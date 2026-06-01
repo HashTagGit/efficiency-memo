@@ -331,7 +331,7 @@ Test-Path "D:\documents\code\git\release\CoreHour"
 - [ ] Zero source code modifications
 - [ ] Zero new dependencies
 
-- [~] 5. Remove sibling directories (Charger-Reminder, CoreHour) — BLOCKED: CoreHour has uncommitted changes. User decision needed.
+- [x] 5. Remove sibling directories (Charger-Reminder, CoreHour)
 
   **What to do**:
   - List all files in both directories (for audit trail)
