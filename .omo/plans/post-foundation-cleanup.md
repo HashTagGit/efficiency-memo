@@ -118,7 +118,7 @@
 
   **Commit**: N/A (this IS the commit)
 
-- [ ] 7. Generate hierarchical AGENTS.md (6 files)
+- [x] 7. Generate hierarchical AGENTS.md (6 files)
 
   **What to do**:
   - Create root `./AGENTS.md` — project overview, monorepo structure, key commands, conventions
@@ -182,7 +182,7 @@
 
 ---
 
-- [ ] 8. Clone + analyze TimeTracker + PawPal → research report
+- [x] 8. Clone + analyze TimeTracker + PawPal → research report
 
   **What to do**:
   - Clone `https://github.com/Evelyn-rgb-debug/TimeTracker` to temp directory, focus on `Windows/` directory
@@ -331,7 +331,7 @@ Test-Path "D:\documents\code\git\release\CoreHour"
 - [ ] Zero source code modifications
 - [ ] Zero new dependencies
 
-- [ ] 5. Remove sibling directories (Charger-Reminder, CoreHour)
+- [~] 5. Remove sibling directories (Charger-Reminder, CoreHour) — BLOCKED: CoreHour has uncommitted changes. User decision needed.
 
   **What to do**:
   - List all files in both directories (for audit trail)
