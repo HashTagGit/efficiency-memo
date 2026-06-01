@@ -1,0 +1,24 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - heading "EfficiencyMemo" [level=1] [ref=e4]
+      - paragraph [ref=e5]: A modern tool gallery for daily productivity
+    - generic [ref=e6]:
+      - generic [ref=e7]:
+        - heading "Design Tokens" [level=2] [ref=e8]
+        - paragraph [ref=e9]: Custom colors, typography, and spacing configured via Tailwind v4 @theme.
+      - generic [ref=e10]:
+        - heading "Typography" [level=2] [ref=e11]
+        - paragraph [ref=e12]: Manrope for body text, Cormorant Garamond for display headings.
+      - generic [ref=e13]:
+        - heading "Sidebar" [level=2] [ref=e14]
+        - paragraph [ref=e15]: Collapsible sidebar with custom width tokens (64px / 240px).
+      - generic [ref=e16]:
+        - heading "Dark Theme" [level=2] [ref=e17]
+        - paragraph [ref=e18]: Rich dark palette with warm gold accents and subtle grid overlay.
+    - generic [ref=e19]:
+      - generic [ref=e20]: Success
+      - generic [ref=e21]: Danger
+      - generic [ref=e22]: Info
+      - generic [ref=e23]: Warning
+  - alert [ref=e24]

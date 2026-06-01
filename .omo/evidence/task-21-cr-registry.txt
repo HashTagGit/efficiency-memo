@@ -1,0 +1,37 @@
+================================================================================
+TASK 21: CR manifest + tool registration — Evidence
+================================================================================
+
+OUTCOME:
+- apps/web/src/features/charger-reminder/manifest.ts with crManifest
+- apps/web/src/features/charger-reminder/index.ts calling registerTool()
+- Dashboard shows Charger Reminder card
+
+FILES CREATED:
+- D:\documents\code\git\release\EfficiencyMemo\apps\web\src\features\charger-reminder\manifest.ts
+- D:\documents\code\git\release\EfficiencyMemo\apps\web\src\features\charger-reminder\component-loader.ts
+- D:\documents\code\git\release\EfficiencyMemo\apps\web\src\features\charger-reminder\index.ts
+- D:\documents\code\git\release\EfficiencyMemo\apps\web\src\features\charger-reminder\pages\device-list-page.tsx
+- D:\documents\code\git\release\EfficiencyMemo\apps\web\src\features\charger-reminder\__tests__\registration.test.ts
+
+MANIFEST CONTENT (manifest.ts):
+export const crManifest: ToolManifest = {
+  id: "charger-reminder",
+  name: "Charger Reminder",
+  icon: "battery",
+  description: "Track device batteries and get reminded to charge before they run out",
+  routes: ["/tools/charger-reminder"],
+  enabled: true,
+};
+
+INDEX CONTENT (index.ts):
+import { crManifest } from "./manifest";
+import { crComponentLoader } from "./component-loader";
+import { registerTool } from "@/lib/tool-registry/registry";
+registerTool(crManifest, crComponentLoader);
+
+TEST RESULTS:
+13 test files passed (60 tests total)
+Charger Reminder registration tests: 4 passed
+
+================================================================================

@@ -1,0 +1,63 @@
+Task 23 — CR Database Layer Verification
+==========================================
+
+Date: 2026-06-01
+
+Files Created:
+- apps/web/src/features/charger-reminder/database/devices.ts (484 lines)
+- apps/web/src/features/charger-reminder/database/test-database.ts (53 lines)
+
+Dependency Added:
+- pg-mem (devDependency in apps/web)
+
+Changes from Charger-Reminder source:
+
+1. Import paths updated:
+   - @/src/lib/auth/session → @/lib/auth/session
+   - @/src/lib/database/device-presets → @/features/charger-reminder/database/device-presets
+   - @/src/lib/reminders/heuristic-engine → @/features/charger-reminder/reminders/heuristic-engine
+   - @/src/lib/supabase/server → @/lib/supabase/server
+   - ./contracts (same directory)
+
+2. Table references prefixed (Task 12 migrations):
+   - devices → cr_devices
+   - device_presets → cr_device_presets
+   - charge_events → cr_charge_events
+   - reminder_preferences → cr_reminder_preferences
+   - computed_reminder_states → cr_computed_reminder_states
+
+3. Removed:
+   - UserRecord type import (not in new contracts)
+   - users(*) joins from Supabase queries
+   - user field from DeviceWithChargeHistory return objects
+   - buildMockUser helper function
+
+4. Added:
+   - buildPresetFromSeeds helper (resolves DevicePresetRecord from devicePresetSeeds array)
+   - Preserved all mock DB functionality (E2E_MOCK_DB flag)
+   - Preserved all "use server" directives
+   - Preserved all function signatures and business logic
+
+5. Functions exported:
+   - createDevice(input, notifyBeforeDays?)
+   - updateDevice(input, notifyBeforeDays?)
+   - deleteDevice(deviceId)
+   - getDeviceById(deviceId)
+   - listDevicesByUser(userId)
+   - logChargeEvent(input)
+   - setReminderPreference(input)
+   - setComputedReminderState(input)
+   - recomputeReminderStateForDevice(deviceId) [internal]
+   - getDevicePresets()
+   - getDefaultThresholdForPreset(presetType)
+
+Typecheck Results:
+- tsc --noEmit: All errors are pre-existing (unrelated to Task 23)
+- devices.ts: No type errors
+- test-database.ts: No type errors (pg-mem installed)
+
+Test Results:
+- 15 test files, 84 tests — ALL PASSED
+- No regressions introduced
+
+====== END EVIDENCE ======

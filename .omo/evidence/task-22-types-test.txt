@@ -1,0 +1,66 @@
+# Task 22 - CR types + test fixtures migration
+# Date: 2026-06-01
+# Status: PASS
+
+## Test Results
+
+src/features/charger-reminder/database/__tests__/types.test.ts
+  ✓ DeviceRecord type validation > should accept valid device records from fixtures
+  ✓ DeviceRecord type validation > should create device via factory function
+  ✓ ChargeEventRecord type validation > should accept valid charge events from fixtures
+  ✓ ChargeEventRecord type validation > should create charge event via factory function
+  ✓ DevicePresetRecord type validation > should contain all 5 preset types
+  ✓ DevicePresetRecord type validation > should have valid thresholds (0-100)
+  ✓ DevicePresetRecord type validation > should have positive drain rates
+  ✓ ReminderPreferenceRecord type validation > should have non-negative notify_before_days
+  ✓ ReminderPreferenceRecord type validation > should have unique device_id per preference
+  ✓ ComputedReminderStateRecord type validation > should have valid estimated_battery_percent (0-100 or null)
+  ✓ ComputedReminderStateRecord type validation > should have valid status values
+  ✓ ComputedReminderStateRecord type validation > should have non-empty heuristic_version
+  ✓ DeviceWithChargeHistory type validation > should include all required relations
+  ✓ DeviceWithChargeHistory type validation > should have matching device_type between device and preset
+  ✓ Input type validation > should accept valid CreateDeviceInput
+  ✓ Input type validation > should accept valid UpdateDeviceInput
+  ✓ Input type validation > should accept valid CreateChargeEventInput
+  ✓ Input type validation > should accept valid UpsertReminderPreferenceInput
+  ✓ Input type validation > should accept valid UpsertComputedReminderStateInput
+  ✓ DevicePresetType union validation > should accept all valid preset types
+
+Test Files  1 passed (1)
+Tests      20 passed (20)
+Duration   2.17s
+
+## Files Created
+
+1. apps/web/src/features/charger-reminder/database/contracts.ts
+   - Migrated types from Charger-Reminder/src/lib/database/contracts.ts
+   - Removed UserRecord type (uses Supabase User from @memo/shared)
+   - Updated table references: devices → cr_devices, device_presets → cr_device_presets, etc.
+   - Updated SchemaRelationship to use cr_ prefixed table names
+   - Removed @/* path imports, using relative paths
+
+2. apps/web/src/features/charger-reminder/database/device-presets.ts
+   - Copied from Charger-Reminder with updated import path
+   - Uses relative import from ./contracts
+
+3. apps/web/src/features/charger-reminder/database/__tests__/fixtures.ts
+   - Test fixtures: fixturesDevicePresets (5 presets)
+   - fixturesDevices (3 devices)
+   - fixturesChargeEvents (3 events)
+   - fixturesReminderPreferences (2 preferences)
+   - fixturesComputedReminderStates (2 states)
+   - fixtureDeviceWithHistory (full relation)
+   - Factory functions: createDeviceFixture, createChargeEventFixture
+   - Constants: TEST_USER_ID, ALL_DEVICE_PRESET_TYPES
+
+4. apps/web/src/features/charger-reminder/database/__tests__/types.test.ts
+   - 20 type validation tests covering all record types
+   - Tests fixtures validity and factory functions
+   - Tests input type shapes
+   - Tests DevicePresetType union
+
+## Verification
+
+Command: cd apps/web && pnpm test -- --reporter=verbose src/features/charger-reminder/database/__tests__/types.test.ts
+Exit code: 0
+Result: 20/20 tests passed

@@ -1,0 +1,67 @@
+# Task 26 Evidence: CR Auth Mock + E2E Mock DB Setup
+
+## Date: 2026-06-01
+## Status: COMPLETE
+
+## Files Verified
+
+### 1. mock.ts - VERIFIED CORRECT
+Location: `apps/web/src/features/charger-reminder/auth/mock.ts`
+
+Contains:
+- `MOCK_AUTH_COOKIE = "efficiency-memo-mock-auth"`
+- `isMockAuthEnabled()` - guards production, checks NEXT_PUBLIC_ENABLE_AUTH_MOCK or AUTH_E2E_MOCK
+- `buildMockMagicLink(email, nextPath)` - builds mock auth callback URL with mock_session, email, next params
+- `getMockAuthCookieOptions()` - returns cookie options with httpOnly, maxAge, path, sameSite, secure
+
+### 2. mock-bypass.ts - VERIFIED CORRECT
+Location: `apps/web/src/features/charger-reminder/auth/mock-bypass.ts`
+
+Contains:
+- `mockBypassAction()` - "use server" action that:
+  - Guards with isMockAuthEnabled()
+  - Extracts email and next from FormData
+  - Sets MOCK_AUTH_COOKIE with getMockAuthCookieOptions()
+  - Redirects to next path
+
+### 3. playwright.config.ts - UPDATED WITH E2E ENV VARS
+Location: `apps/web/playwright.config.ts`
+
+Web server env vars already configured:
+```ts
+AUTH_E2E_MOCK: 'true',
+NEXT_PUBLIC_ENABLE_AUTH_MOCK: 'true',
+E2E_MOCK_DB: 'true',
+```
+
+## Test File Created
+
+### mock.test.ts
+Location: `apps/web/src/features/charger-reminder/auth/__tests__/mock.test.ts`
+
+7 tests covering:
+- `isMockAuthEnabled()` returns false in production
+- `isMockAuthEnabled()` returns true when NEXT_PUBLIC_ENABLE_AUTH_MOCK=true in dev
+- `buildMockMagicLink()` generates correct URL with encoded params
+- `buildMockMagicLink()` encodes special characters in email
+- `getMockAuthCookieOptions()` returns correct options for dev (secure: false)
+- `getMockAuthCookieOptions()` returns secure: true for production
+- `MOCK_AUTH_COOKIE` has expected value
+
+## Test Results
+```
+ RUN  v2.1.9
+
+  ✓  src/features/charger-reminder/auth/__tests__/mock.test.ts (7 tests) 3ms
+
+  Test Files  1 passed (1)
+       Tests  7 passed (7)
+   Duration   2.39s
+```
+
+## Summary
+All requirements met:
+- mock.ts verified correct ✓
+- mock-bypass.ts verified correct ✓
+- Playwright config has E2E mock env vars ✓
+- Mock auth test file created with 7 passing tests ✓

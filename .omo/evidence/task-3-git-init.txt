@@ -1,0 +1,34 @@
+Task 3: Git init + stage all files
+====================================
+Date: 2026-06-01
+
+STEPS EXECUTED:
+1. git init                    — Initialized empty Git repository
+2. git checkout -b main        — Default branch set to 'main'
+3. git add .                   — Staged all non-ignored files
+
+VERIFICATION RESULTS:
+- On branch: main
+- No commits yet (as expected — Task 4 handles commit)
+- Files staged: 95
+
+STAGED FILES (95 total):
+  Config/root: .gitignore, .npmrc, package.json, pnpm-lock.yaml, pnpm-workspace.yaml, tsconfig.base.json
+  Migrations: supabase/migrations/001_cr_device_reminder.sql, 002_cr_seed_presets.sql, 003_ch_core_hour.sql
+  Packages/shared: package.json, tsconfig.json, vitest.config.ts, src/index.ts, src/types.ts, src/constants.ts, src/__tests__/types.test.ts
+  Packages/ui: package.json, tsconfig.json, vitest.config.ts, src/index.ts, src/button.tsx, src/card.tsx, src/modal.tsx, src/shell.tsx, src/sidebar.tsx, scripts/capture-shell.mjs, scripts/capture-sidebar.mjs, __tests__/*.test.tsx, __tests__/setup.ts
+  .omo/: plans, evidence, run-continuation files
+  .playwright-mcp/: page snapshot YAML + PNG files
+  apps/web: (gitlink — embedded git repo)
+
+SECURITY CHECKS:
+  [PASS] No .env files in staged list
+  [PASS] No node_modules/ in staged list
+  [PASS] No .next/ in staged list
+  [PASS] .gitignore active and filtering correctly
+
+ACCEPTANCE CRITERIA:
+  [x] .git/ directory exists
+  [x] Default branch is 'main'
+  [x] git diff --cached --name-only shows source files (not .env, node_modules, .next)
+  [x] No .env files in staged list
