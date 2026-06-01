@@ -256,7 +256,7 @@
 > 2 review agents run in PARALLEL. ALL must APPROVE. Present results to user and get explicit "okay."
 > **Never mark F1-F2 as checked before getting user's okay.**
 
-- [ ] F1. **Acceptance Criteria Audit** — `oracle`
+- [x] F1. **Acceptance Criteria Audit** — `oracle`
   Read the plan end-to-end. For each acceptance criterion, verify implementation:
   - Git: `git log --oneline -1` shows commit, `git status --porcelain` clean
   - Supabase: `supabase status` all healthy, `curl localhost:54321` returns 200
@@ -267,7 +267,7 @@
   - `.gitignore`: contains `.env*`, `node_modules/`, `.next/`
   Output: `Criteria [N/N] | VERDICT: APPROVE/REJECT`
 
-- [ ] F2. **Scope Fidelity Check** — `deep`
+- [x] F2. **Scope Fidelity Check** — `deep`
   Verify no scope creep:
   - No EfficiencyMemo source code modified (check git diff against initial commit)
   - No new dependencies added (compare package.json before/after)
@@ -464,7 +464,7 @@ Test-Path "D:\documents\code\git\release\CoreHour"
 
 ---
 
-- [ ] 2. Create .gitignore
+- [x] 2. Create .gitignore
 
   **What to do**:
   - Create `.gitignore` at project root with standard Next.js + Supabase patterns
