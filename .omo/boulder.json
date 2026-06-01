@@ -8,7 +8,7 @@
       "plan_name": "post-foundation-cleanup",
       "status": "active",
       "started_at": "2026-06-01T07:52:32.225Z",
-      "updated_at": "2026-06-01T07:58:29.274Z",
+      "updated_at": "2026-06-01T08:00:39.616Z",
       "session_ids": [
         "opencode:ses_18174880cffessuMmAg2TuWKEB"
       ],
@@ -21,12 +21,12 @@
           "task_key": "final-wave:f1",
           "task_label": "F1",
           "task_title": "**Acceptance Criteria Audit** — `oracle`",
-          "session_id": "opencode:ses_17dcf9a4dffeNUft3K3Ugm8czr",
+          "session_id": "opencode:ses_17dcd69f9ffebDo7HvtcgiJC47",
           "agent": "Sisyphus-Junior",
           "category": "quick",
-          "updated_at": "2026-06-01T07:58:29.274Z",
           "started_at": "2026-06-01T07:58:29.274Z",
-          "status": "running"
+          "status": "running",
+          "updated_at": "2026-06-01T08:00:39.617Z"
         }
       }
     }
@@ -34,7 +34,7 @@
   "active_plan": "D:\\documents\\code\\git\\release\\EfficiencyMemo\\.omo\\plans\\post-foundation-cleanup.md",
   "started_at": "2026-06-01T07:52:32.225Z",
   "status": "active",
-  "updated_at": "2026-06-01T07:58:29.274Z",
+  "updated_at": "2026-06-01T08:00:39.616Z",
   "session_ids": [
     "opencode:ses_18174880cffessuMmAg2TuWKEB"
   ],
@@ -47,12 +47,12 @@
       "task_key": "final-wave:f1",
       "task_label": "F1",
       "task_title": "**Acceptance Criteria Audit** — `oracle`",
-      "session_id": "opencode:ses_17dcf9a4dffeNUft3K3Ugm8czr",
+      "session_id": "opencode:ses_17dcd69f9ffebDo7HvtcgiJC47",
       "agent": "Sisyphus-Junior",
       "category": "quick",
-      "updated_at": "2026-06-01T07:58:29.274Z",
       "started_at": "2026-06-01T07:58:29.274Z",
-      "status": "running"
+      "status": "running",
+      "updated_at": "2026-06-01T08:00:39.617Z"
     }
   },
   "agent": "atlas"

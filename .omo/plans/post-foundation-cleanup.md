@@ -74,7 +74,7 @@
 
   **Commit**: NO (pre-flight, no file changes)
 
-- [ ] 4. Initial commit
+- [x] 4. Initial commit
 
   **What to do**:
   - Commit staged files with message: `chore: initial commit`
@@ -513,7 +513,7 @@ Test-Path "D:\documents\code\git\release\CoreHour"
 
 ---
 
-- [ ] 3. Git init + stage all files
+- [x] 3. Git init + stage all files
 
   **What to do**:
   - Run `git init` at project root
