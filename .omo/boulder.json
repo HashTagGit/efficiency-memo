@@ -6,9 +6,10 @@
       "work_id": "post-foundation-cleanup-352b6ae1",
       "active_plan": "D:\\documents\\code\\git\\release\\EfficiencyMemo\\.omo\\plans\\post-foundation-cleanup.md",
       "plan_name": "post-foundation-cleanup",
-      "status": "active",
+      "status": "completed",
       "started_at": "2026-06-01T07:52:32.225Z",
-      "updated_at": "2026-06-01T08:58:44.980Z",
+      "ended_at": "2026-06-01T09:00:00.000Z",
+      "updated_at": "2026-06-01T09:00:00.000Z",
       "session_ids": [
         "opencode:ses_18174880cffessuMmAg2TuWKEB"
       ],
@@ -35,26 +36,10 @@
   },
   "active_plan": "D:\\documents\\code\\git\\release\\EfficiencyMemo\\.omo\\plans\\post-foundation-cleanup.md",
   "started_at": "2026-06-01T07:52:32.225Z",
-  "status": "active",
-  "updated_at": "2026-06-01T08:58:44.980Z",
-  "session_ids": [
-    "opencode:ses_18174880cffessuMmAg2TuWKEB"
-  ],
-  "session_origins": {
-    "opencode:ses_18174880cffessuMmAg2TuWKEB": "direct"
-  },
-  "plan_name": "post-foundation-cleanup",
-  "task_sessions": {
-    "final-wave:f1": {
-      "task_key": "final-wave:f1",
-      "task_label": "F1",
-      "task_title": "**Acceptance Criteria Audit** — `oracle`",
-      "session_id": "opencode:ses_17d9bb9b6ffeevF2JwBbzXfXVo",
-      "agent": "Sisyphus-Junior",
-      "category": "unspecified-high",
-      "started_at": "2026-06-01T07:58:29.274Z",
-      "status": "completed",
-      "updated_at": "2026-06-01T08:58:44.980Z",
+"status": "completed",
+  "started_at": "2026-06-01T07:52:32.225Z",
+  "ended_at": "2026-06-01T09:00:00.000Z",
+  "updated_at": "2026-06-01T09:00:00.000Z",
       "ended_at": "2026-06-01T08:58:44.980Z",
       "elapsed_ms": 3615706
     }
