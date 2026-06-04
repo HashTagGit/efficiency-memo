@@ -46,7 +46,6 @@ EfficiencyMemo/
 - Do not commit secrets, `node_modules`, build output, or Playwright reports
 - Do not introduce a remote Supabase project or new migrations; the project runs against the local Supabase CLI
 - Do not add a new top-level dependency without checking every workspace first
-- Do not generate README files; the only docs surface in this repo is `AGENTS.md`
 - Do not refactor the Supabase mock auth flow; the cookie contract (`efficiency-memo-mock-auth`) is locked for E2E
 
 ## Dependencies
