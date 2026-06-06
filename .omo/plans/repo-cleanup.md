@@ -913,7 +913,7 @@ Max Concurrent: 8 (Waves 1 & 4)
   - Message: `chore: remove abandoned core-hour server-actions (feature uses local DB)`
   - Files: `apps/web/src/features/core-hour/database/server-actions.ts`, `__tests__/server-actions.test.ts`
 
-- [ ] 17. Remove 2 unused devDeps from package.json
+- [x] 17. Remove 2 unused devDeps from package.json
 
   **What to do**:
   - Remove `"tsx": "^4.22.4"` from `apps/web/package.json` line 36 — zero imports, zero script usage
@@ -957,7 +957,7 @@ Max Concurrent: 8 (Waves 1 & 4)
   - Message: `chore: remove unused devDeps (tsx, @vitejs/plugin-react from root)`
   - Files: `apps/web/package.json`, `package.json`, `pnpm-lock.yaml`
 
-- [ ] 18. Add 5 gitignore entries
+- [x] 18. Add 5 gitignore entries
 
   **What to do**:
   - Add the following lines to `apps/web/.gitignore`:
@@ -1001,7 +1001,7 @@ Max Concurrent: 8 (Waves 1 & 4)
   - Message: `chore: add gitignore entries for dev.log, test-results, playwright-report, task-26 PNGs, pnpm-lock`
   - Files: `apps/web/.gitignore`
 
-- [ ] 19. Fix stale test counts in 4 docs
+- [x] 19. Fix stale test counts in 4 docs
 
   **What to do**:
   - In `AGENTS.md:23`, `CONTRIBUTING.md:43-44`, `CHANGELOG.md:17-18`, `ARCHITECTURE.md:131,136`:
@@ -1041,7 +1041,7 @@ Max Concurrent: 8 (Waves 1 & 4)
   - Message: `docs: update test counts to current actual values (364 Vitest, 53 Playwright)`
   - Files: `AGENTS.md`, `CONTRIBUTING.md`, `CHANGELOG.md`, `ARCHITECTURE.md`
 
-- [ ] 20. Fix misleading "fan out to all packages" + broken build example
+- [x] 20. Fix misleading "fan out to all packages" + broken build example
 
   **What to do**:
   - In `AGENTS.md:28-30` and `CONTRIBUTING.md:39-44`:
@@ -1082,7 +1082,7 @@ Max Concurrent: 8 (Waves 1 & 4)
   - Message: `docs: correct misleading "fan out to all packages" claims and broken build example`
   - Files: `AGENTS.md`, `CONTRIBUTING.md`
 
-- [ ] 21. Fix README missing start script + landing page
+- [x] 21. Fix README missing start script + landing page
 
   **What to do**:
   - Add `pnpm start` to `README.md:62-71` Scripts table
@@ -1120,7 +1120,7 @@ Max Concurrent: 8 (Waves 1 & 4)
   - Message: `docs: add pnpm start to README scripts table, document public landing page`
   - Files: `README.md`
 
-- [ ] 22. Fix ARCHITECTURE.md "three Supabase clients" claim
+- [x] 22. Fix ARCHITECTURE.md "three Supabase clients" claim
 
   **What to do**:
   - In `ARCHITECTURE.md:116-122`:
@@ -1158,7 +1158,7 @@ Max Concurrent: 8 (Waves 1 & 4)
   - Message: `docs: update ARCHITECTURE.md Supabase client count to match reality`
   - Files: `ARCHITECTURE.md`
 
-- [ ] 23. Fix 9 config drifts
+- [x] 23. Fix 9 config drifts
 
   **What to do**:
   1. **Root package.json**: Add `"packageManager": "pnpm@10.33.0"` (matches installed version)
@@ -1211,7 +1211,7 @@ Max Concurrent: 8 (Waves 1 & 4)
   - Message: `chore: fix 9 config drifts (vitest version, packageManager, missing deps, tsconfig, vitest aliases, supabase config.toml, .env.example, eslint stubs)`
   - Files: `package.json`, `apps/web/package.json`, `packages/shared/package.json`, `packages/ui/package.json`, `tsconfig.base.json`, `apps/web/vitest.config.mts`, `apps/web/.env.example`, `supabase/config.toml`, `pnpm-lock.yaml`
 
-- [ ] 24. Final verification — full test suite + git status check
+- [x] 24. Final verification — full test suite + git status check
 
   **What to do**:
   - Run `pnpm install` to ensure lockfile is consistent after all changes
@@ -1260,28 +1260,28 @@ Max Concurrent: 8 (Waves 1 & 4)
 
 > 4 review agents run in PARALLEL. ALL must APPROVE. Present consolidated results to user and get explicit "okay" before completing.
 
-- [ ] F1. Plan Compliance Audit
+- [x] F1. Plan Compliance Audit
 
   **Recommended Agent Profile**: `oracle`
 
   Read the plan end-to-end. For each "Must Have": verify implementation exists. For each "Must NOT Have": search codebase for forbidden patterns — reject with file:line if found. Check evidence files exist in `.omo/evidence/`. Compare deliverables against plan.
   Output: `Must Have [N/N] | Must NOT Have [N/N] | Tasks [N/N] | VERDICT: APPROVE/REJECT`
 
-- [ ] F2. Code Quality Review
+- [x] F2. Code Quality Review
 
   **Recommended Agent Profile**: `unspecified-high`
 
   Run `pnpm typecheck` + `pnpm test`. Review all changed files for: broken imports, unused imports, missing test co-deletion, stale references in AGENTS.md files to deleted modules. Check AI slop: excessive comments, over-abstraction, generic names.
   Output: `Typecheck [PASS/FAIL] | Tests [N pass/N fail] | Files [N clean/N issues] | VERDICT`
 
-- [ ] F3. Real Manual QA
+- [x] F3. Real Manual QA
 
   **Recommended Agent Profile**: `unspecified-high`
 
   Start from clean state. Execute EVERY QA scenario from EVERY task — follow exact steps, capture evidence. Verify git status is clean. Verify test suite passes. Verify no orphan test files remain. Save to `.omo/evidence/final-qa/`.
   Output: `Scenarios [N/N pass] | Git Clean [YES/NO] | Tests [N/N] | VERDICT`
 
-- [ ] F4. Scope Fidelity Check
+- [x] F4. Scope Fidelity Check
 
   **Recommended Agent Profile**: `deep`
 

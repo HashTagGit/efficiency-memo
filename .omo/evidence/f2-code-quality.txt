@@ -1,0 +1,126 @@
+============================================================
+F2: CODE QUALITY REVIEW — FINAL VERIFICATION
+============================================================
+Date: 2026-06-06
+Reviewer: Sisyphus-Junior
+
+------------------------------------------------------------
+TYPE CHECK
+------------------------------------------------------------
+pnpm typecheck .................... FAIL (pre-existing, not a regression)
+  - 10 errors in packages/shared/src/__tests__/types.test.ts
+  - All 10 errors are pre-existing in ExpectType/expect helpers
+  - No new type errors introduced by the cleanup changes
+  - apps/web and packages/ui: clean, zero type errors
+
+------------------------------------------------------------
+TEST SUITE
+------------------------------------------------------------
+pnpm test ......................... 341 PASS / 0 FAIL
+  - packages/shared:  16 passed
+  - packages/ui:      41 passed
+  - apps/web:        284 passed
+  - 34 test files total, zero failures
+
+------------------------------------------------------------
+CHANGED FILES REVIEW (HEAD~3..HEAD)
+------------------------------------------------------------
+Commits reviewed: 3 (6a072a7, 4c19995, b5a53c2)
+Deleted source files: 9 (all with co-deleted tests)
+  D apps/web/src/components/auth/sign-out-form.tsx
+  D apps/web/src/features/charger-reminder/auth/mock-bypass.ts
+  D apps/web/src/app/(shell)/tools/charger-reminder/_actions/update-device.ts
+  D apps/web/src/features/core-hour/components/session-controller.tsx
+  D apps/web/src/features/core-hour/components/check-in-modal.tsx
+  D apps/web/src/features/core-hour/database/server-actions.ts
+  D apps/web/src/features/core-hour/components/__tests__/check-in-modal.test.tsx
+  D apps/web/src/features/core-hour/components/__tests__/session-controller.test.tsx
+  D apps/web/src/features/core-hour/database/__tests__/server-actions.test.ts
+
+Modified files (non-.omo): 13
+  M AGENTS.md, ARCHITECTURE.md, CHANGELOG.md, CONTRIBUTING.md, README.md
+  M package.json, pnpm-lock.yaml, tsconfig.base.json
+  M apps/web/package.json, apps/web/vitest.config.mts, apps/web/.gitignore
+  M packages/shared/package.json, packages/ui/package.json
+
+Added files: supabase/.gitignore, supabase/config.toml, .codegraph/*
+
+------------------------------------------------------------
+BROKEN IMPORTS (PASS — 0 found)
+------------------------------------------------------------
+  - Grep confirmed zero import references to all 6 deleted modules
+  - server-actions, check-in-modal, session-controller, mock-bypass,
+    sign-out-form, update-device — no remaining import statements
+  - @vitejs/plugin-react properly declared in apps/web/package.json
+    after removal from root; import in vitest.config.mts is valid
+
+------------------------------------------------------------
+UNUSED IMPORTS (PASS — 0 found)
+------------------------------------------------------------
+  - No source files were modified (only deleted); no unused imports
+    introduced
+
+------------------------------------------------------------
+STALE REFERENCES IN AGENTS.md (FAIL — 4 files, 8 references)
+------------------------------------------------------------
+
+[1] Root AGENTS.md (line 23):
+    "300 Vitest cases (16 in packages/shared + 284 in apps/web)"
+    ACTUAL: 341 cases (16 shared + 41 ui + 284 web)
+    packages/ui's 41 tests are missing from count.
+
+[2] apps/web/AGENTS.md (line 29):
+    "Server actions live in database/server-actions.ts (or
+     database/<entity>.ts) inside each feature"
+    core-hour's database/server-actions.ts was deleted.
+    Pattern description is still valid but the concrete
+    example no longer applies.
+
+[3] apps/web/src/features/core-hour/AGENTS.md (6 stale refs):
+    Line 11: "components/, dashboard, session-controller,
+             check-in-modal, tag-bar"
+             → session-controller and check-in-modal deleted
+    Line 13: "database/, server-actions.ts"
+             → server-actions.ts deleted
+    Line 27: "Server actions in database/server-actions.ts
+             are the only path to Supabase"
+             → file deleted, constraint stale
+    Line 29: "components/check-in-modal.tsx is the canonical
+             example"
+             → file deleted
+    Line 34: "it belongs in database/server-actions.ts only"
+             → file deleted
+    Line 46: "components/session-controller.tsx,
+             components/check-in-modal.tsx"
+             → both files deleted
+
+[4] apps/web/src/features/charger-reminder/AGENTS.md (line 10):
+    "auth/, mock.ts and mock-bypass.ts for the dev/test auth shim"
+    → mock-bypass.ts deleted, mock.ts still exists
+
+------------------------------------------------------------
+AI SLOP CHECK (PASS)
+------------------------------------------------------------
+  - No TODO/FIXME/HACK found anywhere in source or docs
+  - No excessive comments, over-abstraction, or generic names
+  - Deletions are clean: co-deleted tests, no orphaned imports
+  - Config changes are minimal and purposeful (dependency
+    consolidation, vitest alias fix, .gitignore hygiene)
+
+------------------------------------------------------------
+VERDICT
+------------------------------------------------------------
+Typecheck: FAIL (pre-existing, not a regression)
+Tests:     341 pass / 0 fail
+Files:     13 reviewed / 4 with stale AGENTS.md references
+
+OVERALL: PASS with caveats
+  - No regressions introduced by the cleanup
+  - Zero broken imports, zero unused imports, zero AI slop
+  - 4 AGENTS.md files contain stale references to deleted modules
+    (8 individual stale references total)
+  - These are documentation-only issues; no code impact
+  - Root AGENTS.md test count understates actual by 41 tests
+    (missing packages/ui's 41 Vitest cases)
+
+============================================================

@@ -26,7 +26,7 @@ The app is structured around route groups: `(auth)` for the unauthenticated sign
 
 ## Patterns
 - Use Server Components by default; opt into `"use client"` only for stateful or browser-only logic
-- Server actions live in `database/server-actions.ts` (or `database/<entity>.ts`) inside each feature; they end with `revalidatePath` for the affected route
+- Server actions live in `database/<entity>.ts` inside each feature; they end with `revalidatePath` for the affected route
 - Pull types from `@memo/shared` for tool-related shapes; pull UI from `@memo/ui`; never duplicate them locally
 - All Supabase access goes through the three clients in `src/lib/supabase/`, never via direct `createClient` calls
 - Tests mirror the source tree under `__tests__/`; E2E specs live in `e2e/*.spec.ts`

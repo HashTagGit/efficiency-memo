@@ -1,0 +1,28 @@
+
+> efficiency-memo@0.0.1 typecheck D:\documents\code\git\release\efficiency-memo
+> pnpm -r typecheck
+
+Scope: 3 of 4 workspace projects
+packages/shared typecheck$ tsc --noEmit
+packages/shared typecheck: src/__tests__/types.test.ts(69,38): error TS2349: This expression is not callable.
+packages/shared typecheck:   Type 'ExpectString<string | undefined>' has no call signatures.
+packages/shared typecheck: src/__tests__/types.test.ts(110,55): error TS2344: Type 'ToolManifest' does not satisfy the constraint '{ id: string; name: string; icon: string; description: string; routes: string[]; enabled: "Expected: boolean, Actual: never"; }'.
+packages/shared typecheck:   Types of property 'enabled' are incompatible.
+packages/shared typecheck:     Type 'boolean' is not assignable to type '"Expected: boolean, Actual: never"'.
+packages/shared typecheck: src/__tests__/types.test.ts(148,33): error TS2349: This expression is not callable.
+packages/shared typecheck:   Type 'ExpectString<string | undefined>' has no call signatures.
+packages/shared typecheck: src/__tests__/types.test.ts(149,35): error TS2349: This expression is not callable.
+packages/shared typecheck:   Type 'ExpectNumber<number | undefined>' has no call signatures.
+packages/shared typecheck: src/__tests__/types.test.ts(169,33): error TS2349: This expression is not callable.
+packages/shared typecheck:   Type 'ExpectString<string | undefined>' has no call signatures.
+packages/shared typecheck: src/__tests__/types.test.ts(170,35): error TS2349: This expression is not callable.
+packages/shared typecheck:   Type 'ExpectNumber<number | undefined>' has no call signatures.
+packages/shared typecheck: src/__tests__/types.test.ts(176,5): error TS2304: Cannot find name 'expect'.
+packages/shared typecheck: src/__tests__/types.test.ts(180,5): error TS2304: Cannot find name 'expect'.
+packages/shared typecheck: src/__tests__/types.test.ts(181,5): error TS2304: Cannot find name 'expect'.
+packages/shared typecheck: src/__tests__/types.test.ts(185,5): error TS2304: Cannot find name 'expect'.
+packages/shared typecheck: Failed
+D:\documents\code\git\release\efficiency-memo\packages\shared:
+鈥塃RR_PNPM_RECURSIVE_RUN_FIRST_FAIL鈥?@memo/shared@0.0.1 typecheck: `tsc --noEmit`
+Exit status 2
+鈥塃LIFECYCLE鈥?Command failed with exit code 2.

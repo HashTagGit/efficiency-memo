@@ -20,7 +20,7 @@ EfficiencyMemo/
 
 **Stack**: Next.js 16.2.6 (App Router), React 19.2.4, Tailwind v4, Supabase (`@supabase/ssr` + `@supabase/supabase-js`), Vitest, Playwright. Node >= 20, pnpm >= 9.
 
-**Tooling**: TypeScript strict mode, ESLint via `eslint-config-next`, Vitest for unit/integration, Playwright for E2E. The test suite runs 300 Vitest cases (16 in `packages/shared` + 284 in `apps/web`) and 53 Playwright cases across the workspace.
+**Tooling**: TypeScript strict mode, ESLint via `eslint-config-next`, Vitest for unit/integration, Playwright for E2E. The test suite runs 341 Vitest cases (16 in `packages/shared` + 41 in `packages/ui` + 284 in `apps/web`) and 53 Playwright cases across the workspace.
 
 ## Patterns
 

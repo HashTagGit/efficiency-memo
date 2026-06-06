@@ -7,7 +7,7 @@ Charger-Reminder tracks user-owned battery-powered devices and tells each device
 Feature folder: `apps/web/src/features/charger-reminder/`. It is auto-discovered by `src/lib/tool-registry/discovery.ts` and self-registers via `index.ts` -> `manifest.ts` + `component-loader.ts`. The manifest route is `/tools/charger-reminder`, rendered through the catch-all under `src/app/(shell)/tools/[toolId]/page.tsx`.
 
 **Sub-folders**:
-- `auth/`, `mock.ts` and `mock-bypass.ts` for the dev/test auth shim; the cookie name `efficiency-memo-mock-auth` is shared with `lib/auth/session.ts` and the auth callback
+- `auth/`, `mock.ts` for the dev/test auth shim; the cookie name `efficiency-memo-mock-auth` is shared with `lib/auth/session.ts` and the auth callback
 - `database/`, `contracts.ts` (types), `device-presets.ts` (5 seeded presets), `devices.ts` (Supabase server actions), `test-database.ts` (E2E mock)
 - `reminders/`, `heuristic-engine.ts` (deterministic drain math, version `deterministic-v1`)
 - `components/`, `device-card`, `device-detail`, `device-form`, `device-list`

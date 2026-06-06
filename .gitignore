@@ -33,3 +33,7 @@ Thumbs.db
 # Temporary files
 *.tmp
 .cache/
+
+# Tool-generated artifacts
+.understand-anything/
+.codegraph/
