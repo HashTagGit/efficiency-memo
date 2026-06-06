@@ -1,10 +1,10 @@
-# EfficiencyMemo
+# efficiency memo
 
 A unified tool gallery for daily productivity.
 
 ## About
 
-EfficiencyMemo is a pnpm monorepo that bundles independent productivity tools behind a single Next.js shell with Supabase authentication.
+efficiency memo is a pnpm monorepo that bundles independent productivity tools behind a single Next.js shell with Supabase authentication.
 
 The same user account reaches every tool without re-onboarding. Currently it ships two tools: Charger-Reminder for battery tracking with heuristic reminders, and CoreHour for time tracking with periodic check-ins.
 
@@ -75,7 +75,7 @@ The public landing page is served at `/` (rendered by `apps/web/src/app/page.tsx
 
 ## Architecture
 
-EfficiencyMemo is organized as a pnpm monorepo. `apps/web/` is the only deployable surface. `packages/shared/` holds cross-tool types and constants. `packages/ui/` is the React + Tailwind v4 component library.
+efficiency memo is organized as a pnpm monorepo. `apps/web/` is the only deployable surface. `packages/shared/` holds cross-tool types and constants. `packages/ui/` is the React + Tailwind v4 component library.
 
 Tools self-register through a dynamic registry under `src/features/`. Each tool exports a manifest that defines its routes, navigation entry, and metadata. The shell layout reads this registry to render the sidebar and route the user to the correct tool page.
 
