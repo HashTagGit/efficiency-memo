@@ -1,0 +1,79 @@
+
+> web@0.1.0 test:e2e D:\documents\code\git\release\efficiency-memo\apps\web
+> playwright test
+
+
+Running 53 tests using 8 workers
+
+[1A[2K[1/53] [chromium] 鈥?e2e\charger-reminder.spec.ts:43:7 鈥?Charger Reminder 鈥?Auth 鈥?mock auth bypass sets cookie and redirects to CR page
+[1A[2K[2/53] [chromium] 鈥?e2e\charger-reminder.spec.ts:99:7 鈥?Charger Reminder 鈥?Device CRUD 鈥?shows empty state when no devices exist
+[1A[2K[3/53] [chromium] 鈥?e2e\core-hour.spec.ts:30:7 鈥?Core Hour 鈥?Auth 鈥?redirects to sign-in when no auth cookie is set
+[1A[2K[4/53] [chromium] 鈥?e2e\charger-reminder.spec.ts:380:7 鈥?Charger Reminder 鈥?Smoke 鈥?CR main page loads when authenticated
+[1A[2K[5/53] [chromium] 鈥?e2e\charger-reminder.spec.ts:313:7 鈥?Charger Reminder 鈥?Reminder Display 鈥?newly created device shows Needs Charge Log status
+[1A[2K[6/53] [chromium] 鈥?e2e\charger-reminder.spec.ts:389:7 鈥?Charger Reminder 鈥?Smoke 鈥?new device page loads when authenticated
+[1A[2K[7/53] [chromium] 鈥?e2e\charger-reminder.spec.ts:401:7 鈥?Charger Reminder 鈥?Smoke 鈥?back to devices link works on new device page
+[1A[2K[8/53] [chromium] 鈥?e2e\core-hour.spec.ts:82:7 鈥?Core Hour 鈥?Dashboard & Session 鈥?navigate to /tools/core-hour loads the shell with auth
+[1A[2K[9/53] [chromium] 鈥?e2e\core-hour.spec.ts:94:7 鈥?Core Hour 鈥?Dashboard & Session 鈥?dashboard page shows tool gallery
+[1A[2K[10/53] [chromium] 鈥?e2e\core-hour.spec.ts:135:7 鈥?Core Hour 鈥?Settings 鈥?settings page accessible
+[1A[2K[11/53] [chromium] 鈥?e2e\core-hour.spec.ts:171:7 鈥?Core Hour 鈥?History 鈥?history page accessible
+[1A[2K[12/53] [chromium] 鈥?e2e\charger-reminder.spec.ts:114:7 鈥?Charger Reminder 鈥?Device CRUD 鈥?add device link navigates to new device form
+[1A[2K[13/53] [chromium] 鈥?e2e\charger-reminder.spec.ts:54:7 鈥?Charger Reminder 鈥?Auth 鈥?session persists after page reload
+[1A[2K[14/53] [chromium] 鈥?e2e\cross-tool.spec.ts:54:7 鈥?Cross-Tool Auth & Navigation 鈥?signs in and navigates from Charger Reminder to CoreHour
+[1A[2K[15/53] [chromium] 鈥?e2e\charger-reminder.spec.ts:339:7 鈥?Charger Reminder 鈥?Reminder Display 鈥?newly created device appears on the list page
+[1A[2K[16/53] [chromium] 鈥?e2e\core-hour.spec.ts:45:7 鈥?Core Hour 鈥?Auth 鈥?dashboard page loads when authenticated
+[1A[2K[17/53] [chromium] 鈥?e2e\core-hour.spec.ts:116:7 鈥?Core Hour 鈥?Dashboard & Session 鈥?test navigation from dashboard to core-hour tool page
+[1A[2K[18/53] [chromium] 鈥?e2e\dashboard.spec.ts:4:7 鈥?Dashboard Page 鈥?empty state renders when no tools registered
+[1A[2K[19/53] [chromium] 鈥?e2e\dashboard.spec.ts:11:7 鈥?Dashboard Page 鈥?dashboard page has correct metadata
+
+[1A[2K[WebServer] [browser] 猕?unhandledRejection: Error: Database not configured. Call setDb() first.
+[WebServer]     at getDb (src/features/core-hour/hooks/db.ts:20:11)
+[WebServer]     at useHistory.useCallback[loadHistory] (src/features/core-hour/hooks/use-history.ts:29:29)
+[WebServer]     at HistoryPage.useEffect (src/app/(shell)/tools/core-hour/history/history-page.tsx:10:5)
+[WebServer]   18 | export async function getDb(): Promise<DbResult> {
+[WebServer]   19 |   if (!_db) {
+[WebServer] > 20 |     throw new Error("Database not configured. Call setDb() first.");
+[WebServer]      |           ^
+[WebServer]   21 |   }
+[WebServer]   22 |   return _db;
+[WebServer]   23 | }
+[1A[2K[20/53] [chromium] 鈥?e2e\charger-reminder.spec.ts:69:7 鈥?Charger Reminder 鈥?Auth 鈥?redirects to sign-in when no auth cookie is set
+[1A[2K[21/53] [chromium] 鈥?e2e\charger-reminder.spec.ts:128:7 鈥?Charger Reminder 鈥?Device CRUD 鈥?creates device with full form data and verifies on list
+[1A[2K[22/53] [chromium] 鈥?e2e\cross-tool.spec.ts:66:7 鈥?Cross-Tool Auth & Navigation 鈥?signs in and navigates from CoreHour to Charger Reminder
+[1A[2K[23/53] [chromium] 鈥?e2e\mock-auth.spec.ts:5:7 鈥?Mock Auth 鈥?mock auth cookie name is defined
+[1A[2K[24/53] [chromium] 鈥?e2e\core-hour.spec.ts:61:7 鈥?Core Hour 鈥?Auth 鈥?session persists after page reload
+[1A[2K[25/53] [chromium] 鈥?e2e\mock-auth.spec.ts:9:7 鈥?Mock Auth 鈥?isMockAuthEnabled returns boolean based on env vars
+[1A[2K[26/53] [chromium] 鈥?e2e\mock-auth.spec.ts:14:7 鈥?Mock Auth 鈥?normalizeAuthEmail handles various inputs correctly
+[1A[2K[27/53] [chromium] 鈥?e2e\mock-auth.spec.ts:22:7 鈥?Mock Auth 鈥?buildMockMagicLink generates correct callback URL
+[1A[2K[28/53] [chromium] 鈥?e2e\mock-auth.spec.ts:30:7 鈥?Mock Auth 鈥?mock auth bypass API sets cookie when enabled
+[1A[2K[29/53] [chromium] 鈥?e2e\mock-auth.spec.ts:52:7 鈥?Mock Auth 鈥?session user returns mock user when cookie is set
+[1A[2K[30/53] [chromium] 鈥?e2e\smoke.spec.ts:4:7 鈥?Smoke Tests 鈥?homepage loads successfully
+[1A[2K[31/53] [chromium] 鈥?e2e\charger-reminder.spec.ts:359:7 鈥?Charger Reminder 鈥?Reminder Display 鈥?device type is displayed correctly in cards and detail
+[1A[2K[32/53] [chromium] 鈥?e2e\charger-reminder.spec.ts:78:7 鈥?Charger Reminder 鈥?Auth 鈥?dashboard shows Charger Reminder tool card when authenticated
+[1A[2K[33/53] [chromium] 鈥?e2e\cross-tool.spec.ts:78:7 鈥?Cross-Tool Auth & Navigation 鈥?auth persists when navigating between tools in same session
+[1A[2K[chromium] 鈥?e2e\mock-auth.spec.ts:52:7 鈥?Mock Auth 鈥?session user returns mock user when cookie is set
+Current URL after navigation: http://localhost:3000/dashboard
+
+[1A[2KMock cookie value: mock-test@example.com
+
+[1A[2K[34/53] [chromium] 鈥?e2e\smoke.spec.ts:10:7 鈥?Smoke Tests 鈥?sign-in page loads successfully
+[1A[2K[35/53] [chromium] 鈥?e2e\tool-registry.spec.ts:34:7 鈥?Tool Registry 鈥?Dashboard Integration 鈥?dashboard page loads with auth and shows tool grid or empty state
+[1A[2K[36/53] [chromium] 鈥?e2e\charger-reminder.spec.ts:157:7 鈥?Charger Reminder 鈥?Device CRUD 鈥?creates device and verifies detail page shows all fields
+[1A[2K[37/53] [chromium] 鈥?e2e\tool-registry.spec.ts:139:7 鈥?Tool Registry 鈥?Lazy Loading & Navigation 鈥?Charger Reminder page loads without errors
+[1A[2K[38/53] [chromium] 鈥?e2e\tool-registry.spec.ts:249:7 鈥?Tool Registry 鈥?Auth Guard 鈥?redirects to sign-in when no auth cookie is set
+[1A[2K[39/53] [chromium] 鈥?e2e\tool-registry.spec.ts:58:7 鈥?Tool Registry 鈥?Dashboard Integration 鈥?dashboard shows Charger Reminder and CoreHour tool cards when registered
+[1A[2K[40/53] [chromium] 鈥?e2e\tool-registry.spec.ts:161:7 鈥?Tool Registry 鈥?Lazy Loading & Navigation 鈥?CoreHour page loads without errors
+[1A[2K[41/53] [chromium] 鈥?e2e\cross-tool.spec.ts:100:7 鈥?Cross-Tool Auth & Navigation 鈥?session persists after reload on each tool page
+[1A[2K[42/53] [chromium] 鈥?e2e\tool-registry.spec.ts:260:7 鈥?Tool Registry 鈥?Auth Guard 鈥?tool pages persist session after reload
+[1A[2K[43/53] [chromium] 鈥?e2e\tool-registry.spec.ts:81:7 鈥?Tool Registry 鈥?Dashboard Integration 鈥?clicking Charger Reminder card navigates to /tools/charger-reminder
+[1A[2K[44/53] [chromium] 鈥?e2e\tool-registry.spec.ts:173:7 鈥?Tool Registry 鈥?Lazy Loading & Navigation 鈥?unknown tool shows Tool Not Found via [toolId] catch-all route
+[1A[2K[45/53] [chromium] 鈥?e2e\charger-reminder.spec.ts:179:7 鈥?Charger Reminder 鈥?Device CRUD 鈥?edits device threshold and verifies persistence
+[1A[2K[46/53] [chromium] 鈥?e2e\cross-tool.spec.ts:121:7 鈥?Cross-Tool Auth & Navigation 鈥?dashboard shows both tools when authenticated
+[1A[2K[47/53] [chromium] 鈥?e2e\tool-registry.spec.ts:106:7 鈥?Tool Registry 鈥?Dashboard Integration 鈥?clicking CoreHour card navigates to /tools/core-hour
+[1A[2K[48/53] [chromium] 鈥?e2e\cross-tool.spec.ts:141:7 鈥?Cross-Tool Auth & Navigation 鈥?redirects to sign-in from any tool page when unauthenticated
+[1A[2K[49/53] [chromium] 鈥?e2e\tool-registry.spec.ts:190:7 鈥?Tool Registry 鈥?Lazy Loading & Navigation 鈥?navigation between tool pages works correctly
+[1A[2K[50/53] [chromium] 鈥?e2e\tool-registry.spec.ts:210:7 鈥?Tool Registry 鈥?Lazy Loading & Navigation 鈥?tool page navigation from dashboard sidebar links works
+[1A[2K[51/53] [chromium] 鈥?e2e\charger-reminder.spec.ts:237:7 鈥?Charger Reminder 鈥?Device CRUD 鈥?creates device and shows it in the device list
+[1A[2K[52/53] [chromium] 鈥?e2e\charger-reminder.spec.ts:258:7 鈥?Charger Reminder 鈥?Device CRUD 鈥?validates that device name is required on create
+[1A[2K[53/53] [chromium] 鈥?e2e\charger-reminder.spec.ts:272:7 鈥?Charger Reminder 鈥?Device CRUD 鈥?validates that device name is required on edit
+[1A[2K  1 skipped
+  52 passed (21.2s)

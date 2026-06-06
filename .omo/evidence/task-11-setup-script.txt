@@ -1,0 +1,91 @@
+Task 11 — scripts/setup.ps1
+============================
+
+Goal
+----
+Create a Windows PowerShell 7+ one-click setup script that mirrors
+scripts/setup.sh. Checks Docker prerequisites, validates .env.docker,
+and starts the Docker Compose stack.
+
+File
+----
+scripts/setup.ps1 (3760 bytes, UTF-8, no BOM)
+
+Verification (PowerShell 7.6.2 on Windows)
+-------------------------------------------
+
+1. First line
+   Get-Content scripts/setup.ps1 -Head 1
+   -> "#Requires -Version 7"                                   PASS
+
+2. Forbidden references (MOCK / VERCEL / DEV)
+   Select-String -Path scripts/setup.ps1 -Pattern "MOCK|VERCEL|DEV"
+   -> (no matches)                                             PASS
+
+3. Forbidden admin / PATH mutations
+   Select-String ... "Administrator|Set-ExecutionPolicy|SetEnvironmentVariable"
+   -> (no matches)                                             PASS
+
+4. AST parse
+   [System.Management.Automation.Language.Parser]::ParseFile(...)
+   -> no errors; 30 statements; 4 function definitions          PASS
+
+5. Helper functions defined
+   function Write-Ok(   ...) { Write-Host "..."  -ForegroundColor Green  }
+   function Write-Err(  ...) { Write-Host "..."  -ForegroundColor Red    }
+   function Write-Warn( ...) { Write-Host "..."  -ForegroundColor Yellow }
+   function Write-Info( ...) { Write-Host "  ..."                        }
+   -> all four present                                          PASS
+
+6. Required configuration / behaviour
+   $ErrorActionPreference = 'Stop'                              PASS  (line 18)
+   $RepoRoot = Split-Path -Parent $PSScriptRoot                 PASS  (line 22)
+   Get-Command docker -ErrorAction SilentlyContinue             PASS  (line 31)
+   docker info | Out-Null                                       PASS  (line 40)
+   docker compose version | Out-Null                            PASS  (line 50)
+   Test-Path $EnvFile                                           PASS  (line 60)
+   Select-String -Path $EnvFile -Pattern '<replace' -Quiet      PASS  (line 70)
+   docker compose up -d                                         PASS  (line 81)
+   Pop-Location in finally                                      PASS  (line 86)
+
+7. Success banner URLs (must match docker-compose.yml ports)
+   App:    http://localhost:3000                                PASS  (line 94)
+   Auth:   http://localhost:54321                               PASS  (line 95)
+   Studio: http://localhost:54323                              PASS  (line 96)
+   Email:  http://localhost:54324                               PASS  (line 97)
+
+8. Unicode glyphs
+   ✓  U+2713   (Green, Write-Ok)
+   ✗  U+2717   (Red,   Write-Err)
+   ⚠  U+26A0   (Yellow, Write-Warn)
+   File is UTF-8 (no BOM), which is the default for PowerShell 7+
+   on Windows. Symbols render correctly in Windows Terminal and
+   VS Code. The classic console host replaces them with `?` due to
+   the system OEM code page, but that is a host limitation, not a
+   file issue.
+
+Behaviour summary
+-----------------
+On success, in order:
+  1. ✓ Docker is installed
+  2. ✓ Docker daemon is running
+  3. ✓ Docker Compose is available
+  4. ✓ .env.docker exists
+  5. ✓ .env.docker is populated
+  6.   Starting the stack (this may take a minute)...
+       [docker compose up -d]
+  7. Green banner with the four localhost URLs.
+
+On any failure, the script exits with code 1 and prints a
+single-line ✗ diagnostic, followed by a one-line install hint
+(install Docker Desktop, start Docker, etc.).
+
+Constraints satisfied
+---------------------
+- Requires PowerShell 7+                              (#Requires)
+- Exits on first error                                ($ErrorActionPreference = 'Stop')
+- No admin / PATH mutation                            (read-only w.r.t. host)
+- No cmd.exe or Unix shell invocation                 (pure PowerShell)
+- No references to mock auth, Vercel, or dev server   (clean)
+- Pure English output                                 (verified)
+- All four URL labels match docker-compose.yml ports  (3000/54321/54323/54324)

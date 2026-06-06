@@ -1,0 +1,96 @@
+Task: 4 — Create .dockerignore at repo root
+Date:  2026-06-06
+File:  .dockerignore (82 lines)
+
+================================================================================
+QA verification (excludes)
+================================================================================
+[OK] EXCLUDE node_modules/
+      .dockerignore:14: node_modules/
+
+[OK] EXCLUDE .git/  (and .gitignore / .gitattributes)
+      .dockerignore:25: .git/
+      .dockerignore:26: .gitignore
+      .dockerignore:27: .gitattributes
+
+[OK] EXCLUDE .next/, dist/, coverage/
+      .dockerignore:17: .next/
+      .dockerignore:19: dist/
+      .dockerignore:41: coverage/
+
+[OK] EXCLUDE playwright-report/, test-results/
+      .dockerignore:42: test-results/
+      .dockerignore:43: playwright-report/
+
+[OK] EXCLUDE .omo/, .planning/
+      .dockerignore:69: .omo/
+      .dockerignore:70: .omo/drafts/
+      .dockerignore:71: .planning/
+
+[OK] EXCLUDE *.log
+      .dockerignore:49: *.log
+      .dockerignore:50-53: npm/yarn/pnpm debug logs
+
+================================================================================
+QA verification (negation: whitelist)
+================================================================================
+[OK] WHITELIST .env.docker
+      .dockerignore:34: .env*
+      .dockerignore:35: !.env.docker        <-- negation
+      .dockerignore:36: .env.docker.local  (excluded)
+
+================================================================================
+QA verification (keeps — expect no match for these patterns)
+================================================================================
+[OK] KEEP supabase/migrations  -> Select-String returned no matches
+[OK] KEEP pnpm-lock.yaml        -> Select-String returned no matches
+[OK] KEEP pnpm-workspace.yaml   -> no exclude pattern
+[OK] KEEP packages/             -> no exclude pattern
+[OK] KEEP apps/web/             -> no exclude pattern
+[OK] KEEP Dockerfile            -> no exclude pattern
+[OK] KEEP docker-compose.yml    -> no exclude pattern
+[OK] KEEP scripts/              -> no exclude pattern
+
+================================================================================
+Required-paths preservation
+================================================================================
+The .dockerignore only lists paths to exclude. Anything not matched is
+implicitly included by Docker. The required build inputs are:
+
+  * pnpm-lock.yaml       -> pnpm install --frozen-lockfile
+  * pnpm-workspace.yaml  -> workspace resolution
+  * package.json         -> scripts, deps
+  * packages/            -> workspace dep tracing
+  * apps/web/            -> the only deployable surface
+  * supabase/migrations/ -> init container seeds DB
+  * Dockerfile           -> itself (referenced by build)
+  * docker-compose.yml   -> orchestration contract
+  * scripts/             -> build helpers
+
+None of these names appear as a pattern in .dockerignore, so Docker will ship
+them in the build context.
+
+================================================================================
+Mirror of .gitignore (kept in sync)
+================================================================================
+Patterns carried over from .gitignore:
+  node_modules/   .pnpm-store/   .next/   dist/   .turbo/
+  .env*   !.env.example
+  test-results/   playwright-report/   coverage/
+  *.log   pnpm-debug.log*
+  .DS_Store   Thumbs.db
+  .vscode/   .idea/   *.swp   *.swo
+  *.tmp   .cache/
+  .understand-anything/   .codegraph/
+
+Docker-specific additions / divergences:
+  ! .env.example  ->  ! .env.docker   (Docker image needs the docker env)
+  + out/  build/  .git/  .gitattributes
+  + npm/yarn-debug.log*  yarn-error.log*
+  + .playwright-mcp/   .omo/   .omo/drafts/   .planning/
+  + supabase/.branches/   supabase/.temp/
+  - .env.example           (not needed in the image)
+
+================================================================================
+Status: PASS
+================================================================================

@@ -1,0 +1,22 @@
+EfficiencyMemo .env.docker verification
+Generated: 2026-06-06T20:04:31.1762099+08:00
+File: D:\documents\code\git\release\efficiency-memo\.env.docker
+
+  [PASS] NEXT_PUBLIC_SUPABASE_URL (pattern="NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321")
+  [PASS] NEXT_PUBLIC_SUPABASE_ANON_KEY (pattern="NEXT_PUBLIC_SUPABASE_ANON_KEY=")
+  [PASS] POSTGRES_PASSWORD (pattern="POSTGRES_PASSWORD=")
+  [PASS] JWT_SECRET (pattern="JWT_SECRET=")
+  [PASS] ANON_KEY (pattern="ANON_KEY=")
+  [PASS] SERVICE_ROLE_KEY (pattern="SERVICE_ROLE_KEY=")
+  [PASS] SUPABASE_AUTH_SITE_URL (pattern="SUPABASE_AUTH_SITE_URL=http://localhost:3000")
+  [PASS] SUPABASE_AUTH_ADDITIONAL_REDIRECT_URLS (pattern="SUPABASE_AUTH_ADDITIONAL_REDIRECT_URLS=http://localhost:3000")
+  [PASS] FORBIDDEN NEXT_PUBLIC_ENABLE_AUTH_MOCK (pattern="NEXT_PUBLIC_ENABLE_AUTH_MOCK")
+  [PASS] FORBIDDEN AUTH_E2E_MOCK (pattern="AUTH_E2E_MOCK")
+  [PASS] FORBIDDEN E2E_MOCK_DB (pattern="E2E_MOCK_DB")
+
+Overall: PASS
+--- Extra invariants ---
+  127.0.0.1 present: False
+  Comment lines: 58
+  apps/web/.env.example still exists: True
+  apps/web/.env.example untouched (has mock toggles line): True

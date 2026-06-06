@@ -1,0 +1,77 @@
+Task 5 — init-supabase.sh verification
+========================================
+Date: 2026-06-06
+Script: scripts/init-supabase.sh
+Mode:  bash (GNU bash 5.2.21 via Git Bash on win32 host)
+
+
+1. Pre-flight
+-------------
+  $ ls -la scripts/init-supabase.sh
+  -rwxrwxrwx 1 linjunye linjunye 3710 Jun  6  2026 scripts/init-supabase.sh
+                                              ^^^^^ executable bit set via
+                                                    `bash -c 'chmod +x scripts/init-supabase.sh'`
+                                                    (Windows pwsh has no chmod)
+
+  $ bash -n scripts/init-supabase.sh && echo SYNTAX_OK
+  SYNTAX_OK
+
+
+2. Test 1 — env var validation
+------------------------------
+  $ env -u POSTGRES_HOST -u POSTGRES_PORT -u POSTGRES_DB \
+        -u POSTGRES_USER -u POSTGRES_PASSWORD \
+        bash scripts/init-supabase.sh
+  scripts/init-supabase.sh: line 26: POSTGRES_HOST: ERROR: POSTGRES_HOST is required
+  exit_code=1
+
+  Result: PASS — the `${VAR:?msg}` guard fires on the first missing var
+          (POSTGRES_HOST) and the script exits 1 before doing any work.
+
+
+3. Test 2 — Postgres unreachable (the spec's "60s timeout" case)
+----------------------------------------------------------------
+  $ env -i PATH="/usr/bin:/bin" \
+        POSTGRES_HOST=127.0.0.1 POSTGRES_PORT=19999 \
+        POSTGRES_DB=postgres POSTGRES_USER=postgres POSTGRES_PASSWORD=test \
+        timeout 70 bash scripts/init-supabase.sh
+  Waiting for Postgres at 127.0.0.1:19999 (db=postgres)...
+  ... <loop runs ~60 times> ...
+  ERROR: Postgres not ready after 60s at 127.0.0.1:19999
+  exit_code=1
+
+  Result: PASS — the script:
+          - reaches the wait loop (env-var guard did not block)
+          - times out after 60 seconds
+          - prints the spec'd error to stderr
+          - exits 1
+
+  Note on output noise: the Windows host does NOT have `pg_isready` on PATH
+  (it ships in the postgres:17-alpine container where the init script is
+  meant to run), so the 60 loop iterations each print
+    scripts/init-supabase.sh: line 59: pg_isready: command not found
+  This is purely a Windows-host artifact. Inside the Docker container,
+  pg_isready IS on PATH, returns a non-zero exit code (refused / no
+  response) each iteration, and the loop behaves the same way: 60
+  attempts, then the timeout error and exit 1.
+
+
+4. Spec checklist
+-----------------
+  [x] scripts/init-supabase.sh exists at repo root
+  [x] Script is executable (chmod +x)
+  [x] Uses `#!/usr/bin/env bash` shebang
+  [x] `set -euo pipefail` at the top
+  [x] Validates POSTGRES_HOST, POSTGRES_PORT, POSTGRES_DB,
+      POSTGRES_USER, POSTGRES_PASSWORD via `${VAR:?msg}`
+  [x] Loops with `pg_isready` for up to 60 seconds
+  [x] Exits 1 with a clear error on timeout
+  [x] Iterates `/supabase/migrations/*.sql` in sorted order (alphabetical
+      glob + glob guard) and applies each with `psql -v ON_ERROR_STOP=1 -f`
+  [x] Skips /supabase/seed.sql gracefully with a `Skipping ... (not
+      present)` message when absent
+  [x] Exits 0 on success path (final `echo "All migrations applied
+      successfully."; exit 0`)
+  [x] Uses absolute paths; no `cd` anywhere
+  [x] Does not touch supabase/migrations/ or create supabase/seed.sql
+  [x] Does not invoke npx supabase or any Node tool
