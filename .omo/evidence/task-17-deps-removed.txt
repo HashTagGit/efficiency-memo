@@ -1,0 +1,53 @@
+Task 17: Remove unused devDependencies
+Date: 2026-06-06
+==========================================
+
+REMOVALS
+--------
+1. apps/web/package.json
+   - Removed: "tsx": "^4.22.4"
+   - Location: devDependencies (was line 36)
+
+2. package.json (root)
+   - Removed: "@vitejs/plugin-react": "^5.2.0"
+   - Location: devDependencies (was line 19)
+
+VERIFICATION
+------------
+- apps/web still retains its own "@vitejs/plugin-react": "^4.7.0" (used by Vitest config) — NOT removed per MUST NOT rule
+- pnpm install: SUCCESS in 10s
+  - 3 packages removed from store
+  - Lockfile diff: 1 file changed, 2 insertions(+), 35 deletions(-)
+  - pnpm explicitly reported: "@vitejs/plugin-react 5.2.0" as removed
+- pnpm why tsx: empty (no package references it)
+- pnpm why @vitejs/plugin-react: empty (no package references it)
+- pnpm test: ALL PASSING
+  - packages/shared: 16 tests passed (1 file)
+  - apps/web: 284 tests passed (34 files)
+  - Total: 300/300 tests passing — matches Wave 3 baseline
+  - Duration: 24.49s
+
+LOCKFILE STATE
+--------------
+- The two package entries for "tsx@4.22.4" that remain in pnpm-lock.yaml are
+  optional peer dependencies of vite@5.4.21 (bundled inside vitest@2.1.9).
+  They are pre-existing transitive declarations, not reintroduced by this
+  change. "pnpm why tsx" returning empty confirms no active consumer exists;
+  pnpm keeps the optional peer declaration intact.
+
+FILES CHANGED (this task)
+-------------------------
+- apps/web/package.json    (-1 dep)
+- package.json             (-1 dep)
+- pnpm-lock.yaml           (regenerated, -35/+2 lines)
+
+OUT OF SCOPE (pre-existing, NOT touched)
+----------------------------------------
+- README.md
+- apps/web/.gitignore
+- .omo/plans/repo-cleanup.md
+- .omo/run-continuation/ses_1651897fbffeB5JqZ8rQQRu11q.json
+- .omo/evidence/task-18-gitignore.txt (untracked)
+
+RESULT: Task complete. 2 unused devDependencies removed, lockfile updated,
+full test suite green at baseline (300/300).

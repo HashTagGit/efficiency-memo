@@ -20,14 +20,15 @@ EfficiencyMemo/
 
 **Stack**: Next.js 16.2.6 (App Router), React 19.2.4, Tailwind v4, Supabase (`@supabase/ssr` + `@supabase/supabase-js`), Vitest, Playwright. Node >= 20, pnpm >= 9.
 
-**Tooling**: TypeScript strict mode, ESLint via `eslint-config-next`, Vitest for unit/integration, Playwright for E2E. The test suite runs 364 Vitest cases and 42 Playwright cases across the workspace.
+**Tooling**: TypeScript strict mode, ESLint via `eslint-config-next`, Vitest for unit/integration, Playwright for E2E. The test suite runs 300 Vitest cases (16 in `packages/shared` + 284 in `apps/web`) and 53 Playwright cases across the workspace.
 
 ## Patterns
 
 **Commands** (run from repo root):
 - `pnpm dev` runs every workspace in parallel
-- `pnpm build`, `pnpm lint`, `pnpm typecheck`, `pnpm test`, `pnpm test:e2e` fan out to all packages
-- Per-package: `pnpm --filter web test`, `pnpm --filter @memo/ui build`, etc.
+- `pnpm build` and `pnpm lint` run only in `apps/web` (the only workspace with those scripts)
+- `pnpm typecheck` and `pnpm test` run in every workspace that defines the script (`apps/web` and `packages/shared`); `pnpm test:e2e` runs in `apps/web` only
+- Per-package: `pnpm --filter web test`, `pnpm --filter @memo/shared typecheck`, etc.
 
 **Path aliases** (defined in `apps/web/tsconfig.json`):
 - `@/*` -> `apps/web/src/*`

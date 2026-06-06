@@ -59,12 +59,15 @@ pnpm dev
 
 After `pnpm dev`, the Next.js dev server starts on port 3000. Supabase services run on ports 54321 (API) and 54322 (Auth).
 
+The public landing page is served at `/` (rendered by `apps/web/src/app/page.tsx`) and introduces the available tools.
+
 ## Scripts
 
 | Command | Description |
 |---|---|
 | `pnpm dev` | Start dev server |
 | `pnpm build` | Build all packages |
+| `pnpm start` | Start production server |
 | `pnpm lint` | Run ESLint |
 | `pnpm typecheck` | TypeScript check |
 | `pnpm test` | Run Vitest |

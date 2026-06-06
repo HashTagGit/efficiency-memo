@@ -115,11 +115,11 @@ Tools self-register on module import. No manual wiring is required to add a tool
 
 ### Three Supabase Clients
 
-All Supabase access goes through one of three files:
+3 Supabase client files exist (`client.ts`, `server.ts`, `proxy.ts`) but only `client.ts` and `server.ts` are actively wired. `proxy.ts` exists but is not connected to any middleware.
 
-- `apps/web/src/lib/supabase/server.ts` — server components
-- `apps/web/src/lib/supabase/client.ts` — browser
-- `apps/web/src/lib/supabase/proxy.ts` — middleware / proxy contexts
+- `apps/web/src/lib/supabase/server.ts` — server components (wired)
+- `apps/web/src/lib/supabase/client.ts` — browser (wired)
+- `apps/web/src/lib/supabase/proxy.ts` — present on disk; **not currently wired to any middleware**
 
 ---
 
@@ -128,12 +128,12 @@ All Supabase access goes through one of three files:
 ### Vitest
 
 - Unit and integration tests mirror the source tree under `__tests__/` directories.
-- The workspace runs **364 Vitest cases** across `apps/web`, `packages/shared`, and `packages/ui`.
+- The workspace runs **300 Vitest cases** (16 in `packages/shared` + 284 in `apps/web`).
 
 ### Playwright
 
 - E2E specs live in `apps/web/e2e/*.spec.ts`.
-- The workspace runs **42 Playwright cases**.
+- The workspace runs **53 Playwright cases**.
 
 ### Mock Auth for Dev and E2E
 

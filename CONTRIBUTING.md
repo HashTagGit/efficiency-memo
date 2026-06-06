@@ -37,11 +37,11 @@ EfficiencyMemo/
 | Command | Description |
 |---|---|
 | `pnpm dev` | Start all workspaces in parallel |
-| `pnpm build` | Build all packages |
-| `pnpm lint` | Run ESLint |
-| `pnpm typecheck` | TypeScript check |
-| `pnpm test` | Run Vitest (364 cases) |
-| `pnpm test:e2e` | Run Playwright (42 specs) |
+| `pnpm build` | Build `apps/web` (only workspace with a build script) |
+| `pnpm lint` | Run ESLint in `apps/web` (only workspace with a lint script) |
+| `pnpm typecheck` | TypeScript check in `apps/web` and `packages/shared` |
+| `pnpm test` | Run Vitest (300 cases) |
+| `pnpm test:e2e` | Run Playwright (53 specs) |
 
 ## Adding a New Tool
 

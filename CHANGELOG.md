@@ -14,8 +14,8 @@ All notable changes to this project will be documented in this file.
 - pnpm workspace monorepo with `apps/web`, `packages/shared`, `packages/ui`
 - Next.js 16 App Router with TypeScript strict mode
 - Tailwind CSS v4 for styling
-- Vitest for unit/integration testing (364 cases)
-- Playwright for E2E testing (42 specs)
+- Vitest for unit/integration testing (300 cases)
+- Playwright for E2E testing (53 specs)
 - ESLint via `eslint-config-next`
 
 ### Infrastructure

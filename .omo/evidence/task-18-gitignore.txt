@@ -1,0 +1,79 @@
+TASK: task-18 — Add 5 gitignore entries to apps/web/.gitignore
+DATE: 2026-06-06
+OPERATOR: Sisyphus-Junior
+
+=== CHANGES ===
+
+File: apps/web/.gitignore
+Action: Append (no existing entries removed)
+
+Pre-edit state (lines 39-41):
+  # typescript
+  *.tsbuildinfo
+  next-env.d.ts
+
+Appended block (lines 43-48):
+  # local audit clutter (task-18)
+  /dev.log
+  /test-results/
+  /playwright-report/
+  task-26-*.png
+  pnpm-lock.yaml
+
+=== ENTRY RATIONALE ===
+
+1. /dev.log             — dev server output (Next.js dev captures)
+2. /test-results/       — Playwright test result artifacts
+3. /playwright-report/  — Playwright HTML report directory
+4. task-26-*.png        — Playwright screenshot output (task-scoped)
+5. pnpm-lock.yaml       — prevent re-tracking after deletion
+
+=== VERIFICATION ===
+
+[1] Pre-edit git status (apps/web/):
+    $ git status --short apps/web/
+    (no output)
+    -> Clean working tree before edit.
+
+[2] Post-edit git status (apps/web/):
+    $ git status --short apps/web/
+     M apps/web/.gitignore
+     M apps/web/package.json
+    -> Only apps/web/.gitignore modified by this task.
+       apps/web/package.json is unrelated to task-18.
+
+[3] git check-ignore matching (each pattern traced to its rule):
+    $ git check-ignore -v apps/web/dev.log apps/web/task-26-1.png apps/web/pnpm-lock.yaml
+    apps/web/.gitignore:44:/dev.log            apps/web/dev.log
+    apps/web/.gitignore:47:task-26-*.png       apps/web/task-26-1.png
+    apps/web/.gitignore:48:pnpm-lock.yaml      apps/web/pnpm-lock.yaml
+
+    $ git check-ignore -v apps/web/test-results/example.json apps/web/playwright-report/index.html
+    apps/web/.gitignore:45:/test-results/      apps/web/test-results/example.json
+    apps/web/.gitignore:46:/playwright-report/ apps/web/playwright-report/index.html
+
+    -> All 5 patterns are matched by their corresponding rule.
+       Directory patterns require a file inside the dir to match (expected git behavior).
+
+=== CONSTRAINTS HONORED ===
+
+[X] Did NOT modify root .gitignore
+[X] Did NOT remove existing entries (41 pre-existing lines preserved)
+[X] No new top-level dependency introduced
+[X] No remote Supabase project or migration created
+[X] Mock auth cookie contract untouched
+
+=== POST-EDIT FILE TAIL ===
+
+39: # typescript
+40: *.tsbuildinfo
+41: next-env.d.ts
+42:
+43: # local audit clutter (task-18)
+44: /dev.log
+45: /test-results/
+46: /playwright-report/
+47: task-26-*.png
+48: pnpm-lock.yaml
+
+END OF EVIDENCE

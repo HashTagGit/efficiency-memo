@@ -33,8 +33,7 @@
     "jsdom": "^29.0.2",
     "pg-mem": "^3.0.14",
     "tailwindcss": "^4",
-    "tsx": "^4.22.4",
     "typescript": "^5",
-    "vitest": "^2.0.0"
+    "vitest": "^3.0.0"
   }
 }

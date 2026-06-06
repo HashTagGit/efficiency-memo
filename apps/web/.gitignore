@@ -39,3 +39,10 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local audit clutter (task-18)
+/dev.log
+/test-results/
+/playwright-report/
+task-26-*.png
+pnpm-lock.yaml

@@ -689,7 +689,7 @@ Max Concurrent: 8 (Waves 1 & 4)
   - Message: `chore: remove one-off capture scripts from packages/ui/scripts/`
   - Files: `packages/ui/scripts/capture-shell.mjs`, `packages/ui/scripts/capture-sidebar.mjs`
 
-- [~] 12. Review & execute candidate 1 — sign-out-form.tsx + its test
+- [x] 12. Review & execute candidate 1 — sign-out-form.tsx + its test
 
   **What to do**:
   - **PRESENT to user**: `apps/web/src/components/auth/sign-out-form.tsx` exports `SignOutForm` with zero importers. The shell layout (`app/(shell)/shell-layout-client.tsx`) passes `signOutAction` directly to the `Shell` component's `onSignOut` prop — no form wrapper is rendered. The file's own test (`components/auth/__tests__/`) only imports this component.
@@ -744,7 +744,7 @@ Max Concurrent: 8 (Waves 1 & 4)
   - Message: `chore: remove unused sign-out-form.tsx (shell uses onSignOut prop directly)`
   - Files: `apps/web/src/components/auth/sign-out-form.tsx`
 
-- [~] 13. Review & execute candidate 2 — mock-bypass.ts
+- [x] 13. Review & execute candidate 2 — mock-bypass.ts
 
   **What to do**:
   - **PRESENT to user**: `apps/web/src/features/charger-reminder/auth/mock-bypass.ts` exports `mockBypassAction` (server action) with zero importers. The actual mock auth flow uses the API route at `app/api/mock-auth/bypass/route.ts`. This server action was never wired to any form or component. No test file imports it. AGENTS.md mentions it on line 10 — will need a doc update if deleted.
@@ -786,7 +786,7 @@ Max Concurrent: 8 (Waves 1 & 4)
   **Commit**: YES (if approved)
   - Message: `chore: remove unused mock-bypass server action (API route is canonical)`
 
-- [~] 14. Review & execute candidate 3 — update-device.ts
+- [x] 14. Review & execute candidate 3 — update-device.ts
 
   **What to do**:
   - **PRESENT to user**: `apps/web/src/app/(shell)/tools/charger-reminder/_actions/update-device.ts` exports `updateDeviceAction` (server action) with zero importers. The edit form at `[id]/edit/edit-form.tsx:6` calls `updateDevice` directly from `@/features/charger-reminder/database/devices` (which is also a `"use server"` file, so it's already a server action). The wrapper action is redundant. The sibling `create-device.ts` IS used — keep that.
@@ -822,7 +822,7 @@ Max Concurrent: 8 (Waves 1 & 4)
   **Commit**: YES (if approved)
   - Message: `chore: remove unused updateDeviceAction (edit form calls updateDevice directly)`
 
-- [~] 15. Review & execute candidate 4 — session-controller.tsx + check-in-modal.tsx + their tests
+- [x] 15. Review & execute candidate 4 — session-controller.tsx + check-in-modal.tsx + their tests
 
   **What to do**:
   - **PRESENT to user**: Two components in `apps/web/src/features/core-hour/components/`:
@@ -867,7 +867,7 @@ Max Concurrent: 8 (Waves 1 & 4)
   - Message: `chore: remove unused session-controller and check-in-modal (dashboard uses Dashboard+TagBar directly)`
   - Files: 4 files (2 components + 2 tests)
 
-- [~] 16. Review & execute candidate 5 — server-actions.ts (core-hour)
+- [x] 16. Review & execute candidate 5 — server-actions.ts (core-hour)
 
   **What to do**:
   - **PRESENT to user**: `apps/web/src/features/core-hour/database/server-actions.ts` declares 10 Supabase-backed server actions (`startSession`, `endSession`, `listSessions`, `createTag`, etc.). All 10 are ONLY used by their own test file (`__tests__/server-actions.test.ts`). The feature actually uses local-DB implementations in `hooks/context.tsx` + `hooks/db.ts`.

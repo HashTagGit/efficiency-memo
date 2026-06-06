@@ -1,0 +1,184 @@
+================================================================================
+TASK 23 - CONFIG DRIFT FIXES (9 items)
+================================================================================
+Date:           2026-06-06
+Repository:     D:\documents\code\git\release\efficiency-memo
+Node:           v24.14.1
+pnpm:           v10.33.0
+CI mode:        $env:CI="true" (required by pnpm v10)
+
+--------------------------------------------------------------------------------
+SCOPE
+--------------------------------------------------------------------------------
+Apply 9 specific config-drift fixes across the workspace. No behavior change.
+After edits: pnpm install must succeed, pnpm test must remain green.
+
+================================================================================
+CHANGES (1..9)
+================================================================================
+
+ 1. Root package.json — pin packageManager
+    File: package.json
+    Added field:  "packageManager": "pnpm@10.33.0"
+    Diff (excerpt):
+      +  "packageManager": "pnpm@10.33.0",
+
+ 2. apps/web vitest version skew fix
+    File: apps/web/package.json
+    Diff:
+      -    "vitest": "^2.0.0"
+      +    "vitest": "^3.0.0"
+    Rationale: packages/ui already declared "vitest": "^3.0.0". apps/web was on
+    ^2.0.0. Aligned to ^3.0.0 to remove skew.
+
+ 3. packages/shared — add devDeps (vitest + typescript)
+    File: packages/shared/package.json
+    Diff:
+      +  "devDependencies": {
+      +    "typescript": "^5",
+      +    "vitest": "^3.0.0"
+      +  }
+    Rationale: typecheck script and test script both required both binaries
+    declared in devDependencies, not just inherited from the workspace root.
+
+ 4. packages/ui — add test + lint scripts
+    File: packages/ui/package.json
+    Diff:
+      +  "scripts": {
+      +    "lint": "eslint .",
+      +    "test": "vitest run"
+      +  }
+    Note: vitest ^3.0.0 devDep was already present (left untouched).
+
+ 5. apps/web vitest config — workspace package aliases
+    File: apps/web/vitest.config.mts
+    Added aliases to match apps/web/tsconfig.json path mapping:
+      - '@memo/shared'   -> packages/shared/src
+      - '@memo/shared/'  -> packages/shared/src/
+      - '@memo/ui'       -> packages/ui/src
+      - '@memo/ui/'      -> packages/ui/src/
+    Rationale: tsconfig already had the path aliases; the Vitest config did
+    not, which would break any test that imports @memo/shared or @memo/ui.
+
+ 6. tsconfig.base.json — remove emit-related options
+    File: tsconfig.base.json
+    Removed: "declaration", "declarationMap", "sourceMap"
+    Rationale: every consumer (apps/web, packages/shared, packages/ui) sets
+    noEmit: true. declaration/declarationMap/sourceMap were misleading and
+    would cause tsc to attempt emit if any consumer failed to set noEmit.
+
+ 7. apps/web .env.example — document mock toggles
+    File: apps/web/.env.example
+    Added commented block:
+      # Mock auth toggles (NEVER enable in production)
+      # NEXT_PUBLIC_ENABLE_AUTH_MOCK=true
+      # AUTH_E2E_MOCK=true
+    Rationale: AGENTS.md documents these as optional env vars; .env.example
+    was missing them.
+
+ 8. supabase/ — generate config.toml
+    Command:  npx supabase init
+    Output:   "Finished supabase init."
+    Created:  supabase/config.toml (project_id = "efficiency-memo",
+              api port 54321, db port 54322, studio 54323, etc.)
+              supabase/.gitignore
+    Rationale: local Supabase CLI requires supabase/config.toml to be
+    present. Project name defaulted to the working-directory name.
+
+ 9. ESLint packages — add lint script
+    File: packages/shared/package.json
+    File: packages/ui/package.json
+    Diff (both):
+      +    "lint": "eslint .",
+    Rationale: root script "pnpm -r lint" walks every workspace that defines
+    "lint". Both packages were missing it; without the stub, "pnpm lint"
+    would skip them silently.
+
+================================================================================
+VERIFICATION
+================================================================================
+
+ 1. pnpm install
+ --------------------------------------------------------------------------------
+ Command:  $env:CI="true"; pnpm install --no-frozen-lockfile
+ Result:   PASS (exit 0)
+ Output:   Scope: all 4 workspace projects
+           Progress: resolved 644, reused 497, downloaded 0, added 0, done
+           Done in 10.5s using pnpm v10.33.0
+
+ Note: --no-frozen-lockfile was required because adding two new devDeps to
+ packages/shared (typescript + vitest) made the lockfile stale on first
+ install. The lockfile is now updated and future installs with CI=true
+ will succeed under frozen-lockfile again.
+
+ 2. pnpm test (FULL SUITE)
+ --------------------------------------------------------------------------------
+ Command:  $env:CI="true"; pnpm test
+ Result:   PASS (exit 0)
+ Scope:    3 of 4 workspace projects (root runs `pnpm -r test`)
+
+ packages/shared:
+   Vitest:  v3.2.4
+   Test Files: 1 passed (1)
+   Tests:      16 passed (16)
+   Duration:   1.07s
+
+ packages/ui:
+   Vitest:  v3.2.4
+   Test Files: 5 passed (5)
+   Tests:      41 passed (41)
+   Duration:   3.88s
+
+ apps/web:
+   Vitest:  v3.2.4
+   Test Files: 34 passed (34)
+   Tests:      284 passed (284)
+   Duration:   15.99s
+
+ ----------------------------------------------------------------------
+ TOTAL ACROSS WORKSPACES
+ ----------------------------------------------------------------------
+   Test Files: 40 passed (40)
+   Tests:      341 passed (341)
+
+ Note: AGENTS.md baseline of "300 Vitest cases (16 shared + 284 web)" was
+ the apps/web+shared subset. packages/ui contributes 41 additional tests
+ (5 files: button, card, modal, sidebar, shell) that run as part of
+ `pnpm -r test`. All 41 pass. Zero failures, zero skipped.
+
+ 3. git status (relevant changes)
+ --------------------------------------------------------------------------------
+ Command:  git status --short
+
+ Modified (this task):
+   M apps/web/.gitignore              (pre-existing change, not from this task)
+   M apps/web/package.json            (vitest ^2 -> ^3)
+   M apps/web/vitest.config.mts       (workspace package aliases)
+   M package.json                     (packageManager pin)
+   M packages/shared/package.json     (devDeps + lint script)
+   M packages/ui/package.json         (test + lint scripts)
+   M pnpm-lock.yaml                   (lockfile refresh from new devDeps)
+   M tsconfig.base.json               (removed declaration/declarationMap/sourceMap)
+
+ Untracked (this task):
+   ?? supabase/.gitignore             (generated by `supabase init`)
+   ?? supabase/config.toml            (generated by `supabase init`)
+
+================================================================================
+ACCEPTANCE CRITERIA
+================================================================================
+ [x] All 9 config drifts fixed
+ [x] pnpm install succeeds (exit 0, 10.5s)
+ [x] pnpm test passes (341/341 tests across 40 files, exit 0)
+ [x] Evidence saved to .omo/evidence/task-23-config-fixes.txt
+ [x] No source behavior change (config-only edits)
+ [x] supabase start NOT invoked (only `supabase init`)
+ [x] Pre-existing typecheck failure in packages/shared NOT fixed (out of scope)
+
+================================================================================
+CONCLUSION: Task 23 is GREEN.
+  - 9/9 config drifts fixed
+  - pnpm install: OK
+  - pnpm test:    341/341 passed across 40 files
+  - New files:    supabase/config.toml, supabase/.gitignore
+================================================================================
