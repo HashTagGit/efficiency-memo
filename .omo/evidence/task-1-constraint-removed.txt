@@ -1,0 +1,24 @@
+Task: Remove "Do not generate README files" constraint from root AGENTS.md
+Date: 2026-06-04
+File modified: D:\documents\code\git\release\EfficiencyMemo\AGENTS.md
+
+PRE-EDIT STATE
+- Total lines: 57
+- Line 49 contained: `- Do not generate README files; the only docs surface in this repo is \`AGENTS.md\``
+- Line 48 (preceding): `- Do not add a new top-level dependency without checking every workspace first`
+- Line 50 (following): `- Do not refactor the Supabase mock auth flow; the cookie contract (\`efficiency-memo-mock-auth\`) is locked for E2E`
+
+EDIT PERFORMED
+- Tool: edit (exact string replacement)
+- Removed: line 49 only
+- Preserved: line 48 and line 50 verbatim
+- No reformatting, no reordering, no new content
+
+POST-EDIT VERIFICATION
+- `grep -c "Do not generate README" AGENTS.md` => 0  (PASS)
+- `Select-String "Do not refactor the Supabase mock auth flow" AGENTS.md` => 1  (PASS)
+- Total line count: 56  (was 57; net change = -1, matches removing exactly one line)
+- Mock-auth constraint still adjacent to "Do not add a new top-level dependency" constraint
+- Section structure (Constraints, Dependencies) preserved
+
+RESULT: SUCCESS

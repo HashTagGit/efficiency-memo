@@ -1,0 +1,28 @@
+Task 10: Playwright-MCP Artifact Cleanup
+Date: 2026-06-06
+
+ACTIONS PERFORMED
+-----------------
+1. Tracked PNG removed via `git rm`:
+   - .playwright-mcp/page-2026-05-31T17-03-07-337Z.png
+
+2. Untracked YAML deleted from disk:
+   - .playwright-mcp/page-2026-06-05T06-52-08-438Z.yml
+
+VERIFICATION
+------------
+$ git ls-files ".playwright-mcp/*.png"
+(empty — no tracked PNGs remain)
+
+$ Test-Path ".playwright-mcp/page-2026-06-05T06-52-08-438Z.yml"
+False
+
+$ git status --short .playwright-mcp/
+D  .playwright-mcp/page-2026-05-31T17-03-07-337Z.png
+
+NOTES
+-----
+- .playwright-mcp/ directory preserved (other tracked YAML files remain).
+- The untracked YAML was a fresh test artifact, not in git index.
+- 14 tracked YAML files remain in .playwright-mcp/ (out of scope for this task).
+- Baseline: 380 tests pass (unchanged).

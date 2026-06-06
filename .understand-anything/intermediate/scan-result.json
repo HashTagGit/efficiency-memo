@@ -1,0 +1,2008 @@
+{
+  "name": "efficiency-memo",
+  "description": "EfficiencyMemo is a pnpm monorepo that hosts a unified tool gallery behind a single Next.js shell with Supabase authentication, currently shipping Charger-Reminder for battery tracking and CoreHour for time tracking. The shell discovers new productivity tools at build time through a dynamic feature registry under apps/web/src/features. Note: this project has over 100 source files; consider scoping analysis to a subdirectory for faster results.",
+  "languages": [
+    "css",
+    "html",
+    "javascript",
+    "json",
+    "markdown",
+    "mts",
+    "sql",
+    "typescript",
+    "yaml"
+  ],
+  "frameworks": [
+    "Next.js",
+    "React",
+    "Tailwind CSS",
+    "Vitest"
+  ],
+  "files": [
+    {
+      "path": ".codegraph/daemon.pid",
+      "language": "pid",
+      "sizeLines": 6,
+      "fileCategory": "code"
+    },
+    {
+      "path": ".npmrc",
+      "language": "unknown",
+      "sizeLines": 0,
+      "fileCategory": "code"
+    },
+    {
+      "path": ".omo/boulder.json",
+      "language": "json",
+      "sizeLines": 66,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".omo/evidence/task-1-config-check.txt",
+      "language": "txt",
+      "sizeLines": 13,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-1-constraint-removed.txt",
+      "language": "txt",
+      "sizeLines": 24,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-1-workspace-init.txt",
+      "language": "txt",
+      "sizeLines": 6,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-10-client-test.txt",
+      "language": "txt",
+      "sizeLines": 10,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-11-server-client-test.txt",
+      "language": "txt",
+      "sizeLines": 21,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-12-cr-migration.txt",
+      "language": "txt",
+      "sizeLines": 49,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-13-ch-migration.txt",
+      "language": "txt",
+      "sizeLines": 66,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-15-auth-redirect.txt",
+      "language": "txt",
+      "sizeLines": 24,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-15-callback-success.txt",
+      "language": "txt",
+      "sizeLines": 21,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-16-playwright-smoke.txt",
+      "language": "txt",
+      "sizeLines": 44,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-16-vitest-smoke.txt",
+      "language": "txt",
+      "sizeLines": 38,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-17-mobile-menu.txt",
+      "language": "txt",
+      "sizeLines": 19,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-17-shell-authenticated.txt",
+      "language": "txt",
+      "sizeLines": 71,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-18-registry-test.txt",
+      "language": "txt",
+      "sizeLines": 45,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-19-discovery-test.txt",
+      "language": "txt",
+      "sizeLines": 20,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-2-package-scaffold.txt",
+      "language": "txt",
+      "sizeLines": 58,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-21-cr-registry.txt",
+      "language": "txt",
+      "sizeLines": 36,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-22-types-test.txt",
+      "language": "txt",
+      "sizeLines": 66,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-23-crud-test.txt",
+      "language": "txt",
+      "sizeLines": 63,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-24-pgmem-test.txt",
+      "language": "txt",
+      "sizeLines": 33,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-25-heuristic-test.txt",
+      "language": "txt",
+      "sizeLines": 36,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-26-mock-auth.txt",
+      "language": "txt",
+      "sizeLines": 66,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-3-barrel-export.txt",
+      "language": "txt",
+      "sizeLines": 59,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-3-git-init.txt",
+      "language": "txt",
+      "sizeLines": 34,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-3-types-test.txt",
+      "language": "txt",
+      "sizeLines": 14,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-4-commit.txt",
+      "language": "txt",
+      "sizeLines": 10,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-4-license.txt",
+      "language": "txt",
+      "sizeLines": 40,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-4-ui-scaffold.txt",
+      "language": "txt",
+      "sizeLines": 50,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-5-cleanup.txt",
+      "language": "txt",
+      "sizeLines": 17,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-5-sidebar-toggle.txt",
+      "language": "txt",
+      "sizeLines": 14,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-6-changelog.txt",
+      "language": "txt",
+      "sizeLines": 24,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-6-dev-server-stderr.txt",
+      "language": "txt",
+      "sizeLines": 0,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-6-dev-server.txt",
+      "language": "txt",
+      "sizeLines": 21,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-6-typecheck.txt",
+      "language": "txt",
+      "sizeLines": 1,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-7-agents.md",
+      "language": "markdown",
+      "sizeLines": 38,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-7-redirect-stub.txt",
+      "language": "txt",
+      "sizeLines": 41,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-8-components.html",
+      "language": "html",
+      "sizeLines": 85,
+      "fileCategory": "markup"
+    },
+    {
+      "path": ".omo/evidence/task-8-research.txt",
+      "language": "txt",
+      "sizeLines": 32,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/evidence/task-9-env-test.txt",
+      "language": "txt",
+      "sizeLines": 10,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/notepads/project-docs/learnings.md",
+      "language": "markdown",
+      "sizeLines": 90,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/plans/efficiency-memo-foundation.md",
+      "language": "markdown",
+      "sizeLines": 3347,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/plans/post-foundation-cleanup.md",
+      "language": "markdown",
+      "sizeLines": 696,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/plans/project-docs.md",
+      "language": "markdown",
+      "sizeLines": 756,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/research/comparative-summary.md",
+      "language": "markdown",
+      "sizeLines": 196,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/research/pawpal-analysis.md",
+      "language": "markdown",
+      "sizeLines": 199,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/research/timetracker-analysis.md",
+      "language": "markdown",
+      "sizeLines": 152,
+      "fileCategory": "docs"
+    },
+    {
+      "path": ".omo/run-continuation/ses_16d7074abffeBkXXP6ML8Mi9dw.json",
+      "language": "json",
+      "sizeLines": 9,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".omo/run-continuation/ses_16ea8f4fcffehDFpiLRC4ptG6e.json",
+      "language": "json",
+      "sizeLines": 9,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".omo/run-continuation/ses_18146a7f4ffeI4OFilyDD84N41.json",
+      "language": "json",
+      "sizeLines": 9,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".omo/run-continuation/ses_18174880cffessuMmAg2TuWKEB.json",
+      "language": "json",
+      "sizeLines": 9,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".playwright-mcp/page-2026-05-31T16-35-57-562Z.yml",
+      "language": "yaml",
+      "sizeLines": 23,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".playwright-mcp/page-2026-05-31T17-03-01-036Z.yml",
+      "language": "yaml",
+      "sizeLines": 12,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".playwright-mcp/page-2026-05-31T17-03-20-206Z.yml",
+      "language": "yaml",
+      "sizeLines": 15,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".playwright-mcp/page-2026-05-31T17-03-32-294Z.yml",
+      "language": "yaml",
+      "sizeLines": 13,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".playwright-mcp/page-2026-05-31T17-03-45-176Z.yml",
+      "language": "yaml",
+      "sizeLines": 15,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".playwright-mcp/page-2026-05-31T17-03-52-613Z.yml",
+      "language": "yaml",
+      "sizeLines": 15,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".playwright-mcp/page-2026-06-01T01-09-23-919Z.yml",
+      "language": "yaml",
+      "sizeLines": 0,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".playwright-mcp/page-2026-06-01T01-09-38-469Z.yml",
+      "language": "yaml",
+      "sizeLines": 0,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".playwright-mcp/page-2026-06-01T01-11-18-762Z.yml",
+      "language": "yaml",
+      "sizeLines": 13,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".playwright-mcp/page-2026-06-01T01-13-22-320Z.yml",
+      "language": "yaml",
+      "sizeLines": 13,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".playwright-mcp/page-2026-06-01T01-13-45-701Z.yml",
+      "language": "yaml",
+      "sizeLines": 15,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".playwright-mcp/page-2026-06-01T01-14-09-776Z.yml",
+      "language": "yaml",
+      "sizeLines": 13,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".playwright-mcp/page-2026-06-01T01-15-16-006Z.yml",
+      "language": "yaml",
+      "sizeLines": 13,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".understand-anything/.understandignore",
+      "language": "unknown",
+      "sizeLines": 27,
+      "fileCategory": "code"
+    },
+    {
+      "path": ".understand-anything/config.json",
+      "language": "json",
+      "sizeLines": 1,
+      "fileCategory": "config"
+    },
+    {
+      "path": ".understand-anything/tmp/ua-scan-stderr.txt",
+      "language": "txt",
+      "sizeLines": 0,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "AGENTS.md",
+      "language": "markdown",
+      "sizeLines": 56,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "apps/web/AGENTS.md",
+      "language": "markdown",
+      "sizeLines": 52,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "apps/web/CLAUDE.md",
+      "language": "markdown",
+      "sizeLines": 1,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "apps/web/e2e/charger-reminder.spec.ts",
+      "language": "typescript",
+      "sizeLines": 411,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/e2e/core-hour.spec.ts",
+      "language": "typescript",
+      "sizeLines": 190,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/e2e/cross-tool.spec.ts",
+      "language": "typescript",
+      "sizeLines": 155,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/e2e/dashboard.spec.ts",
+      "language": "typescript",
+      "sizeLines": 16,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/e2e/mock-auth.spec.ts",
+      "language": "typescript",
+      "sizeLines": 88,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/e2e/smoke.spec.ts",
+      "language": "typescript",
+      "sizeLines": 14,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/e2e/tool-registry.spec.ts",
+      "language": "typescript",
+      "sizeLines": 276,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/eslint.config.mjs",
+      "language": "javascript",
+      "sizeLines": 18,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/next.config.ts",
+      "language": "typescript",
+      "sizeLines": 7,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/package.json",
+      "language": "json",
+      "sizeLines": 39,
+      "fileCategory": "config"
+    },
+    {
+      "path": "apps/web/playwright.config.ts",
+      "language": "typescript",
+      "sizeLines": 32,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/postcss.config.mjs",
+      "language": "javascript",
+      "sizeLines": 7,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/README.md",
+      "language": "markdown",
+      "sizeLines": 21,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "apps/web/src/app/(auth)/layout.tsx",
+      "language": "typescript",
+      "sizeLines": 18,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/(auth)/sign-in/page.tsx",
+      "language": "typescript",
+      "sizeLines": 17,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/(shell)/__tests__/cross-tool-navigation.test.tsx",
+      "language": "typescript",
+      "sizeLines": 274,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/(shell)/dashboard/__tests__/page.test.tsx",
+      "language": "typescript",
+      "sizeLines": 86,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/(shell)/dashboard/page.tsx",
+      "language": "typescript",
+      "sizeLines": 101,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/(shell)/layout.test.tsx",
+      "language": "typescript",
+      "sizeLines": 271,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/(shell)/layout.tsx",
+      "language": "typescript",
+      "sizeLines": 28,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/(shell)/shell-layout-client.tsx",
+      "language": "typescript",
+      "sizeLines": 47,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/(shell)/tools/[toolId]/not-found.tsx",
+      "language": "typescript",
+      "sizeLines": 18,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/(shell)/tools/[toolId]/page.tsx",
+      "language": "typescript",
+      "sizeLines": 63,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/(shell)/tools/charger-reminder/__tests__/form-pages.test.tsx",
+      "language": "typescript",
+      "sizeLines": 298,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/(shell)/tools/charger-reminder/__tests__/pages.test.tsx",
+      "language": "typescript",
+      "sizeLines": 194,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/(shell)/tools/charger-reminder/_actions/create-device.ts",
+      "language": "typescript",
+      "sizeLines": 18,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/(shell)/tools/charger-reminder/_actions/update-device.ts",
+      "language": "typescript",
+      "sizeLines": 18,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/(shell)/tools/charger-reminder/[id]/edit/edit-form.tsx",
+      "language": "typescript",
+      "sizeLines": 60,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/(shell)/tools/charger-reminder/[id]/edit/page.tsx",
+      "language": "typescript",
+      "sizeLines": 67,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/(shell)/tools/charger-reminder/[id]/page.tsx",
+      "language": "typescript",
+      "sizeLines": 72,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/(shell)/tools/charger-reminder/components/device-detail-page-wrapper.tsx",
+      "language": "typescript",
+      "sizeLines": 12,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/(shell)/tools/charger-reminder/components/device-list-page-wrapper.tsx",
+      "language": "typescript",
+      "sizeLines": 12,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/(shell)/tools/charger-reminder/new/page.tsx",
+      "language": "typescript",
+      "sizeLines": 52,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/(shell)/tools/charger-reminder/page.tsx",
+      "language": "typescript",
+      "sizeLines": 71,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/(shell)/tools/core-hour/__tests__/pages.test.tsx",
+      "language": "typescript",
+      "sizeLines": 275,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/(shell)/tools/core-hour/dashboard-page.tsx",
+      "language": "typescript",
+      "sizeLines": 26,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/(shell)/tools/core-hour/history/history-page.tsx",
+      "language": "typescript",
+      "sizeLines": 79,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/(shell)/tools/core-hour/history/page.tsx",
+      "language": "typescript",
+      "sizeLines": 20,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/(shell)/tools/core-hour/page.tsx",
+      "language": "typescript",
+      "sizeLines": 18,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/(shell)/tools/core-hour/settings/page.tsx",
+      "language": "typescript",
+      "sizeLines": 20,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/(shell)/tools/core-hour/settings/settings-page.tsx",
+      "language": "typescript",
+      "sizeLines": 71,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/(shell)/tools/core-hour/tags/page.tsx",
+      "language": "typescript",
+      "sizeLines": 20,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/(shell)/tools/core-hour/tags/tags-page.tsx",
+      "language": "typescript",
+      "sizeLines": 189,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/api/mock-auth/bypass/route.ts",
+      "language": "typescript",
+      "sizeLines": 28,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/auth/callback/route.ts",
+      "language": "typescript",
+      "sizeLines": 61,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/globals.css",
+      "language": "css",
+      "sizeLines": 161,
+      "fileCategory": "markup"
+    },
+    {
+      "path": "apps/web/src/app/layout.tsx",
+      "language": "typescript",
+      "sizeLines": 44,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/app/page.tsx",
+      "language": "typescript",
+      "sizeLines": 61,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/components/auth/__tests__/sign-in-form.test.tsx",
+      "language": "typescript",
+      "sizeLines": 138,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/components/auth/sign-in-form.tsx",
+      "language": "typescript",
+      "sizeLines": 178,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/components/auth/sign-out-form.tsx",
+      "language": "typescript",
+      "sizeLines": 16,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/charger-reminder/__tests__/registration.test.ts",
+      "language": "typescript",
+      "sizeLines": 40,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/charger-reminder/AGENTS.md",
+      "language": "markdown",
+      "sizeLines": 49,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "apps/web/src/features/charger-reminder/auth/__tests__/mock.test.ts",
+      "language": "typescript",
+      "sizeLines": 79,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/charger-reminder/auth/mock-bypass.ts",
+      "language": "typescript",
+      "sizeLines": 30,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/charger-reminder/auth/mock.ts",
+      "language": "typescript",
+      "sizeLines": 37,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/charger-reminder/component-loader.ts",
+      "language": "typescript",
+      "sizeLines": 7,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/charger-reminder/components/__tests__/device-card.test.tsx",
+      "language": "typescript",
+      "sizeLines": 103,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/charger-reminder/components/__tests__/device-detail.test.tsx",
+      "language": "typescript",
+      "sizeLines": 221,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/charger-reminder/components/__tests__/device-form.test.tsx",
+      "language": "typescript",
+      "sizeLines": 173,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/charger-reminder/components/__tests__/device-list.test.tsx",
+      "language": "typescript",
+      "sizeLines": 81,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/charger-reminder/components/device-card.tsx",
+      "language": "typescript",
+      "sizeLines": 42,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/charger-reminder/components/device-detail.tsx",
+      "language": "typescript",
+      "sizeLines": 141,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/charger-reminder/components/device-form.tsx",
+      "language": "typescript",
+      "sizeLines": 192,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/charger-reminder/components/device-list.tsx",
+      "language": "typescript",
+      "sizeLines": 26,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/charger-reminder/database/__tests__/fixtures.ts",
+      "language": "typescript",
+      "sizeLines": 225,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/charger-reminder/database/__tests__/schema.integration.test.ts",
+      "language": "typescript",
+      "sizeLines": 426,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/charger-reminder/database/__tests__/types.test.ts",
+      "language": "typescript",
+      "sizeLines": 239,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/charger-reminder/database/contracts.ts",
+      "language": "typescript",
+      "sizeLines": 202,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/charger-reminder/database/device-presets.ts",
+      "language": "typescript",
+      "sizeLines": 41,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/charger-reminder/database/devices.ts",
+      "language": "typescript",
+      "sizeLines": 576,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/charger-reminder/database/test-database.ts",
+      "language": "typescript",
+      "sizeLines": 72,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/charger-reminder/index.ts",
+      "language": "typescript",
+      "sizeLines": 5,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/charger-reminder/manifest.ts",
+      "language": "typescript",
+      "sizeLines": 9,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/charger-reminder/pages/device-list-page.tsx",
+      "language": "typescript",
+      "sizeLines": 11,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/charger-reminder/reminders/__tests__/heuristic-engine.test.ts",
+      "language": "typescript",
+      "sizeLines": 95,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/charger-reminder/reminders/heuristic-engine.ts",
+      "language": "typescript",
+      "sizeLines": 237,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/core-hour/__tests__/registration.test.ts",
+      "language": "typescript",
+      "sizeLines": 44,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/core-hour/__tests__/types.test.ts",
+      "language": "typescript",
+      "sizeLines": 230,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/core-hour/AGENTS.md",
+      "language": "markdown",
+      "sizeLines": 47,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "apps/web/src/features/core-hour/component-loader.ts",
+      "language": "typescript",
+      "sizeLines": 7,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/core-hour/components/__tests__/check-in-modal.test.tsx",
+      "language": "typescript",
+      "sizeLines": 271,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/core-hour/components/__tests__/dashboard.test.tsx",
+      "language": "typescript",
+      "sizeLines": 293,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/core-hour/components/__tests__/session-controller.test.tsx",
+      "language": "typescript",
+      "sizeLines": 403,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/core-hour/components/__tests__/tag-bar.test.tsx",
+      "language": "typescript",
+      "sizeLines": 126,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/core-hour/components/check-in-modal.tsx",
+      "language": "typescript",
+      "sizeLines": 268,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/core-hour/components/dashboard.tsx",
+      "language": "typescript",
+      "sizeLines": 153,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/core-hour/components/session-controller.tsx",
+      "language": "typescript",
+      "sizeLines": 123,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/core-hour/components/tag-bar.tsx",
+      "language": "typescript",
+      "sizeLines": 112,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/core-hour/database/__tests__/ch-schema.integration.test.ts",
+      "language": "typescript",
+      "sizeLines": 401,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/core-hour/database/__tests__/server-actions.test.ts",
+      "language": "typescript",
+      "sizeLines": 396,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/core-hour/database/server-actions.ts",
+      "language": "typescript",
+      "sizeLines": 238,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/core-hour/database/test-database.ts",
+      "language": "typescript",
+      "sizeLines": 65,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/core-hour/hooks/__tests__/use-history.test.tsx",
+      "language": "typescript",
+      "sizeLines": 154,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/core-hour/hooks/__tests__/use-session.test.tsx",
+      "language": "typescript",
+      "sizeLines": 132,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/core-hour/hooks/__tests__/use-tags.test.tsx",
+      "language": "typescript",
+      "sizeLines": 153,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/core-hour/hooks/__tests__/use-timer.test.ts",
+      "language": "typescript",
+      "sizeLines": 237,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/core-hour/hooks/context.tsx",
+      "language": "typescript",
+      "sizeLines": 217,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/core-hour/hooks/db.ts",
+      "language": "typescript",
+      "sizeLines": 33,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/core-hour/hooks/use-history.ts",
+      "language": "typescript",
+      "sizeLines": 60,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/core-hour/hooks/use-session.ts",
+      "language": "typescript",
+      "sizeLines": 5,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/core-hour/hooks/use-tags.ts",
+      "language": "typescript",
+      "sizeLines": 5,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/core-hour/hooks/use-timer.ts",
+      "language": "typescript",
+      "sizeLines": 109,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/core-hour/index.ts",
+      "language": "typescript",
+      "sizeLines": 6,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/core-hour/manifest.ts",
+      "language": "typescript",
+      "sizeLines": 15,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/core-hour/pages/dashboard-page.tsx",
+      "language": "typescript",
+      "sizeLines": 4,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/features/core-hour/types.ts",
+      "language": "typescript",
+      "sizeLines": 42,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/lib/__tests__/env.test.ts",
+      "language": "typescript",
+      "sizeLines": 36,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/lib/auth/__tests__/session.test.ts",
+      "language": "typescript",
+      "sizeLines": 60,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/lib/auth/actions.ts",
+      "language": "typescript",
+      "sizeLines": 31,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/lib/auth/session.ts",
+      "language": "typescript",
+      "sizeLines": 54,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/lib/env.ts",
+      "language": "typescript",
+      "sizeLines": 29,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/lib/shell/__tests__/tool-navigation.test.ts",
+      "language": "typescript",
+      "sizeLines": 154,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/lib/shell/tool-navigation.ts",
+      "language": "typescript",
+      "sizeLines": 48,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/lib/supabase/__tests__/client.test.ts",
+      "language": "typescript",
+      "sizeLines": 27,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/lib/supabase/__tests__/proxy.test.ts",
+      "language": "typescript",
+      "sizeLines": 40,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/lib/supabase/__tests__/server.test.ts",
+      "language": "typescript",
+      "sizeLines": 27,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/lib/supabase/__tests__/setup.ts",
+      "language": "typescript",
+      "sizeLines": 10,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/lib/supabase/client.ts",
+      "language": "typescript",
+      "sizeLines": 17,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/lib/supabase/proxy.ts",
+      "language": "typescript",
+      "sizeLines": 34,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/lib/supabase/server.ts",
+      "language": "typescript",
+      "sizeLines": 25,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/lib/tool-registry/__tests__/discovery.test.ts",
+      "language": "typescript",
+      "sizeLines": 56,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/lib/tool-registry/__tests__/registry.test.ts",
+      "language": "typescript",
+      "sizeLines": 67,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/lib/tool-registry/__tests__/routes.test.ts",
+      "language": "typescript",
+      "sizeLines": 74,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/lib/tool-registry/discovery.ts",
+      "language": "typescript",
+      "sizeLines": 60,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/lib/tool-registry/registry.ts",
+      "language": "typescript",
+      "sizeLines": 39,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/lib/tool-registry/routes.ts",
+      "language": "typescript",
+      "sizeLines": 38,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/src/lib/tool-registry/types.ts",
+      "language": "typescript",
+      "sizeLines": 5,
+      "fileCategory": "code"
+    },
+    {
+      "path": "apps/web/tsconfig.json",
+      "language": "json",
+      "sizeLines": 38,
+      "fileCategory": "config"
+    },
+    {
+      "path": "apps/web/vercel.json",
+      "language": "json",
+      "sizeLines": 6,
+      "fileCategory": "config"
+    },
+    {
+      "path": "apps/web/vitest.config.mts",
+      "language": "mts",
+      "sizeLines": 21,
+      "fileCategory": "code"
+    },
+    {
+      "path": "ARCHITECTURE.md",
+      "language": "markdown",
+      "sizeLines": 142,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "CHANGELOG.md",
+      "language": "markdown",
+      "sizeLines": 27,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "CONTRIBUTING.md",
+      "language": "markdown",
+      "sizeLines": 84,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "package.json",
+      "language": "json",
+      "sizeLines": 20,
+      "fileCategory": "config"
+    },
+    {
+      "path": "packages/shared/AGENTS.md",
+      "language": "markdown",
+      "sizeLines": 37,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "packages/shared/package.json",
+      "language": "json",
+      "sizeLines": 14,
+      "fileCategory": "config"
+    },
+    {
+      "path": "packages/shared/src/__tests__/types.test.ts",
+      "language": "typescript",
+      "sizeLines": 187,
+      "fileCategory": "code"
+    },
+    {
+      "path": "packages/shared/src/constants.ts",
+      "language": "typescript",
+      "sizeLines": 3,
+      "fileCategory": "code"
+    },
+    {
+      "path": "packages/shared/src/index.ts",
+      "language": "typescript",
+      "sizeLines": 2,
+      "fileCategory": "code"
+    },
+    {
+      "path": "packages/shared/src/types.ts",
+      "language": "typescript",
+      "sizeLines": 29,
+      "fileCategory": "code"
+    },
+    {
+      "path": "packages/shared/tsconfig.json",
+      "language": "json",
+      "sizeLines": 5,
+      "fileCategory": "config"
+    },
+    {
+      "path": "packages/shared/vitest.config.ts",
+      "language": "typescript",
+      "sizeLines": 9,
+      "fileCategory": "code"
+    },
+    {
+      "path": "packages/ui/AGENTS.md",
+      "language": "markdown",
+      "sizeLines": 37,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "packages/ui/package.json",
+      "language": "json",
+      "sizeLines": 21,
+      "fileCategory": "config"
+    },
+    {
+      "path": "packages/ui/scripts/capture-shell.mjs",
+      "language": "javascript",
+      "sizeLines": 137,
+      "fileCategory": "code"
+    },
+    {
+      "path": "packages/ui/scripts/capture-sidebar.mjs",
+      "language": "javascript",
+      "sizeLines": 117,
+      "fileCategory": "code"
+    },
+    {
+      "path": "packages/ui/src/__tests__/button.test.tsx",
+      "language": "typescript",
+      "sizeLines": 92,
+      "fileCategory": "code"
+    },
+    {
+      "path": "packages/ui/src/__tests__/card.test.tsx",
+      "language": "typescript",
+      "sizeLines": 63,
+      "fileCategory": "code"
+    },
+    {
+      "path": "packages/ui/src/__tests__/modal.test.tsx",
+      "language": "typescript",
+      "sizeLines": 78,
+      "fileCategory": "code"
+    },
+    {
+      "path": "packages/ui/src/__tests__/setup.ts",
+      "language": "typescript",
+      "sizeLines": 1,
+      "fileCategory": "code"
+    },
+    {
+      "path": "packages/ui/src/__tests__/shell.test.tsx",
+      "language": "typescript",
+      "sizeLines": 146,
+      "fileCategory": "code"
+    },
+    {
+      "path": "packages/ui/src/__tests__/sidebar.test.tsx",
+      "language": "typescript",
+      "sizeLines": 140,
+      "fileCategory": "code"
+    },
+    {
+      "path": "packages/ui/src/button.tsx",
+      "language": "typescript",
+      "sizeLines": 93,
+      "fileCategory": "code"
+    },
+    {
+      "path": "packages/ui/src/card.tsx",
+      "language": "typescript",
+      "sizeLines": 69,
+      "fileCategory": "code"
+    },
+    {
+      "path": "packages/ui/src/index.ts",
+      "language": "typescript",
+      "sizeLines": 6,
+      "fileCategory": "code"
+    },
+    {
+      "path": "packages/ui/src/modal.tsx",
+      "language": "typescript",
+      "sizeLines": 87,
+      "fileCategory": "code"
+    },
+    {
+      "path": "packages/ui/src/shell.tsx",
+      "language": "typescript",
+      "sizeLines": 128,
+      "fileCategory": "code"
+    },
+    {
+      "path": "packages/ui/src/sidebar.tsx",
+      "language": "typescript",
+      "sizeLines": 100,
+      "fileCategory": "code"
+    },
+    {
+      "path": "packages/ui/tsconfig.json",
+      "language": "json",
+      "sizeLines": 17,
+      "fileCategory": "config"
+    },
+    {
+      "path": "packages/ui/vitest.config.ts",
+      "language": "typescript",
+      "sizeLines": 8,
+      "fileCategory": "code"
+    },
+    {
+      "path": "pnpm-workspace.yaml",
+      "language": "yaml",
+      "sizeLines": 2,
+      "fileCategory": "config"
+    },
+    {
+      "path": "README.md",
+      "language": "markdown",
+      "sizeLines": 87,
+      "fileCategory": "docs"
+    },
+    {
+      "path": "supabase/migrations/001_cr_device_reminder.sql",
+      "language": "sql",
+      "sizeLines": 109,
+      "fileCategory": "data"
+    },
+    {
+      "path": "supabase/migrations/002_cr_seed_presets.sql",
+      "language": "sql",
+      "sizeLines": 53,
+      "fileCategory": "data"
+    },
+    {
+      "path": "supabase/migrations/003_ch_core_hour.sql",
+      "language": "sql",
+      "sizeLines": 70,
+      "fileCategory": "data"
+    },
+    {
+      "path": "tsconfig.base.json",
+      "language": "json",
+      "sizeLines": 21,
+      "fileCategory": "config"
+    }
+  ],
+  "totalFiles": 239,
+  "filteredByIgnore": 0,
+  "estimatedComplexity": "large",
+  "importMap": {
+    ".codegraph/daemon.pid": [],
+    ".npmrc": [],
+    ".omo/boulder.json": [],
+    ".omo/evidence/task-1-config-check.txt": [],
+    ".omo/evidence/task-1-constraint-removed.txt": [],
+    ".omo/evidence/task-1-workspace-init.txt": [],
+    ".omo/evidence/task-10-client-test.txt": [],
+    ".omo/evidence/task-11-server-client-test.txt": [],
+    ".omo/evidence/task-12-cr-migration.txt": [],
+    ".omo/evidence/task-13-ch-migration.txt": [],
+    ".omo/evidence/task-15-auth-redirect.txt": [],
+    ".omo/evidence/task-15-callback-success.txt": [],
+    ".omo/evidence/task-16-playwright-smoke.txt": [],
+    ".omo/evidence/task-16-vitest-smoke.txt": [],
+    ".omo/evidence/task-17-mobile-menu.txt": [],
+    ".omo/evidence/task-17-shell-authenticated.txt": [],
+    ".omo/evidence/task-18-registry-test.txt": [],
+    ".omo/evidence/task-19-discovery-test.txt": [],
+    ".omo/evidence/task-2-package-scaffold.txt": [],
+    ".omo/evidence/task-21-cr-registry.txt": [],
+    ".omo/evidence/task-22-types-test.txt": [],
+    ".omo/evidence/task-23-crud-test.txt": [],
+    ".omo/evidence/task-24-pgmem-test.txt": [],
+    ".omo/evidence/task-25-heuristic-test.txt": [],
+    ".omo/evidence/task-26-mock-auth.txt": [],
+    ".omo/evidence/task-3-barrel-export.txt": [],
+    ".omo/evidence/task-3-git-init.txt": [],
+    ".omo/evidence/task-3-types-test.txt": [],
+    ".omo/evidence/task-4-commit.txt": [],
+    ".omo/evidence/task-4-license.txt": [],
+    ".omo/evidence/task-4-ui-scaffold.txt": [],
+    ".omo/evidence/task-5-cleanup.txt": [],
+    ".omo/evidence/task-5-sidebar-toggle.txt": [],
+    ".omo/evidence/task-6-changelog.txt": [],
+    ".omo/evidence/task-6-dev-server-stderr.txt": [],
+    ".omo/evidence/task-6-dev-server.txt": [],
+    ".omo/evidence/task-6-typecheck.txt": [],
+    ".omo/evidence/task-7-agents.md": [],
+    ".omo/evidence/task-7-redirect-stub.txt": [],
+    ".omo/evidence/task-8-components.html": [],
+    ".omo/evidence/task-8-research.txt": [],
+    ".omo/evidence/task-9-env-test.txt": [],
+    ".omo/notepads/project-docs/learnings.md": [],
+    ".omo/plans/efficiency-memo-foundation.md": [],
+    ".omo/plans/post-foundation-cleanup.md": [],
+    ".omo/plans/project-docs.md": [],
+    ".omo/research/comparative-summary.md": [],
+    ".omo/research/pawpal-analysis.md": [],
+    ".omo/research/timetracker-analysis.md": [],
+    ".omo/run-continuation/ses_16d7074abffeBkXXP6ML8Mi9dw.json": [],
+    ".omo/run-continuation/ses_16ea8f4fcffehDFpiLRC4ptG6e.json": [],
+    ".omo/run-continuation/ses_18146a7f4ffeI4OFilyDD84N41.json": [],
+    ".omo/run-continuation/ses_18174880cffessuMmAg2TuWKEB.json": [],
+    ".playwright-mcp/page-2026-05-31T16-35-57-562Z.yml": [],
+    ".playwright-mcp/page-2026-05-31T17-03-01-036Z.yml": [],
+    ".playwright-mcp/page-2026-05-31T17-03-20-206Z.yml": [],
+    ".playwright-mcp/page-2026-05-31T17-03-32-294Z.yml": [],
+    ".playwright-mcp/page-2026-05-31T17-03-45-176Z.yml": [],
+    ".playwright-mcp/page-2026-05-31T17-03-52-613Z.yml": [],
+    ".playwright-mcp/page-2026-06-01T01-09-23-919Z.yml": [],
+    ".playwright-mcp/page-2026-06-01T01-09-38-469Z.yml": [],
+    ".playwright-mcp/page-2026-06-01T01-11-18-762Z.yml": [],
+    ".playwright-mcp/page-2026-06-01T01-13-22-320Z.yml": [],
+    ".playwright-mcp/page-2026-06-01T01-13-45-701Z.yml": [],
+    ".playwright-mcp/page-2026-06-01T01-14-09-776Z.yml": [],
+    ".playwright-mcp/page-2026-06-01T01-15-16-006Z.yml": [],
+    ".understand-anything/.understandignore": [],
+    ".understand-anything/config.json": [],
+    ".understand-anything/tmp/ua-scan-stderr.txt": [],
+    "AGENTS.md": [],
+    "apps/web/AGENTS.md": [],
+    "apps/web/CLAUDE.md": [],
+    "apps/web/e2e/charger-reminder.spec.ts": [
+      "apps/web/src/features/charger-reminder/auth/mock.ts"
+    ],
+    "apps/web/e2e/core-hour.spec.ts": [],
+    "apps/web/e2e/cross-tool.spec.ts": [],
+    "apps/web/e2e/dashboard.spec.ts": [],
+    "apps/web/e2e/mock-auth.spec.ts": [
+      "apps/web/src/features/charger-reminder/auth/mock.ts"
+    ],
+    "apps/web/e2e/smoke.spec.ts": [],
+    "apps/web/e2e/tool-registry.spec.ts": [],
+    "apps/web/eslint.config.mjs": [],
+    "apps/web/next.config.ts": [],
+    "apps/web/package.json": [],
+    "apps/web/playwright.config.ts": [],
+    "apps/web/postcss.config.mjs": [],
+    "apps/web/README.md": [],
+    "apps/web/src/app/(auth)/layout.tsx": [],
+    "apps/web/src/app/(auth)/sign-in/page.tsx": [
+      "apps/web/src/components/auth/sign-in-form.tsx"
+    ],
+    "apps/web/src/app/(shell)/__tests__/cross-tool-navigation.test.tsx": [
+      "apps/web/src/app/(shell)/shell-layout-client.tsx",
+      "apps/web/src/lib/tool-registry/registry.ts",
+      "packages/shared/src/index.ts"
+    ],
+    "apps/web/src/app/(shell)/dashboard/__tests__/page.test.tsx": [
+      "apps/web/src/app/(shell)/dashboard/page.tsx",
+      "apps/web/src/lib/tool-registry/registry.ts",
+      "packages/shared/src/index.ts"
+    ],
+    "apps/web/src/app/(shell)/dashboard/page.tsx": [
+      "apps/web/src/lib/tool-registry/registry.ts",
+      "packages/ui/src/index.ts"
+    ],
+    "apps/web/src/app/(shell)/layout.test.tsx": [
+      "apps/web/src/app/(shell)/shell-layout-client.tsx",
+      "packages/shared/src/index.ts"
+    ],
+    "apps/web/src/app/(shell)/layout.tsx": [
+      "apps/web/src/app/(shell)/shell-layout-client.tsx",
+      "apps/web/src/lib/auth/actions.ts",
+      "apps/web/src/lib/auth/session.ts",
+      "apps/web/src/lib/shell/tool-navigation.ts",
+      "packages/ui/src/index.ts"
+    ],
+    "apps/web/src/app/(shell)/shell-layout-client.tsx": [
+      "apps/web/src/lib/shell/tool-navigation.ts",
+      "packages/shared/src/index.ts",
+      "packages/ui/src/index.ts"
+    ],
+    "apps/web/src/app/(shell)/tools/[toolId]/not-found.tsx": [],
+    "apps/web/src/app/(shell)/tools/[toolId]/page.tsx": [
+      "apps/web/src/lib/tool-registry/registry.ts"
+    ],
+    "apps/web/src/app/(shell)/tools/charger-reminder/__tests__/form-pages.test.tsx": [
+      "apps/web/src/app/(shell)/tools/charger-reminder/[id]/edit/page.tsx",
+      "apps/web/src/app/(shell)/tools/charger-reminder/new/page.tsx",
+      "apps/web/src/features/charger-reminder/database/contracts.ts"
+    ],
+    "apps/web/src/app/(shell)/tools/charger-reminder/__tests__/pages.test.tsx": [
+      "apps/web/src/app/(shell)/tools/charger-reminder/[id]/page.tsx",
+      "apps/web/src/app/(shell)/tools/charger-reminder/page.tsx",
+      "apps/web/src/features/charger-reminder/database/contracts.ts"
+    ],
+    "apps/web/src/app/(shell)/tools/charger-reminder/_actions/create-device.ts": [
+      "apps/web/src/features/charger-reminder/components/device-form.tsx",
+      "apps/web/src/features/charger-reminder/database/devices.ts"
+    ],
+    "apps/web/src/app/(shell)/tools/charger-reminder/_actions/update-device.ts": [
+      "apps/web/src/features/charger-reminder/components/device-form.tsx",
+      "apps/web/src/features/charger-reminder/database/devices.ts"
+    ],
+    "apps/web/src/app/(shell)/tools/charger-reminder/[id]/edit/edit-form.tsx": [
+      "apps/web/src/features/charger-reminder/components/device-form.tsx",
+      "apps/web/src/features/charger-reminder/database/contracts.ts",
+      "apps/web/src/features/charger-reminder/database/devices.ts"
+    ],
+    "apps/web/src/app/(shell)/tools/charger-reminder/[id]/edit/page.tsx": [
+      "apps/web/src/app/(shell)/tools/charger-reminder/[id]/edit/edit-form.tsx",
+      "apps/web/src/features/charger-reminder/database/devices.ts",
+      "apps/web/src/lib/auth/session.ts"
+    ],
+    "apps/web/src/app/(shell)/tools/charger-reminder/[id]/page.tsx": [
+      "apps/web/src/app/(shell)/tools/charger-reminder/components/device-detail-page-wrapper.tsx",
+      "apps/web/src/features/charger-reminder/database/devices.ts",
+      "apps/web/src/features/charger-reminder/reminders/heuristic-engine.ts",
+      "apps/web/src/lib/auth/session.ts"
+    ],
+    "apps/web/src/app/(shell)/tools/charger-reminder/components/device-detail-page-wrapper.tsx": [
+      "apps/web/src/features/charger-reminder/components/device-detail.tsx",
+      "apps/web/src/features/charger-reminder/database/contracts.ts"
+    ],
+    "apps/web/src/app/(shell)/tools/charger-reminder/components/device-list-page-wrapper.tsx": [
+      "apps/web/src/features/charger-reminder/components/device-list.tsx",
+      "apps/web/src/features/charger-reminder/database/contracts.ts"
+    ],
+    "apps/web/src/app/(shell)/tools/charger-reminder/new/page.tsx": [
+      "apps/web/src/app/(shell)/tools/charger-reminder/_actions/create-device.ts",
+      "apps/web/src/features/charger-reminder/components/device-form.tsx",
+      "apps/web/src/features/charger-reminder/database/contracts.ts",
+      "apps/web/src/features/charger-reminder/database/devices.ts",
+      "apps/web/src/lib/auth/session.ts"
+    ],
+    "apps/web/src/app/(shell)/tools/charger-reminder/page.tsx": [
+      "apps/web/src/app/(shell)/tools/charger-reminder/components/device-list-page-wrapper.tsx",
+      "apps/web/src/features/charger-reminder/database/devices.ts",
+      "apps/web/src/features/charger-reminder/manifest.ts",
+      "apps/web/src/lib/auth/session.ts"
+    ],
+    "apps/web/src/app/(shell)/tools/core-hour/__tests__/pages.test.tsx": [
+      "apps/web/src/app/(shell)/tools/core-hour/history/page.tsx",
+      "apps/web/src/app/(shell)/tools/core-hour/page.tsx",
+      "apps/web/src/app/(shell)/tools/core-hour/settings/page.tsx",
+      "apps/web/src/app/(shell)/tools/core-hour/tags/page.tsx"
+    ],
+    "apps/web/src/app/(shell)/tools/core-hour/dashboard-page.tsx": [
+      "apps/web/src/features/core-hour/components/dashboard.tsx",
+      "apps/web/src/features/core-hour/components/tag-bar.tsx",
+      "apps/web/src/features/core-hour/hooks/use-session.ts",
+      "apps/web/src/features/core-hour/hooks/use-tags.ts"
+    ],
+    "apps/web/src/app/(shell)/tools/core-hour/history/history-page.tsx": [
+      "apps/web/src/features/core-hour/hooks/use-history.ts"
+    ],
+    "apps/web/src/app/(shell)/tools/core-hour/history/page.tsx": [
+      "apps/web/src/app/(shell)/tools/core-hour/history/history-page.tsx",
+      "apps/web/src/features/core-hour/manifest.ts"
+    ],
+    "apps/web/src/app/(shell)/tools/core-hour/page.tsx": [
+      "apps/web/src/app/(shell)/tools/core-hour/dashboard-page.tsx",
+      "apps/web/src/features/core-hour/manifest.ts"
+    ],
+    "apps/web/src/app/(shell)/tools/core-hour/settings/page.tsx": [
+      "apps/web/src/app/(shell)/tools/core-hour/settings/settings-page.tsx",
+      "apps/web/src/features/core-hour/manifest.ts"
+    ],
+    "apps/web/src/app/(shell)/tools/core-hour/settings/settings-page.tsx": [],
+    "apps/web/src/app/(shell)/tools/core-hour/tags/page.tsx": [
+      "apps/web/src/app/(shell)/tools/core-hour/tags/tags-page.tsx",
+      "apps/web/src/features/core-hour/manifest.ts"
+    ],
+    "apps/web/src/app/(shell)/tools/core-hour/tags/tags-page.tsx": [
+      "apps/web/src/features/core-hour/hooks/use-tags.ts"
+    ],
+    "apps/web/src/app/api/mock-auth/bypass/route.ts": [
+      "apps/web/src/features/charger-reminder/auth/mock.ts"
+    ],
+    "apps/web/src/app/auth/callback/route.ts": [
+      "apps/web/src/features/charger-reminder/auth/mock.ts",
+      "apps/web/src/lib/supabase/server.ts"
+    ],
+    "apps/web/src/app/globals.css": [],
+    "apps/web/src/app/layout.tsx": [
+      "apps/web/src/app/globals.css",
+      "packages/shared/src/index.ts"
+    ],
+    "apps/web/src/app/page.tsx": [
+      "packages/shared/src/index.ts"
+    ],
+    "apps/web/src/components/auth/__tests__/sign-in-form.test.tsx": [
+      "apps/web/src/components/auth/sign-in-form.tsx"
+    ],
+    "apps/web/src/components/auth/sign-in-form.tsx": [],
+    "apps/web/src/components/auth/sign-out-form.tsx": [
+      "apps/web/src/lib/auth/actions.ts"
+    ],
+    "apps/web/src/features/charger-reminder/__tests__/registration.test.ts": [
+      "apps/web/src/features/charger-reminder/index.ts",
+      "apps/web/src/lib/tool-registry/registry.ts"
+    ],
+    "apps/web/src/features/charger-reminder/AGENTS.md": [],
+    "apps/web/src/features/charger-reminder/auth/__tests__/mock.test.ts": [
+      "apps/web/src/features/charger-reminder/auth/mock.ts"
+    ],
+    "apps/web/src/features/charger-reminder/auth/mock-bypass.ts": [
+      "apps/web/src/features/charger-reminder/auth/mock.ts"
+    ],
+    "apps/web/src/features/charger-reminder/auth/mock.ts": [],
+    "apps/web/src/features/charger-reminder/component-loader.ts": [
+      "apps/web/src/features/charger-reminder/manifest.ts"
+    ],
+    "apps/web/src/features/charger-reminder/components/__tests__/device-card.test.tsx": [
+      "apps/web/src/features/charger-reminder/components/device-card.tsx",
+      "apps/web/src/features/charger-reminder/database/contracts.ts"
+    ],
+    "apps/web/src/features/charger-reminder/components/__tests__/device-detail.test.tsx": [
+      "apps/web/src/features/charger-reminder/components/device-detail.tsx",
+      "apps/web/src/features/charger-reminder/database/contracts.ts"
+    ],
+    "apps/web/src/features/charger-reminder/components/__tests__/device-form.test.tsx": [
+      "apps/web/src/features/charger-reminder/components/device-form.tsx",
+      "apps/web/src/features/charger-reminder/database/contracts.ts"
+    ],
+    "apps/web/src/features/charger-reminder/components/__tests__/device-list.test.tsx": [
+      "apps/web/src/features/charger-reminder/components/device-list.tsx",
+      "apps/web/src/features/charger-reminder/database/contracts.ts"
+    ],
+    "apps/web/src/features/charger-reminder/components/device-card.tsx": [
+      "apps/web/src/features/charger-reminder/database/contracts.ts",
+      "packages/ui/src/index.ts"
+    ],
+    "apps/web/src/features/charger-reminder/components/device-detail.tsx": [
+      "apps/web/src/features/charger-reminder/database/contracts.ts"
+    ],
+    "apps/web/src/features/charger-reminder/components/device-form.tsx": [
+      "apps/web/src/features/charger-reminder/database/contracts.ts",
+      "packages/ui/src/index.ts"
+    ],
+    "apps/web/src/features/charger-reminder/components/device-list.tsx": [
+      "apps/web/src/features/charger-reminder/components/device-card.tsx",
+      "apps/web/src/features/charger-reminder/database/contracts.ts"
+    ],
+    "apps/web/src/features/charger-reminder/database/__tests__/fixtures.ts": [
+      "apps/web/src/features/charger-reminder/database/contracts.ts"
+    ],
+    "apps/web/src/features/charger-reminder/database/__tests__/schema.integration.test.ts": [
+      "apps/web/src/features/charger-reminder/database/contracts.ts",
+      "apps/web/src/features/charger-reminder/database/device-presets.ts",
+      "apps/web/src/features/charger-reminder/database/test-database.ts"
+    ],
+    "apps/web/src/features/charger-reminder/database/__tests__/types.test.ts": [
+      "apps/web/src/features/charger-reminder/database/__tests__/fixtures.ts",
+      "apps/web/src/features/charger-reminder/database/contracts.ts"
+    ],
+    "apps/web/src/features/charger-reminder/database/contracts.ts": [],
+    "apps/web/src/features/charger-reminder/database/device-presets.ts": [
+      "apps/web/src/features/charger-reminder/database/contracts.ts"
+    ],
+    "apps/web/src/features/charger-reminder/database/devices.ts": [
+      "apps/web/src/features/charger-reminder/database/contracts.ts",
+      "apps/web/src/features/charger-reminder/database/device-presets.ts",
+      "apps/web/src/features/charger-reminder/reminders/heuristic-engine.ts",
+      "apps/web/src/lib/auth/session.ts",
+      "apps/web/src/lib/supabase/server.ts"
+    ],
+    "apps/web/src/features/charger-reminder/database/test-database.ts": [],
+    "apps/web/src/features/charger-reminder/index.ts": [
+      "apps/web/src/features/charger-reminder/component-loader.ts",
+      "apps/web/src/features/charger-reminder/manifest.ts",
+      "apps/web/src/lib/tool-registry/registry.ts"
+    ],
+    "apps/web/src/features/charger-reminder/manifest.ts": [
+      "packages/shared/src/index.ts"
+    ],
+    "apps/web/src/features/charger-reminder/pages/device-list-page.tsx": [],
+    "apps/web/src/features/charger-reminder/reminders/__tests__/heuristic-engine.test.ts": [
+      "apps/web/src/features/charger-reminder/reminders/heuristic-engine.ts"
+    ],
+    "apps/web/src/features/charger-reminder/reminders/heuristic-engine.ts": [
+      "apps/web/src/features/charger-reminder/database/contracts.ts",
+      "apps/web/src/features/charger-reminder/database/device-presets.ts"
+    ],
+    "apps/web/src/features/core-hour/__tests__/registration.test.ts": [
+      "apps/web/src/features/core-hour/index.ts",
+      "apps/web/src/lib/tool-registry/registry.ts"
+    ],
+    "apps/web/src/features/core-hour/__tests__/types.test.ts": [
+      "apps/web/src/features/core-hour/types.ts"
+    ],
+    "apps/web/src/features/core-hour/AGENTS.md": [],
+    "apps/web/src/features/core-hour/component-loader.ts": [
+      "apps/web/src/features/core-hour/manifest.ts"
+    ],
+    "apps/web/src/features/core-hour/components/__tests__/check-in-modal.test.tsx": [
+      "apps/web/src/features/core-hour/components/check-in-modal.tsx",
+      "apps/web/src/features/core-hour/types.ts"
+    ],
+    "apps/web/src/features/core-hour/components/__tests__/dashboard.test.tsx": [
+      "apps/web/src/features/core-hour/components/dashboard.tsx",
+      "apps/web/src/features/core-hour/hooks/context.tsx"
+    ],
+    "apps/web/src/features/core-hour/components/__tests__/session-controller.test.tsx": [
+      "apps/web/src/features/core-hour/components/session-controller.tsx",
+      "apps/web/src/features/core-hour/hooks/context.tsx",
+      "apps/web/src/features/core-hour/types.ts"
+    ],
+    "apps/web/src/features/core-hour/components/__tests__/tag-bar.test.tsx": [
+      "apps/web/src/features/core-hour/components/tag-bar.tsx",
+      "apps/web/src/features/core-hour/hooks/context.tsx"
+    ],
+    "apps/web/src/features/core-hour/components/check-in-modal.tsx": [
+      "apps/web/src/features/core-hour/types.ts",
+      "packages/ui/src/index.ts"
+    ],
+    "apps/web/src/features/core-hour/components/dashboard.tsx": [
+      "apps/web/src/features/core-hour/hooks/use-session.ts",
+      "apps/web/src/features/core-hour/hooks/use-timer.ts",
+      "packages/ui/src/index.ts"
+    ],
+    "apps/web/src/features/core-hour/components/session-controller.tsx": [
+      "apps/web/src/features/core-hour/components/check-in-modal.tsx",
+      "apps/web/src/features/core-hour/hooks/context.tsx",
+      "apps/web/src/features/core-hour/hooks/use-session.ts",
+      "apps/web/src/features/core-hour/hooks/use-timer.ts",
+      "apps/web/src/features/core-hour/types.ts"
+    ],
+    "apps/web/src/features/core-hour/components/tag-bar.tsx": [
+      "apps/web/src/features/core-hour/hooks/use-tags.ts",
+      "packages/ui/src/index.ts"
+    ],
+    "apps/web/src/features/core-hour/database/__tests__/ch-schema.integration.test.ts": [
+      "apps/web/src/features/core-hour/database/test-database.ts",
+      "apps/web/src/features/core-hour/types.ts"
+    ],
+    "apps/web/src/features/core-hour/database/__tests__/server-actions.test.ts": [
+      "apps/web/src/features/core-hour/database/server-actions.ts",
+      "apps/web/src/features/core-hour/types.ts"
+    ],
+    "apps/web/src/features/core-hour/database/server-actions.ts": [
+      "apps/web/src/features/core-hour/types.ts",
+      "apps/web/src/lib/supabase/server.ts"
+    ],
+    "apps/web/src/features/core-hour/database/test-database.ts": [],
+    "apps/web/src/features/core-hour/hooks/__tests__/use-history.test.tsx": [
+      "apps/web/src/features/core-hour/hooks/use-history.ts"
+    ],
+    "apps/web/src/features/core-hour/hooks/__tests__/use-session.test.tsx": [
+      "apps/web/src/features/core-hour/hooks/context.tsx"
+    ],
+    "apps/web/src/features/core-hour/hooks/__tests__/use-tags.test.tsx": [
+      "apps/web/src/features/core-hour/hooks/context.tsx"
+    ],
+    "apps/web/src/features/core-hour/hooks/__tests__/use-timer.test.ts": [
+      "apps/web/src/features/core-hour/hooks/use-timer.ts"
+    ],
+    "apps/web/src/features/core-hour/hooks/context.tsx": [
+      "apps/web/src/features/core-hour/hooks/db.ts",
+      "apps/web/src/features/core-hour/types.ts"
+    ],
+    "apps/web/src/features/core-hour/hooks/db.ts": [],
+    "apps/web/src/features/core-hour/hooks/use-history.ts": [
+      "apps/web/src/features/core-hour/hooks/db.ts",
+      "apps/web/src/features/core-hour/types.ts"
+    ],
+    "apps/web/src/features/core-hour/hooks/use-session.ts": [],
+    "apps/web/src/features/core-hour/hooks/use-tags.ts": [],
+    "apps/web/src/features/core-hour/hooks/use-timer.ts": [],
+    "apps/web/src/features/core-hour/index.ts": [
+      "apps/web/src/features/core-hour/component-loader.ts",
+      "apps/web/src/features/core-hour/manifest.ts",
+      "apps/web/src/lib/tool-registry/registry.ts"
+    ],
+    "apps/web/src/features/core-hour/manifest.ts": [
+      "packages/shared/src/index.ts"
+    ],
+    "apps/web/src/features/core-hour/pages/dashboard-page.tsx": [],
+    "apps/web/src/features/core-hour/types.ts": [],
+    "apps/web/src/lib/__tests__/env.test.ts": [
+      "apps/web/src/lib/env.ts"
+    ],
+    "apps/web/src/lib/auth/__tests__/session.test.ts": [
+      "apps/web/src/lib/auth/session.ts"
+    ],
+    "apps/web/src/lib/auth/actions.ts": [
+      "apps/web/src/features/charger-reminder/auth/mock.ts",
+      "apps/web/src/lib/supabase/server.ts"
+    ],
+    "apps/web/src/lib/auth/session.ts": [
+      "apps/web/src/features/charger-reminder/auth/mock.ts",
+      "apps/web/src/lib/supabase/server.ts"
+    ],
+    "apps/web/src/lib/env.ts": [],
+    "apps/web/src/lib/shell/__tests__/tool-navigation.test.ts": [
+      "apps/web/src/lib/shell/tool-navigation.ts",
+      "apps/web/src/lib/tool-registry/registry.ts",
+      "packages/shared/src/index.ts"
+    ],
+    "apps/web/src/lib/shell/tool-navigation.ts": [
+      "apps/web/src/lib/tool-registry/registry.ts",
+      "packages/shared/src/index.ts"
+    ],
+    "apps/web/src/lib/supabase/__tests__/client.test.ts": [
+      "apps/web/src/lib/supabase/client.ts"
+    ],
+    "apps/web/src/lib/supabase/__tests__/proxy.test.ts": [
+      "apps/web/src/lib/supabase/proxy.ts"
+    ],
+    "apps/web/src/lib/supabase/__tests__/server.test.ts": [
+      "apps/web/src/lib/supabase/server.ts"
+    ],
+    "apps/web/src/lib/supabase/__tests__/setup.ts": [],
+    "apps/web/src/lib/supabase/client.ts": [
+      "apps/web/src/lib/env.ts"
+    ],
+    "apps/web/src/lib/supabase/proxy.ts": [
+      "apps/web/src/lib/env.ts"
+    ],
+    "apps/web/src/lib/supabase/server.ts": [
+      "apps/web/src/lib/env.ts"
+    ],
+    "apps/web/src/lib/tool-registry/__tests__/discovery.test.ts": [
+      "apps/web/src/lib/tool-registry/discovery.ts",
+      "apps/web/src/lib/tool-registry/registry.ts",
+      "packages/shared/src/index.ts"
+    ],
+    "apps/web/src/lib/tool-registry/__tests__/registry.test.ts": [
+      "apps/web/src/lib/tool-registry/registry.ts",
+      "packages/shared/src/index.ts"
+    ],
+    "apps/web/src/lib/tool-registry/__tests__/routes.test.ts": [
+      "apps/web/src/lib/tool-registry/registry.ts",
+      "apps/web/src/lib/tool-registry/routes.ts",
+      "packages/shared/src/index.ts"
+    ],
+    "apps/web/src/lib/tool-registry/discovery.ts": [
+      "apps/web/src/lib/tool-registry/registry.ts",
+      "apps/web/src/lib/tool-registry/types.ts",
+      "packages/shared/src/index.ts"
+    ],
+    "apps/web/src/lib/tool-registry/registry.ts": [
+      "apps/web/src/lib/tool-registry/types.ts",
+      "packages/shared/src/index.ts"
+    ],
+    "apps/web/src/lib/tool-registry/routes.ts": [
+      "apps/web/src/lib/tool-registry/registry.ts"
+    ],
+    "apps/web/src/lib/tool-registry/types.ts": [
+      "packages/shared/src/index.ts"
+    ],
+    "apps/web/tsconfig.json": [],
+    "apps/web/vercel.json": [],
+    "apps/web/vitest.config.mts": [],
+    "ARCHITECTURE.md": [],
+    "CHANGELOG.md": [],
+    "CONTRIBUTING.md": [],
+    "package.json": [],
+    "packages/shared/AGENTS.md": [],
+    "packages/shared/package.json": [],
+    "packages/shared/src/__tests__/types.test.ts": [
+      "packages/shared/src/constants.ts",
+      "packages/shared/src/types.ts"
+    ],
+    "packages/shared/src/constants.ts": [],
+    "packages/shared/src/index.ts": [],
+    "packages/shared/src/types.ts": [],
+    "packages/shared/tsconfig.json": [],
+    "packages/shared/vitest.config.ts": [],
+    "packages/ui/AGENTS.md": [],
+    "packages/ui/package.json": [],
+    "packages/ui/scripts/capture-shell.mjs": [],
+    "packages/ui/scripts/capture-sidebar.mjs": [],
+    "packages/ui/src/__tests__/button.test.tsx": [
+      "packages/ui/src/button.tsx"
+    ],
+    "packages/ui/src/__tests__/card.test.tsx": [
+      "packages/ui/src/card.tsx"
+    ],
+    "packages/ui/src/__tests__/modal.test.tsx": [
+      "packages/ui/src/modal.tsx"
+    ],
+    "packages/ui/src/__tests__/setup.ts": [],
+    "packages/ui/src/__tests__/shell.test.tsx": [
+      "packages/ui/src/shell.tsx"
+    ],
+    "packages/ui/src/__tests__/sidebar.test.tsx": [
+      "packages/ui/src/sidebar.tsx"
+    ],
+    "packages/ui/src/button.tsx": [],
+    "packages/ui/src/card.tsx": [],
+    "packages/ui/src/index.ts": [],
+    "packages/ui/src/modal.tsx": [],
+    "packages/ui/src/shell.tsx": [
+      "packages/ui/src/sidebar.tsx"
+    ],
+    "packages/ui/src/sidebar.tsx": [],
+    "packages/ui/tsconfig.json": [],
+    "packages/ui/vitest.config.ts": [],
+    "pnpm-workspace.yaml": [],
+    "README.md": [],
+    "supabase/migrations/001_cr_device_reminder.sql": [],
+    "supabase/migrations/002_cr_seed_presets.sql": [],
+    "supabase/migrations/003_ch_core_hour.sql": [],
+    "tsconfig.base.json": []
+  }
+}

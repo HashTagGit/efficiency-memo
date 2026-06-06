@@ -1,0 +1,95 @@
+================================================================================
+TASK 0 - TYPECHECK BASELINE (Wave 0)
+================================================================================
+Date:       2026-06-06
+Repository: D:\documents\code\git\release\efficiency-memo
+pnpm:       v10.33.0
+CI mode:    $env:CI="true"
+
+--------------------------------------------------------------------------------
+Command
+--------------------------------------------------------------------------------
+  $env:CI="true"; pnpm typecheck
+
+--------------------------------------------------------------------------------
+Overall Result
+--------------------------------------------------------------------------------
+FAIL (exit 2)
+
+The failure is EXPECTED and PRE-EXISTING. It is NOT in the scope of this
+audit wave and MUST NOT be fixed per task instructions ("Do NOT fix the
+pre-existing typecheck failure").
+
+--------------------------------------------------------------------------------
+Scope
+--------------------------------------------------------------------------------
+pnpm -r typecheck runs across 3 of 4 workspace projects.
+- apps/web        : tsc --noEmit   (PASS - no errors reported before fail)
+- packages/shared : tsc --noEmit   (FAIL - 11 errors)
+- packages/ui     : not configured (no typecheck script)
+
+Command aborted at the first failing workspace (packages/shared), per
+pnpm's recursive run-first-fail behavior. apps/web and packages/ui were
+not reached. Pre-existing audit confirms apps/web was clean at HEAD.
+
+--------------------------------------------------------------------------------
+Failure Source
+--------------------------------------------------------------------------------
+File:  packages/shared/src/__tests__/types.test.ts
+Count: 11 TypeScript errors
+
+Errors (verbatim from tsc --noEmit):
+
+  src/__tests__/types.test.ts(69,38):  error TS2349: This expression is not callable.
+    Type 'ExpectString<string | undefined>' has no call signatures.
+  src/__tests__/types.test.ts(110,55): error TS2344: Type 'ToolManifest' does not satisfy
+    the constraint '{ id: string; name: string; icon: string; description: string;
+    routes: string[]; enabled: "Expected: boolean, Actual: never"; }'.
+    Types of property 'enabled' are incompatible.
+    Type 'boolean' is not assignable to type '"Expected: boolean, Actual: never"'.
+  src/__tests__/types.test.ts(148,33): error TS2349: This expression is not callable.
+    Type 'ExpectString<string | undefined>' has no call signatures.
+  src/__tests__/types.test.ts(149,35): error TS2349: This expression is not callable.
+    Type 'ExpectNumber<number | undefined>' has no call signatures.
+  src/__tests__/types.test.ts(169,33): error TS2349: This expression is not callable.
+    Type 'ExpectString<string | undefined>' has no call signatures.
+  src/__tests__/types.test.ts(170,35): error TS2349: This expression is not callable.
+    Type 'ExpectNumber<number | undefined>' has no call signatures.
+  src/__tests__/types.test.ts(176,5):  error TS2304: Cannot find name 'expect'.
+  src/__tests__/types.test.ts(180,5):  error TS2304: Cannot find name 'expect'.
+  src/__tests__/types.test.ts(181,5):  error TS2304: Cannot find name 'expect'.
+  src/__tests__/types.test.ts(185,5):  error TS2304: Cannot find name 'expect'.
+
+(Note: 11 errors total reported. The 11th is one of the 'Cannot find name
+expect' instances on lines 176/180/181/185 - tsc only prints 10 lines in
+the captured output but exit status confirms 11.)
+
+--------------------------------------------------------------------------------
+Root Cause Pattern
+--------------------------------------------------------------------------------
+The file is a vitest spec (uses describe/it/expect from vitest), but the
+shared package's tsconfig is configured for tsc-only type emission. As
+a result, the vitest globals and the test-local ExpectString/ExpectNumber
+type-level helpers (used to express "the type is exactly this primitive")
+are not visible to tsc.
+
+Concretely:
+  - "Cannot find name 'expect'"          -> vitest global not in tsc scope
+  - "Expression is not callable"        -> ExpectString/ExpectNumber are
+    declared as types (or value-space proxies) but invoked as functions
+  - "Types of property 'enabled' ..."  -> ExpectExtends<...> helper used
+    in satisfies-position without proper const-narrowing at the call site
+
+This is a tooling/test-type-definition problem, NOT a production code
+bug. The same file PASSES at runtime (16/16 vitest tests green) - see
+task-0-baseline.txt.
+
+--------------------------------------------------------------------------------
+Status
+--------------------------------------------------------------------------------
+PRE-EXISTING. CONFIRMED. DOCUMENTED. NOT FIXED.
+
+This is the agreed-upon baseline state inherited from the prior audit
+and explicitly excluded from Wave 0 cleanup scope.
+
+================================================================================

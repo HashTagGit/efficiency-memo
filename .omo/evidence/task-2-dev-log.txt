@@ -1,0 +1,10 @@
+task:           task-2-dev-log
+file:           apps/web/dev.log
+action:         delete (untracked clutter)
+timestamp:      2026-06-06T13:18:51+08:00
+existence_before: True
+untracked_check:   git ls-files apps/web/dev.log -> '' (empty = untracked)
+existence_after:  False
+method:         Test-Path -> git ls-files -> Remove-Item (no git rm)
+tools_used:     Test-Path, git ls-files, Remove-Item
+constraints:    must not git rm, must not modify sources

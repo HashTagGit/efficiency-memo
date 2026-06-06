@@ -1,0 +1,26 @@
+Task 1: Delete untracked console-errors.log
+
+Date: 2026-06-06
+Repo: efficiency-memo
+
+Pre-check:
+  Test-Path console-errors.log        = True
+  git ls-files console-errors.log     = (empty - file is untracked)
+  git status --short | grep console   = (no entry - confirms untracked)
+
+Action:
+  Remove-Item -LiteralPath "console-errors.log" -Force
+  - Used plain Remove-Item (not `git rm`) because file is untracked.
+  - No source files modified.
+
+Post-check:
+  Test-Path console-errors.log        = False
+  git ls-files console-errors.log     = (empty)
+  git status --short | grep console   = (no entry - deletion clean)
+
+Result: SUCCESS
+  - File deleted from repo root
+  - Zero impact on tracked files / git index
+  - Wave 1 zero-risk untracked file cleanup complete
+
+Baseline context: 380 tests pass (inherited from prior task).

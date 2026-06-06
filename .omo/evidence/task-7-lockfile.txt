@@ -1,0 +1,42 @@
+Task 7 - Duplicate lockfile removal
+=====================================
+Date: 2026-06-06
+Branch: main
+
+OBJECTIVE
+---------
+Remove duplicate lockfile `apps/web/pnpm-lock.yaml` from the git index while
+keeping the root `pnpm-lock.yaml` (the canonical workspace lockfile) intact.
+
+PRE-STATE
+---------
+- `git ls-files apps/web/pnpm-lock.yaml` => "apps/web/pnpm-lock.yaml"  (tracked)
+- `Test-Path apps/web/pnpm-lock.yaml`     => True                       (present on disk)
+- `Test-Path pnpm-lock.yaml`              => True                       (root present)
+- `git ls-files pnpm-lock.yaml`          => "pnpm-lock.yaml"            (root tracked)
+
+ACTION
+------
+$ git rm apps/web/pnpm-lock.yaml
+rm 'apps/web/pnpm-lock.yaml'
+
+POST-STATE
+----------
+- `git ls-files apps/web/pnpm-lock.yaml` => (empty)              (NOT_TRACKED)
+- `Test-Path apps/web/pnpm-lock.yaml`     => False               (removed from working tree)
+- `Test-Path pnpm-lock.yaml`              => True                (root PRESERVED)
+- `git status` shows: `D  apps/web/pnpm-lock.yaml` (staged deletion)
+- Root `pnpm-lock.yaml` untouched: no entry in `git status` for it.
+
+VERIFICATION
+------------
+- Duplicate removed from git index ........ PASS
+- Duplicate removed from working tree ..... PASS (Test-Path = False)
+- Root pnpm-lock.yaml preserved ............ PASS (Test-Path = True, no git status entry)
+- `git rm` exit code ........................ 0
+- No `pnpm install` executed inside apps/web/ (per MUST NOT DO)
+
+NOTES
+-----
+- Staged deletion has NOT been committed; the change is staged in the index only.
+- A subsequent commit is out of scope for this task.

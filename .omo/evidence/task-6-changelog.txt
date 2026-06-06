@@ -1,0 +1,24 @@
+CHANGELOG.md Verification Evidence
+==================================
+Date: 2026-06-04
+
+Checks performed:
+1. Select-String "## \[0\.0\.1\]" CHANGELOG.md
+   Result: PASS (found at line 5)
+
+2. Select-String "### Added" CHANGELOG.md
+   Result: PASS (found at line 7)
+
+3. Select-String "boulder\.json" CHANGELOG.md
+   Result: PASS (no output - not found)
+
+4. Select-String "\.omo/" CHANGELOG.md
+   Result: PASS (no output - not found)
+
+5. Select-String "\[0\.0\.1\]:" CHANGELOG.md
+   Result: PASS (found at line 27)
+
+6. (Get-Content CHANGELOG.md).Count
+   Result: PASS (27 lines, under 60 limit)
+
+All verification checks passed.

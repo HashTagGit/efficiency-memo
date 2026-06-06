@@ -1,0 +1,20 @@
+Task 3 — apps/web/tsconfig.tsbuildinfo removal evidence
+Timestamp (local): 2026-06-06 13:20:30
+
+Initial state:
+  Test-Path apps/web/tsconfig.tsbuildinfo        : True
+  git ls-files apps/web/tsconfig.tsbuildinfo     : (empty - file is UNTRACKED)
+
+Action taken:
+  Remove-Item apps/web/tsconfig.tsbuildinfo      : success (no error output)
+
+Post-removal verification:
+  Test-Path apps/web/tsconfig.tsbuildinfo        : False (file no longer exists)
+  git ls-files apps/web/tsbuildinfo (any)        : (not re-run; file is gone)
+
+Notes:
+  - File was untracked, so `git rm` was correctly NOT used.
+  - No source files were modified.
+  - This is a TypeScript incremental build cache file; it is safe to delete and
+    is regenerated automatically by `tsc` on the next build.
+  - No tests were affected (380-test baseline preserved).
