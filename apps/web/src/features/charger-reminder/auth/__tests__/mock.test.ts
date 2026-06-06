@@ -6,9 +6,15 @@ import {
   getMockAuthCookieOptions,
 } from "../mock";
 
+/** Bypass readonly ProcessEnv.NODE_ENV for test manipulation */
+const setNodeEnv = (val: string | undefined) => {
+  (process.env as Record<string, string | undefined>).NODE_ENV = val;
+};
+const getNodeEnv = () => process.env.NODE_ENV;
+
 describe("mock auth utilities", () => {
   describe("isMockAuthEnabled", () => {
-    const originalNodeEnv = process.env.NODE_ENV;
+    const originalNodeEnv = getNodeEnv();
 
     beforeEach(() => {
       vi.resetModules();
@@ -17,18 +23,18 @@ describe("mock auth utilities", () => {
     });
 
     afterEach(() => {
-      process.env.NODE_ENV = originalNodeEnv;
+      setNodeEnv(originalNodeEnv);
       delete process.env.NEXT_PUBLIC_ENABLE_AUTH_MOCK;
       delete process.env.AUTH_E2E_MOCK;
     });
 
     it("returns false in production", () => {
-      process.env.NODE_ENV = "production";
+      setNodeEnv("production");
       expect(isMockAuthEnabled()).toBe(false);
     });
 
     it("returns true when NEXT_PUBLIC_ENABLE_AUTH_MOCK=true in dev", () => {
-      process.env.NODE_ENV = "development";
+      setNodeEnv("development");
       process.env.NEXT_PUBLIC_ENABLE_AUTH_MOCK = "true";
       expect(isMockAuthEnabled()).toBe(true);
     });
@@ -49,14 +55,14 @@ describe("mock auth utilities", () => {
   });
 
   describe("getMockAuthCookieOptions", () => {
-    const originalNodeEnv = process.env.NODE_ENV;
+    const originalNodeEnv = getNodeEnv();
 
     afterEach(() => {
-      process.env.NODE_ENV = originalNodeEnv;
+      setNodeEnv(originalNodeEnv);
     });
 
     it("returns correct options for dev (non-production)", () => {
-      process.env.NODE_ENV = "development";
+      setNodeEnv("development");
       const options = getMockAuthCookieOptions();
       expect(options.httpOnly).toBe(true);
       expect(options.maxAge).toBe(60 * 60 * 24 * 7);
@@ -66,7 +72,7 @@ describe("mock auth utilities", () => {
     });
 
     it("returns secure=true for production", () => {
-      process.env.NODE_ENV = "production";
+      setNodeEnv("production");
       const options = getMockAuthCookieOptions();
       expect(options.secure).toBe(true);
     });

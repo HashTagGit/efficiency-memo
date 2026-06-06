@@ -65,7 +65,7 @@ function validSessionTag(overrides?: Partial<SessionTag>): SessionTag {
 // ---------------------------------------------------------------------------
 // Field-type shape helpers (type-level only — runtime no-ops)
 // ---------------------------------------------------------------------------
-function checkFieldTypes<T extends Record<string, unknown>>(_obj: T): void {
+function checkFieldTypes<T>(_obj: T): void {
   /* no-op */
 }
 

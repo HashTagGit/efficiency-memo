@@ -31,15 +31,13 @@ vi.mock("@/lib/auth/actions", () => ({
 }));
 
 // Mock tool navigation
-const mockGetActiveTool = vi.fn(() => "charger-reminder");
+const mockGetActiveTool = vi.fn((_pathname?: string) => "charger-reminder");
 
 vi.mock("@/lib/shell/tool-navigation", () => ({
-  getToolList: () => {
-    const { getRegisteredTools } = vi.importActual("@/lib/tool-registry/registry");
-    return getRegisteredTools()
+  getToolList: () =>
+    getRegisteredTools()
       .filter((t: { enabled: boolean }) => t.enabled)
-      .map((t: ToolManifest) => t);
-  },
+      .map((t: ToolManifest) => t),
   getActiveTool: (pathname: string) => mockGetActiveTool(pathname),
 }));
 

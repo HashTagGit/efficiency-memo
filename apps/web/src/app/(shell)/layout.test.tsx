@@ -25,7 +25,7 @@ vi.mock("@/lib/auth/actions", () => ({
 
 // Mock tool navigation
 const mockGetToolList = vi.fn(() => []);
-const mockGetActiveTool = vi.fn(() => "");
+const mockGetActiveTool = vi.fn((_pathname?: string) => "");
 
 vi.mock("@/lib/shell/tool-navigation", () => ({
   getToolList: () => mockGetToolList(),
