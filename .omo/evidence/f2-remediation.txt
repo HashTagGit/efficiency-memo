@@ -1,0 +1,139 @@
+============================================================
+F2 REMEDIATION: CODE-QUALITY FIXES
+============================================================
+Date:           2026-06-06
+Review source:  .omo/plans/docker-release.md (F2 section, lines 1130-1132)
+Commit:         (see git log)
+Files changed:  4 (release.yml, release/README.md, docker-entrypoint.sh, setup.ps1)
+Issues fixed:   5 (1 HIGH + 2 MEDIUM + 2 LOW)
+
+------------------------------------------------------------
+FIX 1 (HIGH) — .github/workflows/release.yml, line 85
+------------------------------------------------------------
+BEFORE:
+          mkdir -p release-dist
+          cp docker-compose.yml release-dist/
+          cp .env.docker release-dist/
+          if [ -f release/README.md ]; then
+            cp release/README.md release-dist/
+          else
+            echo "See ..." > release-dist/README.md
+          fi
+
+AFTER:
+          mkdir -p release-dist
+          cp docker-compose.yml release-dist/
+          cp .env.docker release-dist/
+          cp -r scripts release-dist/        <-- ADDED
+          if [ -f release/README.md ]; then
+            cp release/README.md release-dist/
+          else
+            echo "See ..." > release-dist/README.md
+          fi
+
+WHY: release/README.md Quick Start instructs users to run
+  `bash scripts/generate-keys.sh`, `bash scripts/setup.sh`, and
+  `pwsh scripts/setup.ps1`. Without the scripts/ copy, the release
+  zip was missing the very files the README points to.
+
+------------------------------------------------------------
+FIX 2 (MEDIUM) — release/README.md, line 43
+------------------------------------------------------------
+BEFORE:
+| Postgres | Database (internal Docker network) | 54322 |
+
+AFTER:
+| Postgres | Database (internal Docker network) | internal |
+
+WHY: docker-compose.yml has NO `ports:` mapping for the `db`
+  service (verified: lines 4-17 contain only image, environment,
+  volumes, healthcheck, restart). The previous row falsely implied
+  Postgres was exposed on host port 54322.
+
+------------------------------------------------------------
+FIX 3 (MEDIUM) — release/README.md, line 173
+------------------------------------------------------------
+BEFORE:
+- **Port 54321** in use: Change `54321:8000` to `54322:8000` (or any free port).
+
+AFTER:
+- **Port 54321** in use: Change `54321:8000` to `54381:8000` (or
+  any other free port — avoid 54322, which is the internal Postgres
+  port and not exposed to the host).
+
+WHY: 54322 was the host port claim in the table above (Fix 2) and
+  would have been double-booked. Switched to 54381 (free) and added
+  an explicit note that 54322 is the internal Postgres port.
+
+------------------------------------------------------------
+FIX 4 (LOW) — scripts/docker-entrypoint.sh, line 2
+------------------------------------------------------------
+BEFORE:
+#!/bin/sh
+set -e
+
+AFTER:
+#!/bin/sh
+set -euo pipefail
+
+WHY: Consistency with other bash scripts in the repo. `set -u`
+  catches unset variables (defense in depth — the script already
+  validates NEXT_PUBLIC_SUPABASE_URL/_ANON_KEY with `${VAR:-}`
+  defaults and explicit empty checks, so no behavior change).
+  `pipefail` is defensive (script has no pipes). `bash -n` parse: OK.
+
+------------------------------------------------------------
+FIX 5 (LOW) — scripts/setup.ps1, lines 62-64
+------------------------------------------------------------
+BEFORE:
+  Write-Info "Create it from the template and populate the placeholders:"
+  Write-Info "  Copy-Item .env.docker .env.docker  (already a template; just populate it)"
+  Write-Info "  bash scripts/generate-keys.sh | Out-File -Append .env.docker"
+
+AFTER:
+  Write-Info "Create it from the template and populate the placeholders:"
+  Write-Info "  The shipped .env.docker is itself the template (contains <replace-with-...> placeholders)."
+  Write-Info "  bash scripts/generate-keys.sh | Out-File -Append .env.docker"
+
+WHY: The original `Copy-Item .env.docker .env.docker` was a
+  self-copy (no-op) — likely a copy-paste artifact. The shipped
+  .env.docker IS the template (per its own header at .env.docker:1-10
+  and the absence of any .env.example at the repo root), so the
+  user just needs to populate it via the keys-generation command.
+  Replaced the meaningless self-copy line with a plain explanation.
+
+------------------------------------------------------------
+VERIFICATION RUN (after fixes)
+------------------------------------------------------------
+Fix 1:  Select-String "cp.*scripts" release.yml
+        -> "cp -r scripts release-dist/"    [PASS]
+
+Fix 2:  Select-String "54322" release/README.md
+        -> 1 match, line 173 (warning text in troubleshooting
+           explicitly noting 54322 is the internal Postgres port
+           and NOT a host port). Port table line 43 now says
+           "internal". [PASS]
+
+Fix 3:  Select-String "54322:8000" release/README.md
+        -> 0 matches    [PASS]
+
+Fix 4:  head -2 scripts/docker-entrypoint.sh
+        -> "#!/bin/sh" / "set -euo pipefail"    [PASS]
+        bash -n scripts/docker-entrypoint.sh    [PASS]
+
+Fix 5:  Select-String "Copy-Item \.env\.docker \.env\.docker" scripts/setup.ps1
+        -> 0 matches    [PASS]
+        [System.Management.Automation.Language.Parser]::ParseFile()
+        on setup.ps1 -> no parse errors    [PASS]
+
+Additional:
+  python yaml.safe_load(release.yml) -> 3 jobs (test, build, release)  [PASS]
+
+------------------------------------------------------------
+NO REGRESSIONS
+------------------------------------------------------------
+- 4 files modified, 0 created, 0 deleted
+- No new dependencies
+- No supabase/migrations/ changes
+- No mock-auth env var changes
+- No other files touched
