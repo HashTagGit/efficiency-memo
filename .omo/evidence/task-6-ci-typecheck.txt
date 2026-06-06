@@ -1,0 +1,52 @@
+Task 6 — CI typecheck scope fix
+=================================
+
+File:   .github/workflows/release.yml
+Job:    test
+Step:   "Type check"
+Line:   29
+
+BEFORE
+------
+  28:       - name: Type check
+  29:         run: pnpm typecheck
+
+AFTER
+-----
+  28:       - name: Type check
+  29:         run: pnpm --filter web typecheck
+
+git diff .github/workflows/release.yml
+---------------------------------------
+  diff --git a/.github/workflows/release.yml b/.github/workflows/release.yml
+  index 18e7eb7..a7d7aa2 100644
+  --- a/.github/workflows/release.yml
+  +++ b/.github/workflows/release.yml
+  @@ -26,7 +26,7 @@ jobs:
+          run: pnpm install --frozen-lockfile
+
+        - name: Type check
+  -     run: pnpm typecheck
+  +     run: pnpm --filter web typecheck
+
+        - name: Run unit tests
+          run: pnpm test
+
+Why
+---
+  At repo root, `pnpm typecheck` is defined in the workspace `package.json` as
+  `pnpm -r typecheck`, which fans out to every workspace that defines a
+  `typecheck` script. Both `apps/web` and `packages/shared` define it.
+  `packages/shared` currently contains pre-existing test-file type errors that
+  cause `tsc` to exit 2, failing the Release workflow on every tag push.
+
+  Scoping the step to `pnpm --filter web typecheck` runs typecheck only on
+  the deployable surface (`apps/web`, the only consumer that ships). The
+  shared package is still typechecked transitively by `apps/web`'s build,
+  so the release artifact is unaffected.
+
+Acceptance checklist
+--------------------
+  [x] Line 29 of release.yml reads: `        run: pnpm --filter web typecheck`
+  [x] All other lines unchanged (diff above shows one-line change only)
+  [x] `git diff .github/workflows/release.yml` shows only this one line changed

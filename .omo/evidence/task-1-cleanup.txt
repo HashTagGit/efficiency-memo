@@ -1,0 +1,77 @@
+Task 1: Cleanup stray C? directory with corrupted Unicode filename
+=================================================================
+Date: 2026-06-07
+Repo: D:\documents\code\git\release\efficiency-memo
+
+Initial state
+-------------
+- Directory existed: D:\documents\code\git\release\efficiency-memo\C?\
+- Actual byte content of the name: 0x43 0xEF 0x80 0xBA
+  - 0x43        = 'C'
+  - 0xEF 0x80 0xBA (UTF-8) = U+FFBA (Private Use Area; rendered as `?` by PowerShell)
+- .gitignore already contained: `C?*/` on line 43
+- Git status at start did NOT list `C?` as untracked (the .gitignore pattern
+  was already suppressing it from `git status`)
+
+Methods attempted
+----------------
+1. `[System.IO.Directory]::Delete('...\C?', $true)`
+   FAILED: "The filename, directory name, or volume label syntax is incorrect"
+   (PowerShell literal `?` does not match the on-disk U+FFBA bytes)
+2. `cmd /c 'rmdir /S /Q "C?\"'`
+   FAILED: same syntax error (cmd resolved `?` as wildcard and it did not
+   match the literal U+FFBA character)
+3. PowerShell pipe: `Get-ChildItem | Where-Object { $_.Name -like 'C?*' } | Remove-Item -Recurse -Force`
+   Not used - .NET read of the actual directory path succeeded first.
+4. Working method: read the directory with .NET (which returns the exact
+   on-disk bytes), then call `[System.IO.Directory]::Delete($info.FullName, $true)`.
+
+   Command sequence:
+       $dirs = [System.IO.Directory]::GetDirectories($repo, "C*")
+       $info = New-Object System.IO.DirectoryInfo($dirs[0])
+       [System.IO.Directory]::Delete($info.FullName, $true)
+
+Acceptance checks
+-----------------
+[1] `Test-Path 'D:\...\C?'` returns False (and C-prefixed dirs count = 0)
+    $ [System.IO.Directory]::GetDirectories($repo, "C*").Count
+    0
+    PASS
+
+[2] `git status --short` does NOT show `C?` in untracked list
+    $ git status --short
+     M .codegraph/daemon.pid
+     M .github/workflows/release.yml
+     M .gitignore
+     M .omo/boulder.json
+     M CHANGELOG.md
+     M README.md
+     M apps/web/package.json
+     M packages/ui/package.json
+    ?? .omo/evidence/task-6-ci-typecheck.txt
+    ?? .omo/notepads/docker-release/
+    ?? .omo/plans/release-0.0.1.md
+    ?? .omo/run-continuation/ses_1634abdc2ffeYN8urQg8OsgZ9i.json
+    ?? .omo/run-continuation/ses_163d19725ffebbVkCj8EkGSyNr.json
+    (no `C?` entry; the stray dir is gone and the .gitignore pattern is
+    also still in place as a belt-and-suspenders)
+    PASS
+
+[3] `git check-ignore -v "C?/dummy"` matches .gitignore
+    $ git check-ignore -v "C?/dummy"
+    .gitignore:43:C?*/\tC?/dummy
+    PASS
+
+Scope discipline
+----------------
+- Did not touch any other files in the repo.
+- The existing `.gitignore` rule `C?*/` was left in place (it is the same
+  pattern that suppressed the dir from `git status` before deletion and
+  now acts as a safety net against future occurrences).
+
+Notes
+-----
+- The directory name was U+FFBA, not U+FFFD as the user described. The
+  PowerShell console (and Windows cmd) both render it as `?`. Either way
+  the path was a corrupted Unicode filename and the deletion succeeded
+  with the .NET DirectoryInfo round-trip.
