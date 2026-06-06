@@ -82,6 +82,7 @@ jobs:
           mkdir -p release-dist
           cp docker-compose.yml release-dist/
           cp .env.docker release-dist/
+          cp -r scripts release-dist/
           if [ -f release/README.md ]; then
             cp release/README.md release-dist/
           else

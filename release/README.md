@@ -40,7 +40,7 @@ The Docker Compose stack runs seven services:
 |---|---|---|
 | Next.js | The EfficiencyMemo web app | 3000 |
 | Auth (GoTrue) | Supabase authentication API | 54321 |
-| Postgres | Database (internal Docker network) | 54322 |
+| Postgres | Database (internal Docker network) | internal |
 | Studio | Supabase management dashboard | 54323 |
 | Inbucket (Web) | Local email catch-all for magic links | 54324 |
 | Inbucket (SMTP) | Internal SMTP relay for auth emails | 54325 |
@@ -170,7 +170,7 @@ Your data lives in a named Docker volume (`pgdata`), so it survives container re
 If you see an error like `bind: address already in use`, another program is listening on one of the required ports. Common fixes:
 
 - **Port 3000** in use: Edit `docker-compose.yml` and change the host mapping from `3000:3000` to something like `3001:3000`. Then visit `http://localhost:3001`.
-- **Port 54321** in use: Change `54321:8000` to `54322:8000` (or any free port).
+- **Port 54321** in use: Change `54321:8000` to `54381:8000` (or any other free port — avoid 54322, which is the internal Postgres port and not exposed to the host).
 - **Port 54323 / 54324** in use: Adjust the left-hand side of the mapping the same way.
 
 Only edit the number before the colon. The number after the colon is the container's internal port and must stay the same.

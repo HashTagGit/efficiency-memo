@@ -60,7 +60,7 @@ $EnvFile = Join-Path $RepoRoot '.env.docker'
 if (-not (Test-Path $EnvFile)) {
   Write-Err ".env.docker not found at repo root"
   Write-Info "Create it from the template and populate the placeholders:"
-  Write-Info "  Copy-Item .env.docker .env.docker  (already a template; just populate it)"
+  Write-Info "  The shipped .env.docker is itself the template (contains <replace-with-...> placeholders)."
   Write-Info "  bash scripts/generate-keys.sh | Out-File -Append .env.docker"
   exit 1
 }

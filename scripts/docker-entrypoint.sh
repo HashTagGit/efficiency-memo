@@ -1,5 +1,5 @@
 #!/bin/sh
-set -e
+set -euo pipefail
 
 # Validate required env vars
 if [ -z "${NEXT_PUBLIC_SUPABASE_URL:-}" ]; then
