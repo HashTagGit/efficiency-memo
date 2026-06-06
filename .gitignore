@@ -7,9 +7,10 @@ node_modules/
 dist/
 .turbo/
 
-# Environment files (keep .env.example)
+# Environment files (keep .env.example, .env.docker template)
 .env*
 !.env.example
+!.env.docker
 
 # Test outputs
 test-results/
