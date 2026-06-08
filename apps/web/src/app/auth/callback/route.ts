@@ -57,5 +57,36 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(errorUrl);
   }
 
+  // If no code/token_hash, the auth token may be in the URL hash fragment
+  // (magic link flow with implicit grant). Browsers don't send hash to server,
+  // so we return a small HTML page that preserves the hash when redirecting.
+  // The destination page's Supabase client (detectSessionInUrl: true) will
+  // automatically pick up the token from the hash and establish the session.
+  if (!code && !tokenHash) {
+    const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Authenticating...</title>
+</head>
+<body>
+  <p>Authenticating...</p>
+  <script>
+    // Preserve the hash fragment (access_token) when redirecting.
+    // The destination page's Supabase client will detect it automatically.
+    var hash = window.location.hash;
+    if (hash && hash.includes('access_token')) {
+      window.location.replace('${redirectTo.toString()}' + hash);
+    } else {
+      window.location.replace('${errorUrl.toString()}');
+    }
+  </script>
+</body>
+</html>`;
+    return new NextResponse(html, {
+      headers: { "Content-Type": "text/html" },
+    });
+  }
+
   return NextResponse.redirect(errorUrl);
 }
