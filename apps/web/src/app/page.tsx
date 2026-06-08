@@ -1,8 +1,10 @@
 import { APP_NAME } from "@memo/shared";
+import { AuthHashHandler } from "@/components/auth/auth-hash-handler";
 
 export default function HomePage() {
   return (
     <main className="flex-1 flex flex-col items-center justify-center gap-8 px-6 py-12">
+      <AuthHashHandler />
       <div className="text-center space-y-4">
         <h1
           className="text-5xl md:text-7xl font-semibold tracking-tight"
