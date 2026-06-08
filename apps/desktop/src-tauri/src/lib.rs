@@ -1,10 +1,36 @@
 // Learn more about Tauri commands at https://v2.tauri.app/develop/calling-rust/
 
+use tauri_plugin_sql::{Builder, Migration, MigrationKind};
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let migrations = vec![
+        Migration {
+            version: 1,
+            description: "create charger reminder tables",
+            sql: include_str!("../migrations/0001_cr_device_reminder.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 2,
+            description: "seed charger reminder presets",
+            sql: include_str!("../migrations/0002_cr_seed_presets.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 3,
+            description: "create core hour tables",
+            sql: include_str!("../migrations/0003_ch_core_hour.sql"),
+            kind: MigrationKind::Up,
+        },
+    ];
+
     tauri::Builder::default()
-        // Tauri v2 plugin registration
-        // Plugin registrations will be added in Task 3 when migrations are integrated
+        .plugin(
+            tauri_plugin_sql::Builder::default()
+                .add_migrations("sqlite:efficiency-memo.db", migrations)
+                .build(),
+        )
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

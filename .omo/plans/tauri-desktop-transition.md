@@ -198,7 +198,7 @@ Max Concurrent: 5 (Wave 1)
 
   **Commit**: YES — `feat(desktop): port Supabase migrations to SQLite DDL`
 
-- [ ] 3. Set up Rust-side migration runner + plugin registration
+- [x] 3. Set up Rust-side migration runner + plugin registration
 
   **What to do**:
   - In `apps/desktop/src-tauri/src/lib.rs`:
@@ -253,7 +253,7 @@ Max Concurrent: 5 (Wave 1)
 
   **Commit**: YES — `feat(desktop): implement DB interface layer for both features`
 
-- [ ] 5. Reuse `@memo/shared` + `@memo/ui` via workspace protocol
+- [x] 5. Reuse `@memo/shared` + `@memo/ui` via workspace protocol
 
   **What to do**:
   - Verify `apps/desktop/package.json` has `@memo/shared: "workspace:*"` and `@memo/ui: "workspace:*"`
