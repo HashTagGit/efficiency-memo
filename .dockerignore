@@ -6,18 +6,32 @@
 #
 # Negation rules are honored: a leading `!` re-includes a path that was
 # excluded by an earlier pattern. Keep this in mind when reordering entries.
+#
+# IMPORTANT: bare directory patterns (e.g. `node_modules/`) match at the root
+# of the build context only. Workspace packages each have their own
+# `node_modules/`, `.next/`, etc., so use `**/node_modules/` to catch them all.
 # =============================================================================
 
 # -----------------------------------------------------------------------------
-# Build outputs
+# Build outputs (any depth — `**/` matches across workspace packages)
 # -----------------------------------------------------------------------------
-node_modules/
-.pnpm-store/
-.next/
-out/
-dist/
-build/
-.turbo/
+**/node_modules/
+**/.pnpm-store/
+**/.next/
+**/out/
+**/dist/
+**/build/
+**/.turbo/
+**/coverage/
+**/test-results/
+**/playwright-report/
+**/.playwright-mcp/
+
+# -----------------------------------------------------------------------------
+# TypeScript / bundler caches (any depth)
+# -----------------------------------------------------------------------------
+**/*.tsbuildinfo
+**/.cache/
 
 # -----------------------------------------------------------------------------
 # VCS metadata
@@ -34,14 +48,6 @@ build/
 .env*
 !.env.docker
 .env.docker.local
-
-# -----------------------------------------------------------------------------
-# Test artifacts
-# -----------------------------------------------------------------------------
-coverage/
-test-results/
-playwright-report/
-.playwright-mcp/
 
 # -----------------------------------------------------------------------------
 # Logs

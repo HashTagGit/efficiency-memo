@@ -67,7 +67,7 @@ if (-not (Test-Path $EnvFile)) {
 Write-Ok ".env.docker exists"
 
 # --- 5. Placeholder sanity check -------------------------------------------
-if (Select-String -Path $EnvFile -Pattern '<replace' -Quiet) {
+if (Select-String -Path $EnvFile -Pattern '=\s*<replace' -Quiet) {
   Write-Warn ".env.docker still contains unreplaced placeholders"
   Write-Info "Run: bash scripts/generate-keys.sh and paste the output into .env.docker"
   exit 1
@@ -78,7 +78,7 @@ Write-Ok ".env.docker is populated"
 Write-Info "Starting the stack (this may take a minute)..."
 Push-Location $RepoRoot
 try {
-  docker compose up -d
+    docker compose --env-file .env.docker up -d
   if ($LASTEXITCODE -ne 0) {
     throw "docker compose up -d exited with code $LASTEXITCODE"
   }

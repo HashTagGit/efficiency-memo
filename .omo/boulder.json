@@ -1,131 +1,67 @@
 {
   "schema_version": 2,
-  "active_work_id": "release-0-0-1-9fd2fa5e",
+  "active_work_id": "auth-routing-fix-e3e77467",
   "works": {
-    "release-0-0-1-9fd2fa5e": {
-      "work_id": "release-0-0-1-9fd2fa5e",
-      "active_plan": "D:\\documents\\code\\git\\release\\efficiency-memo\\.omo\\plans\\release-0.0.1.md",
-      "plan_name": "release-0.0.1",
+    "auth-routing-fix-e3e77467": {
+      "work_id": "auth-routing-fix-e3e77467",
+      "active_plan": "D:\\documents\\code\\git\\release\\efficiency-memo\\.omo\\plans\\auth-routing-fix.md",
+      "plan_name": "auth-routing-fix",
       "status": "completed",
-      "started_at": "2026-06-06T15:54:17.791Z",
-      "updated_at": "2026-06-06T16:58:09.063Z",
+      "started_at": "2026-06-08T08:42:36.359Z",
+      "updated_at": "2026-06-08T08:55:25.208Z",
       "session_ids": [
-        "opencode:ses_163d19725ffebbVkCj8EkGSyNr",
-        "opencode:ses_1622fa22dffeHN43fliMETod2C",
-        "opencode:ses_1622f9538ffeewLgJBK4NcQjWJ",
-        "opencode:ses_1622f78c6ffeHTc5rOiB7RgWan"
+        "opencode:ses_1626c350affeLiftDYMdIP5bc1"
       ],
       "session_origins": {
-        "opencode:ses_163d19725ffebbVkCj8EkGSyNr": "direct",
-        "opencode:ses_1622fa22dffeHN43fliMETod2C": "appended",
-        "opencode:ses_1622f9538ffeewLgJBK4NcQjWJ": "appended",
-        "opencode:ses_1622f78c6ffeHTc5rOiB7RgWan": "appended"
+        "opencode:ses_1626c350affeLiftDYMdIP5bc1": "direct"
       },
       "agent": "atlas",
       "task_sessions": {
         "todo:1": {
           "task_key": "todo:1",
           "task_label": "1",
-          "task_title": "`Property 'getRegisteredTools' does not exist on type 'Promise<ESModuleExports>'`",
-          "session_id": "opencode:ses_1622a1cafffePLaLZfLo5NeKtA",
-          "agent": "Sisyphus-Junior",
-          "category": "unspecified-high",
-          "started_at": "2026-06-06T16:13:22.908Z",
-          "ended_at": "2026-06-06T16:54:59.959Z",
-          "elapsed_ms": 2497051,
-          "status": "completed",
-          "updated_at": "2026-06-06T16:54:59.959Z"
-        },
-        "todo:7": {
-          "task_key": "todo:7",
-          "task_label": "7",
-          "task_title": "Tag v0.0.1 and push to origin",
-          "session_id": "opencode:ses_16246458effeDIX5xNhPR6CrZV",
+          "task_title": "New `kong` service using `nginx:alpine` image",
+          "session_id": "opencode:ses_159976474ffel3xmRGYMmc0T53",
           "agent": "Sisyphus-Junior",
           "category": "quick",
-          "started_at": "2026-06-06T16:16:56.044Z",
+          "started_at": "2026-06-08T08:44:24.258Z",
+          "ended_at": "2026-06-08T08:51:43.540Z",
+          "elapsed_ms": 439282,
           "status": "completed",
-          "updated_at": "2026-06-06T16:20:27.577Z",
-          "ended_at": "2026-06-06T16:20:27.577Z",
-          "elapsed_ms": 211533
-        },
-        "todo:8": {
-          "task_key": "todo:8",
-          "task_label": "8",
-          "task_title": "Monitor CI pipeline status",
-          "session_id": "opencode:ses_162436cddffeDDHLDDm6X2tNA4",
-          "agent": "Sisyphus-Junior",
-          "category": "quick",
-          "updated_at": "2026-06-06T16:58:09.063Z",
-          "started_at": "2026-06-06T16:30:41.269Z",
-          "status": "completed",
-          "ended_at": "2026-06-06T16:58:09.063Z",
-          "elapsed_ms": 1647794
+          "updated_at": "2026-06-08T08:51:43.540Z"
         }
       },
-      "ended_at": "2026-06-06T16:31:29.743Z",
-      "elapsed_ms": 2231952
+      "ended_at": "2026-06-08T08:55:25.208Z",
+      "elapsed_ms": 768849
     }
   },
-  "active_plan": "D:\\documents\\code\\git\\release\\efficiency-memo\\.omo\\plans\\release-0.0.1.md",
-  "started_at": "2026-06-06T15:54:17.791Z",
+  "active_plan": "D:\\documents\\code\\git\\release\\efficiency-memo\\.omo\\plans\\auth-routing-fix.md",
+  "started_at": "2026-06-08T08:42:36.359Z",
   "status": "completed",
-  "updated_at": "2026-06-06T16:58:09.063Z",
+  "updated_at": "2026-06-08T08:55:25.208Z",
   "session_ids": [
-    "opencode:ses_163d19725ffebbVkCj8EkGSyNr",
-    "opencode:ses_1622fa22dffeHN43fliMETod2C",
-    "opencode:ses_1622f9538ffeewLgJBK4NcQjWJ",
-    "opencode:ses_1622f78c6ffeHTc5rOiB7RgWan"
+    "opencode:ses_1626c350affeLiftDYMdIP5bc1"
   ],
   "session_origins": {
-    "opencode:ses_163d19725ffebbVkCj8EkGSyNr": "direct",
-    "opencode:ses_1622fa22dffeHN43fliMETod2C": "appended",
-    "opencode:ses_1622f9538ffeewLgJBK4NcQjWJ": "appended",
-    "opencode:ses_1622f78c6ffeHTc5rOiB7RgWan": "appended"
+    "opencode:ses_1626c350affeLiftDYMdIP5bc1": "direct"
   },
-  "plan_name": "release-0.0.1",
+  "plan_name": "auth-routing-fix",
   "task_sessions": {
     "todo:1": {
       "task_key": "todo:1",
       "task_label": "1",
-      "task_title": "`Property 'getRegisteredTools' does not exist on type 'Promise<ESModuleExports>'`",
-      "session_id": "opencode:ses_1622a1cafffePLaLZfLo5NeKtA",
-      "agent": "Sisyphus-Junior",
-      "category": "unspecified-high",
-      "started_at": "2026-06-06T16:13:22.908Z",
-      "ended_at": "2026-06-06T16:54:59.959Z",
-      "elapsed_ms": 2497051,
-      "status": "completed",
-      "updated_at": "2026-06-06T16:54:59.959Z"
-    },
-    "todo:7": {
-      "task_key": "todo:7",
-      "task_label": "7",
-      "task_title": "Tag v0.0.1 and push to origin",
-      "session_id": "opencode:ses_16246458effeDIX5xNhPR6CrZV",
+      "task_title": "New `kong` service using `nginx:alpine` image",
+      "session_id": "opencode:ses_159976474ffel3xmRGYMmc0T53",
       "agent": "Sisyphus-Junior",
       "category": "quick",
-      "started_at": "2026-06-06T16:16:56.044Z",
+      "started_at": "2026-06-08T08:44:24.258Z",
+      "ended_at": "2026-06-08T08:51:43.540Z",
+      "elapsed_ms": 439282,
       "status": "completed",
-      "updated_at": "2026-06-06T16:20:27.577Z",
-      "ended_at": "2026-06-06T16:20:27.577Z",
-      "elapsed_ms": 211533
-    },
-    "todo:8": {
-      "task_key": "todo:8",
-      "task_label": "8",
-      "task_title": "Monitor CI pipeline status",
-      "session_id": "opencode:ses_162436cddffeDDHLDDm6X2tNA4",
-      "agent": "Sisyphus-Junior",
-      "category": "quick",
-      "updated_at": "2026-06-06T16:58:09.063Z",
-      "started_at": "2026-06-06T16:30:41.269Z",
-      "status": "completed",
-      "ended_at": "2026-06-06T16:58:09.063Z",
-      "elapsed_ms": 1647794
+      "updated_at": "2026-06-08T08:51:43.540Z"
     }
   },
   "agent": "atlas",
-  "ended_at": "2026-06-06T16:31:29.743Z",
-  "elapsed_ms": 2231952
+  "ended_at": "2026-06-08T08:55:25.208Z",
+  "elapsed_ms": 768849
 }

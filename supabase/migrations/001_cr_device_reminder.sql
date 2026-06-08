@@ -97,14 +97,4 @@ create index if not exists idx_cr_computed_reminder_states_device_id
   on cr_computed_reminder_states (device_id);
 
 -- DOWN: Drop all cr_ tables (order matters for FK constraints)
-
-drop index if exists idx_cr_computed_reminder_states_device_id;
-drop table if exists cr_computed_reminder_states;
-drop table if exists cr_reminder_preferences;
-drop index if exists idx_cr_charge_events_charged_at;
-drop index if exists idx_cr_charge_events_device_id;
-drop table if exists cr_charge_events;
-drop index if exists idx_cr_devices_device_type;
-drop index if exists idx_cr_devices_user_id;
-drop table if exists cr_devices;
-drop table if exists cr_device_presets;
+-- NOTE: Down migrations should be in a separate file, not executed with up

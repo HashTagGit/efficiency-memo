@@ -1,0 +1,2 @@
+Fix: dashboard/page.test.tsx — Error 3
+- Added 'vi' to vitest imports (fixes "Cannot find name 'vi'")

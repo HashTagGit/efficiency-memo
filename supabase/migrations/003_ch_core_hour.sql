@@ -64,8 +64,9 @@ INSERT INTO ch_settings (key, value) VALUES ('interval_minutes', '30')
 ON CONFLICT (key) DO NOTHING;
 
 -- DOWN
-DROP TABLE IF EXISTS ch_check_in_entries;
-DROP TABLE IF EXISTS ch_check_ins;
-DROP TABLE IF EXISTS ch_sessions;
-DROP TABLE IF EXISTS ch_tags;
-DROP TABLE IF EXISTS ch_settings;
+-- NOTE: Down migrations should be in a separate file, not executed with up
+-- DROP TABLE IF EXISTS ch_check_in_entries;
+-- DROP TABLE IF EXISTS ch_check_ins;
+-- DROP TABLE IF EXISTS ch_sessions;
+-- DROP TABLE IF EXISTS ch_tags;
+-- DROP TABLE IF EXISTS ch_settings;

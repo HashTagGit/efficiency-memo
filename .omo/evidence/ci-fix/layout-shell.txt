@@ -1,0 +1,2 @@
+Fix: shell/layout.test.tsx — additional "Expected 0 arguments, but got 1"
+- Same pattern as cross-tool-navigation: vi.fn typed with _pathname?: string parameter

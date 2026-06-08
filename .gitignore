@@ -38,6 +38,3 @@ Thumbs.db
 # Tool-generated artifacts
 .understand-anything/
 .codegraph/
-
-# Stray clipboard artifacts (corrupted Unicode filenames)
-C?*/

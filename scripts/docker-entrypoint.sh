@@ -16,7 +16,7 @@ fi
 echo "Waiting for Supabase at $NEXT_PUBLIC_SUPABASE_URL..."
 i=0
 while [ $i -lt 60 ]; do
-  if curl -sf "$NEXT_PUBLIC_SUPABASE_URL/auth/v1/health" > /dev/null 2>&1; then
+  if wget -qO- "$NEXT_PUBLIC_SUPABASE_URL/health" > /dev/null 2>&1; then
     echo "Supabase is ready"
     break
   fi

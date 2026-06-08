@@ -8,6 +8,9 @@ export async function createSupabaseServerClient() {
   const { supabaseUrl, supabaseAnonKey } = getEnv();
 
   return createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookieOptions: {
+      name: "sb-auth-token",
+    },
     cookies: {
       getAll() {
         return cookieStore.getAll();

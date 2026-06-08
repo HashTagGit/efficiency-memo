@@ -12,7 +12,11 @@ export function createSupabaseBrowserClient(): SupabaseClient {
 
   const { supabaseUrl, supabaseAnonKey } = getEnv();
 
-  browserClient = createBrowserClient(supabaseUrl, supabaseAnonKey);
+  browserClient = createBrowserClient(supabaseUrl, supabaseAnonKey, {
+    cookieOptions: {
+      name: "sb-auth-token",
+    },
+  });
 
   return browserClient;
 }
