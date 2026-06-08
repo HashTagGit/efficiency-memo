@@ -12,7 +12,11 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 export async function GET(request: NextRequest) {
   const { searchParams } = new URL(request.url);
   const nextPath = searchParams.get("next") || "/dashboard";
-  const redirectUrl = new URL(nextPath, request.url);
+  // Use SITE_URL env var (set in Docker) so redirects point to the
+  // browser-facing origin (localhost:3000), not the container-internal
+  // bind address (0.0.0.0:3000) which browsers cannot access.
+  const siteUrl = process.env.SITE_URL || request.url;
+  const redirectUrl = new URL(nextPath, siteUrl);
 
   // Handle mock auth for E2E testing
   if (isMockAuthEnabled() && searchParams.get("mock_session") === "1") {
@@ -26,7 +30,7 @@ export async function GET(request: NextRequest) {
 
   // Default redirect path
   const redirectTo = redirectUrl;
-  const errorUrl = new URL("/sign-in", request.url);
+  const errorUrl = new URL("/sign-in", siteUrl);
   errorUrl.searchParams.set("error", "auth");
 
   const code = searchParams.get("code");
