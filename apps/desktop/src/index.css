@@ -1,0 +1,145 @@
+@import "tailwindcss";
+
+/* ─────────────────────────────────────────────────────────────
+   Design Tokens — EfficiencyMemo Desktop
+   Tailwind v4 CSS-based configuration
+   (mirrors apps/web/src/app/globals.css)
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+  /* ── Base ── */
+  --background: #0a0c10;
+  --background-soft: #11141a;
+  --foreground: #f6efdf;
+  --muted: #b2ab9d;
+  --border: rgba(229, 197, 137, 0.18);
+
+  /* ── Accent ── */
+  --accent: #d5a659;
+  --accent-strong: #f0cb86;
+
+  /* ── Semantic ── */
+  --success: #8ad49f;
+  --danger: #f7a4a4;
+  --info: #7ec8e3;
+  --warning: #e8c97a;
+
+  /* ── Surface ── */
+  --surface: rgba(20, 24, 31, 0.9);
+  --surface-strong: rgba(28, 33, 43, 0.94);
+  --card: rgba(24, 28, 36, 0.92);
+
+  /* ── Sidebar ── */
+  --color-sidebar: rgba(16, 19, 26, 0.95);
+  --color-sidebar-hover: rgba(28, 33, 43, 0.88);
+  --color-active: rgba(213, 166, 89, 0.14);
+  --color-card: var(--card);
+
+  /* ── Shadows ── */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.24);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.32);
+  --shadow-lg: 0 28px 80px rgba(0, 0, 0, 0.38);
+
+  /* ── Spacing ── */
+  --sidebar-width: 240px;
+  --sidebar-width-collapsed: 64px;
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Tailwind v4 @theme directive — maps tokens to utilities
+   ───────────────────────────────────────────────────────────── */
+
+@theme inline {
+  /* Colors */
+  --color-background: var(--background);
+  --color-background-soft: var(--background-soft);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-accent: var(--accent);
+  --color-accent-strong: var(--accent-strong);
+  --color-success: var(--success);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
+  --color-warning: var(--warning);
+  --color-surface: var(--surface);
+  --color-surface-strong: var(--surface-strong);
+  --color-card: var(--card);
+
+  /* Sidebar tokens */
+  --color-sidebar: var(--color-sidebar);
+  --color-sidebar-hover: var(--color-sidebar-hover);
+  --color-active: var(--color-active);
+
+  /* Typography */
+  --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Cormorant Garamond", ui-serif, Georgia, serif;
+  --font-mono: "Geist Mono", ui-monospace, monospace;
+
+  /* Spacing */
+  --spacing-sidebar: var(--sidebar-width);
+  --spacing-sidebar-collapsed: var(--sidebar-width-collapsed);
+
+  /* Shadows */
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+}
+
+/* ─────────────────────────────────────────────────────────────
+   Global styles
+   ───────────────────────────────────────────────────────────── */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  background-image:
+    radial-gradient(circle at top, rgba(213, 166, 89, 0.17), transparent 30%),
+    radial-gradient(circle at 20% 20%, rgba(136, 106, 61, 0.16), transparent 25%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.02), transparent 55%),
+    linear-gradient(180deg, #10141c 0%, #0a0c10 72%);
+  min-height: 100vh;
+  margin: 0;
+}
+
+/* Subtle grid overlay */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  background-size: 96px 96px;
+  mask-image: radial-gradient(circle at center, black, transparent 85%);
+  opacity: 0.18;
+}
+
+/* Selection */
+::selection {
+  background: rgba(213, 166, 89, 0.34);
+  color: #fff9ef;
+}
+
+/* Interactive transitions */
+a,
+button,
+input {
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease,
+    opacity 180ms ease,
+    transform 180ms ease,
+    box-shadow 180ms ease;
+}

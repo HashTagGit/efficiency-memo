@@ -1,0 +1,13 @@
+{
+  "$schema": "https://raw.githubusercontent.com/nicegui-dev/nicegui/main/tauri.capability.v2.schema.json",
+  "identifier": "default",
+  "description": "Default capability for EfficiencyMemo desktop",
+  "windows": ["main"],
+  "permissions": [
+    "core:default",
+    "sql:default",
+    "sql:allow-execute",
+    "sql:allow-select",
+    "sql:allow-load"
+  ]
+}
