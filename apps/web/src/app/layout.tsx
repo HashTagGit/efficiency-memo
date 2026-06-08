@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Manrope, Cormorant_Garamond } from "next/font/google";
 import { Geist_Mono } from "next/font/google";
 import { APP_NAME } from "@memo/shared";
+import { AuthHashHandler } from "@/components/auth/auth-hash-handler";
 import "./globals.css";
 
 const manrope = Manrope({
@@ -38,7 +39,10 @@ export default function RootLayout({
       lang="en"
       className={`${manrope.variable} ${cormorant.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <AuthHashHandler />
+        {children}
+      </body>
     </html>
   );
 }
