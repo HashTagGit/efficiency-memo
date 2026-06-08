@@ -73,4 +73,22 @@ Additionally, 3 pre-existing charger-reminder files had `getCurrentUser()` retur
 - **Severity**: Low
 - **Context**: `get_device_id()` hashes `dirs::data_dir()` (e.g., `C:\Users\<user>\AppData\Roaming`), not the Tauri app data dir (`C:\Users\<user>\AppData\Roaming\com.efficiency-memo.app`). This means the device ID is stable across all apps for the same user on the same machine, not specific to EfficiencyMemo. For a single-app desktop tool this is functionally identical, but it may cause collisions if multiple apps use the same hashing scheme on the same WebDAV server.
 
+## 2026-06-09 — Sync UI (Task 11)
+
+### No `@memo/ui` Input component
+- **Status**: Accepted limitation
+- **Severity**: Low
+- **Context**: `@memo/ui` exports `Button`, `Card`, `Modal`, `Sidebar`, `Shell` but no `Input`. The sync settings page uses native `<input>` with Tailwind utility classes instead. If a reusable `Input` primitive is needed in the future, it should be added to `@memo/ui` (out of scope for this task per constraint "Do NOT modify existing workspace packages").
+
+### Settings navigation via synthetic tool manifest
+- **Status**: Accepted pattern
+- **Severity**: Low
+- **Context**: `Shell` / `Sidebar` only accept `ToolManifest[]` for navigation. The settings page is not a real tool (no `registerTool()` call, no component loader). It is injected as a synthetic manifest in `ShellLayout` so it appears in the sidebar without modifying `@memo/ui`. This pattern can be extended for other non-tool pages (e.g., user profile, about) if needed.
+
+### Password cleared from state after save
+- **Status**: By design
+- **Severity**: None
+- **Context**: After "Save Credentials" succeeds, `setPassword("")` is called to clear the password from React state. The password only exists in the input field and OS keychain — never in `localStorage`, `sessionStorage`, or any JS variable after the invoke returns. This matches the security requirement "Do NOT store the WebDAV password in localStorage, sessionStorage, or any JS state after saving to keychain".
+
+
 

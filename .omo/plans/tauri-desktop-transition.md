@@ -411,7 +411,7 @@ Max Concurrent: 5 (Wave 1)
 
   **Commit**: YES — `feat(desktop): implement WebDAV sync engine`
 
-- [ ] 11. Sync UI + settings page
+- [x] 11. Sync UI + settings page
 
   **What to do**:
   - Create `apps/desktop/src/pages/settings/sync.tsx`:

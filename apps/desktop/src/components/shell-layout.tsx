@@ -8,8 +8,10 @@ import { getCurrentUser, signOut } from "../lib/auth";
 import { getRegisteredTools } from "../lib/tool-registry/registry";
 
 function getActiveToolId(pathname: string): string {
-  const match = pathname.match(/^\/tools\/([^\/]+)/);
-  return match ? match[1] : "";
+  const toolMatch = pathname.match(/^\/tools\/([^\/]+)/);
+  if (toolMatch) return toolMatch[1];
+  if (pathname.startsWith("/settings")) return "settings";
+  return "";
 }
 
 export function ShellLayout({ children }: { children: React.ReactNode }) {
@@ -31,6 +33,10 @@ export function ShellLayout({ children }: { children: React.ReactNode }) {
   const activeToolId = getActiveToolId(location.pathname);
 
   const handleToolSelect = (toolId: string) => {
+    if (toolId === "settings") {
+      navigate("/settings/sync");
+      return;
+    }
     const tool = tools.find((t) => t.id === toolId);
     if (tool?.routes[0]) {
       navigate(tool.routes[0]);
@@ -57,9 +63,22 @@ export function ShellLayout({ children }: { children: React.ReactNode }) {
     enabled: tool.enabled,
   }));
 
+  // Append Settings as a synthetic tool in the sidebar
+  const allManifests: ToolManifest[] = [
+    ...toolManifests,
+    {
+      id: "settings",
+      name: "Settings",
+      icon: "settings",
+      description: "Sync and app settings",
+      routes: ["/settings/sync"],
+      enabled: true,
+    },
+  ];
+
   return (
     <Shell
-      tools={toolManifests}
+      tools={allManifests}
       activeToolId={activeToolId}
       onToolSelect={handleToolSelect}
       isCollapsed={isCollapsed}

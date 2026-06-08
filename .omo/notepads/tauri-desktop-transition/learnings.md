@@ -283,6 +283,31 @@ All 7 SQL queries converted from `?` to `$N`:
 
 **Lesson.** When porting DB queries between backends, verify table names against the target migration files directly. The abstraction layer may mask naming conventions.
 
+## Wave 3 / Task 11 — Sync UI and Settings Page
+
+### Files Created (1)
+- `apps/desktop/src/lib/sync.ts` — thin JS wrapper around the 4 Tauri commands (`sync_export`, `sync_import`, `sync_list`, `store_webdav_credentials`). Uses `@tauri-apps/api/core` `invoke()` with typed signatures.
+
+### Files Modified (2)
+- `apps/desktop/src/pages/settings/sync/page.tsx` — full `SyncSettingsPage` component replacing the placeholder. Includes:
+  - **WebDAV Configuration Card**: URL, username, password inputs with validation. "Save Credentials" button calls `store_webdav_credentials()` and persists URL/username to `localStorage` (never the password). Password is cleared from React state after successful save.
+  - **Sync Actions Card**: "Export & Upload" and "Download & Import" buttons with loading states. Results shown in inline alert. Import success shows a restart notice.
+  - **Sync History Card**: "Refresh List" button calls `sync_list()` and renders remote backup filenames (`.db` + `manifest.json`). Empty state with icon when no backups exist.
+  - **Status / Last Synced**: Dot indicator (idle/syncing/success/error) + formatted timestamp from `localStorage`.
+  - **Error handling**: Inline alerts for validation errors (empty URL/username), Tauri command errors (network, credentials), and empty list states.
+- `apps/desktop/src/components/shell-layout.tsx` — added "Settings" as a synthetic sidebar item. `getActiveToolId()` now recognizes `/settings/*` paths. `handleToolSelect()` navigates to `/settings/sync` when the settings item is clicked.
+
+### Design Decisions
+- **No Input component in `@memo/ui`**: the package exports `Button`, `Card`, `Modal`, `Sidebar`, `Shell` only. Native `<input>` elements with Tailwind utility classes are used for the form fields (consistent with the existing design token palette: `border-gray-300`, `focus:ring-blue-500`, etc.).
+- **Credentials persistence split**: URL and username are stored in `localStorage` under `efficiency-memo-webdav-url` and `efficiency-memo-webdav-username` so the user does not retype them. The password is ONLY passed to `store_webdav_credentials()` and never persisted in JS state or storage after save.
+- **Settings as synthetic tool**: since `Shell` / `Sidebar` only accept `ToolManifest[]`, the settings item is appended as an extra manifest object with `id: "settings"`. This keeps the sidebar navigation pattern consistent without modifying `@memo/ui`.
+- **Result alert pattern**: a single inline alert at the top of the page shows success/error/info messages from any operation. It is dismissible and automatically cleared when a new action starts.
+- **No `useCallback` overkill**: submit handlers are wrapped in `useCallback` with correct dependency arrays to avoid re-renders, but form input `onChange` handlers use inline lambdas (simple enough for this page's scale).
+
+### Verification
+- `pnpm --filter desktop typecheck` — `tsc --noEmit` exits 0, zero errors.
+- `pnpm --filter desktop build` — `tsc && vite build` exits 0, 80 modules transformed. Pre-existing Vite warning about mixed static+dynamic `lib/db.ts` import remains (intentional design from Task 4).
+
 ## Wave 3 / Task 10 — WebDAV Sync Engine
 
 ### File Inventory (2 modified, 1 created)
