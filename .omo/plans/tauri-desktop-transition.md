@@ -275,7 +275,7 @@ Max Concurrent: 5 (Wave 1)
 
   **Commit**: YES — `feat(desktop): integrate @memo/shared and @memo/ui`
 
-- [ ] 6. Migrate Charger-Reminder to SQLite backend
+- [x] 6. Migrate Charger-Reminder to SQLite backend
 
   **What to do**:
   - Copy CR components, pages, hooks from `apps/web/src/features/charger-reminder/` to `apps/desktop/src/features/charger-reminder/`
@@ -304,7 +304,7 @@ Max Concurrent: 5 (Wave 1)
 
   **Commit**: YES — `feat(desktop): migrate Charger-Reminder to SQLite backend`
 
-- [ ] 7. Migrate CoreHour to SQLite backend
+- [x] 7. Migrate CoreHour to SQLite backend
 
   **What to do**:
   - Copy CH components, hooks, context to `apps/desktop/src/features/core-hour/`
@@ -330,7 +330,7 @@ Max Concurrent: 5 (Wave 1)
 
   **Commit**: YES — `feat(desktop): migrate CoreHour to SQLite backend`
 
-- [ ] 8. Local auth module (replace Supabase auth)
+- [x] 8. Local auth module (replace Supabase auth)
 
   **What to do**:
   - Create `apps/desktop/src/lib/auth.ts` with signIn, signOut, getCurrentUser, requireSessionUser
@@ -354,7 +354,7 @@ Max Concurrent: 5 (Wave 1)
 
   **Commit**: YES — `feat(desktop): implement local auth module`
 
-- [ ] 9. Shell + layout + navigation (Vite React Router)
+- [x] 9. Shell + layout + navigation (Vite React Router)
 
   **What to do**:
   - Set up `react-router-dom` for SPA navigation
