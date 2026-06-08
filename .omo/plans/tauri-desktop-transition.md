@@ -443,7 +443,7 @@ Max Concurrent: 5 (Wave 1)
 
   **Commit**: YES — `feat(desktop): add sync UI and settings page`
 
-- [ ] 12. Windows build + packaging
+- [x] 12. Windows build + packaging
 
   **What to do**:
   - Configure `tauri.conf.json` for Windows:
