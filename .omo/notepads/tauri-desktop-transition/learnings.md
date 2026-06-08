@@ -118,3 +118,34 @@
 - `APP_NAME` from `@memo/shared` is `'EfficiencyMemo'` (verified via `packages/shared/src/constants.ts`). Use it for any app-level heading/label to stay in sync with web.
 - `Shell` and `Sidebar` from `@memo/ui` both depend on the `ToolManifest[]` type from `@memo/shared` and expect `activeToolId`/`onToolSelect` props — desktop will need a tool registry before it can render them. The current App.tsx deliberately avoids `Shell` to keep this task scoped to import-wiring only.
 
+## Wave 1 / Task 4 — Client-Side DB Interface Layer
+
+### Files Created (6)
+- `apps/desktop/src/lib/db.ts` — singleton `getDb()` wrapper around `@tauri-apps/plugin-sql`, plus convenience helpers `dbSelect<T>()` and `dbExecute()`. The `execute` adaptor swallows `QueryResult` to match the `DbResult` interface (`Promise<void>`).
+- `apps/desktop/src/features/core-hour/db-tauri.ts` — `DbResult` interface (copied from web, identical signature), `tauriDb` proxy object, `setDbOnStartup()` async init, `setDb()` for test injection, `resetDb()` for test teardown.
+- `apps/desktop/src/features/charger-reminder/contracts.ts` — all types copied from `apps/web/src/features/charger-reminder/database/contracts.ts` (`DevicePersistenceContract`, `DeviceRecord`, `ChargeEventRecord`, etc.). Not imported from web — copied to avoid workspace coupling.
+- `apps/desktop/src/features/charger-reminder/device-presets.ts` — `devicePresetSeeds` array (5 presets) copied verbatim from web.
+- `apps/desktop/src/features/charger-reminder/heuristic-engine.ts` — `computeDeterministicReminderState()` and all supporting math copied from web. Imports types from local `contracts.ts` instead of `@/...` aliases.
+- `apps/desktop/src/features/charger-reminder/db-tauri.ts` — full `DevicePersistenceContract` implementation across 8 methods (`createDevice`, `updateDevice`, `deleteDevice`, `getDeviceById`, `listDevicesByUser`, `logChargeEvent`, `setReminderPreference`, `setComputedReminderState`) plus internal helpers `recomputeReminderStateForDevice`, `getDeviceByIdInternal`, `setComputedReminderStateInternal`, `validateChargeEventTimestamp`, `getDefaultThresholdForPreset`. Exports `chargerReminderDb: DevicePersistenceContract` object.
+
+### Design Decisions
+- **Circular dependency avoidance**: `lib/db.ts` imports `DbResult` from `core-hour/db-tauri.ts`, so `db-tauri.ts` cannot statically import from `lib/db.ts`. `setDbOnStartup()` uses `await import("../../lib/db")` (dynamic import) to break the cycle.
+- **Types duplicated, not shared**: All types are copied into `apps/desktop/src/features/charger-reminder/contracts.ts` rather than imported from `apps/web`. This avoids coupling the desktop app to the web app. The contract is stable and unlikely to diverge significantly.
+- **`INSERT OR REPLACE` with `created_at` preservation**: `setReminderPreference` and `setComputedReminderState` use `INSERT OR REPLACE INTO` (as specified by task), but first SELECT the existing row to preserve `id` and `created_at` across upserts. `INSERT OR REPLACE` deletes the old row (due to UNIQUE constraint on `device_id`), so without this step, `id` and `created_at` would reset on every call.
+- **`DbResult.execute` returns `void`, not `QueryResult`**: The Tauri plugin-sql `Database.execute()` returns `Promise<QueryResult>`, but the `DbResult` interface expects `Promise<void>`. The wrapper in `lib/db.ts` swallows the result with an explicit `await` inside a block body.
+- **Type narrowing for singleton pattern**: TypeScript cannot narrow `dbPromise` after assignment inside `.then()` callbacks. Used `!` non-null assertion on the return statement since runtime guarantees initialization.
+- **`notifyBeforeDays` as optional second parameter**: Both `createDevice` and `updateDevice` accept an optional `notifyBeforeDays?: number` second parameter (matching the web implementation), even though `DevicePersistenceContract` only declares the primary input. The contract is the minimum interface; the extra parameter is an implementation detail.
+
+### SQL Placeholder Verification
+- All 25 SQL strings in `db-tauri.ts` use `$1, $2, ...` placeholder syntax. Zero `?` placeholders found anywhere in the new files. Confirmed via grep: `\$\d+` matches 25 lines, `\b\?\b` matches 0.
+
+### Build Verification
+- `pnpm --filter desktop typecheck` — `tsc --noEmit` exits 0 with zero errors.
+- `pnpm --filter desktop build` — `vite build` produces `dist/` with 37 modules (197.38 kB JS, 6.39 kB CSS). Same module count as Task 5 because the new files are not yet imported by `App.tsx` — they will be wired in Tasks 6/7.
+
+### Consumer Notes (for Wave 1 / Tasks 6–9)
+- Task 6 (Charger-Reminder migration): import `chargerReminderDb` from `features/charger-reminder/db-tauri.ts` and call its methods. The DB connection is lazy — first call to any method will trigger `Database.load("sqlite:efficiency-memo.db")` via `dbSelect`/`dbExecute`.
+- Task 7 (CoreHour migration): call `setDbOnStartup()` at app init, then use `tauriDb.select()` / `tauriDb.execute()` from `features/core-hour/db-tauri.ts`. Alternatively, use `dbSelect`/`dbExecute` directly from `lib/db.ts`.
+- `getDb()` singleton is per-module — multiple imports share the same `dbPromise`. Safe to call from any module.
+- SQLite CASCADE deletes are handled by the schema (`ON DELETE CASCADE` on FK constraints in migrations). `deleteDevice()` only needs `DELETE FROM cr_devices WHERE id = $1` — all child rows are cleaned up automatically.
+

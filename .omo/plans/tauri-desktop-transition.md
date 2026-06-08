@@ -222,7 +222,7 @@ Max Concurrent: 5 (Wave 1)
 
   **Commit**: YES — `feat(desktop): register SQL plugin with migration runner`
 
-- [ ] 4. Create DB interface layer (DbResult for CoreHour, DeviceRepo for CR)
+- [x] 4. Create DB interface layer (DbResult for CoreHour, DeviceRepo for CR)
 
   **What to do**:
   - Create `apps/desktop/src/lib/db.ts` — wraps `@tauri-apps/plugin-sql`:
