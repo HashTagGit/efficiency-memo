@@ -70,40 +70,35 @@ export async function GET(request: NextRequest) {
   console.log("[AUTH CALLBACK] No code/tokenHash — returning HTML page for hash-based auth");
 
   if (!code && !tokenHash) {
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-    const html = `<!DOCTYPE html>
+ const html = `<!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8">
-  <title>Authenticating...</title>
+ <meta charset="utf-8">
+ <title>Authenticating...</title>
 </head>
 <body>
-  <p>Authenticating...</p>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.106.2/dist/umd/supabase.min.js"></script>
-  <script>
-    (async function() {
-      try {
-        var client = supabase.createClient('${supabaseUrl}', '${supabaseKey}');
-        var { data, error } = await client.auth.getSession();
-        if (error) throw error;
-        if (data.session) {
-          window.location.replace('${redirectTo.toString()}');
-        } else {
-          window.location.replace('${errorUrl.toString()}');
-        }
-      } catch (e) {
-        console.error("Auth callback error:", e);
-        window.location.replace('${errorUrl.toString()}');
-      }
-    })();
-  </script>
+ <p>Authenticating...</p>
+ <script>
+ (function() {
+ try {
+ var hash = window.location.hash || "";
+ if (hash && hash.indexOf("access_token") !== -1) {
+ window.location.replace("/" + hash);
+ } else {
+ window.location.replace('${errorUrl.toString()}');
+ }
+ } catch (e) {
+ console.error("Auth callback error:", e);
+ window.location.replace('${errorUrl.toString()}');
+ }
+ })();
+ </script>
 </body>
 </html>`;
-    return new NextResponse(html, {
-      headers: { "Content-Type": "text/html" },
-    });
-  }
+ return new NextResponse(html, {
+ headers: { "Content-Type": "text/html" },
+ });
+ }
 
   console.log("[AUTH CALLBACK] Fallback to error URL");
   return NextResponse.redirect(errorUrl);
