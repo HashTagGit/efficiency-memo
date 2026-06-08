@@ -378,7 +378,7 @@ Max Concurrent: 5 (Wave 1)
 
   **Commit**: YES — `feat(desktop): implement shell layout with React Router`
 
-- [ ] 10. WebDAV sync engine (Rust side)
+- [x] 10. WebDAV sync engine (Rust side)
 
   **What to do**:
   - Add `reqwest_dav` to `Cargo.toml`

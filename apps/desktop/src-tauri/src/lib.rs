@@ -2,6 +2,8 @@
 
 use tauri_plugin_sql::{Builder, Migration, MigrationKind};
 
+mod sync;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     let migrations = vec![
@@ -31,6 +33,12 @@ pub fn run() {
                 .add_migrations("sqlite:efficiency-memo.db", migrations)
                 .build(),
         )
+        .invoke_handler(tauri::generate_handler![
+            sync::sync_export,
+            sync::sync_import,
+            sync::sync_list,
+            sync::store_webdav_credentials,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

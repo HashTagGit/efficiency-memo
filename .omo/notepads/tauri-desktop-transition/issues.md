@@ -43,4 +43,34 @@ Additionally, 3 pre-existing charger-reminder files had `getCurrentUser()` retur
 
 **Lesson.** When copying database queries from one backend to another, verify table names against the target schema migration files. The `ch_` prefix convention is consistent across both web (Supabase) and desktop (SQLite) — the difference was in the abstraction layer, not the schema.
 
+## 2026-06-09 — WebDAV Sync Engine (Task 10)
+
+### Unverified Rust compilation
+- **Status**: Open
+- **Severity**: Medium
+- **Context**: `cargo` is not installed in this environment, so `cargo check` could not be executed against the new `sync.rs` or modified `Cargo.toml`.
+- **What could fail**:
+  1. `reqwest_dav` 0.3 API mismatch — method names (`.list()` vs `.list_dir()`, `.build()` vs `.build_client()`), `ListEntity` field names (`.href` vs `.path` vs `.name`), or the `put` method accepting different body types.
+  2. `rusqlite` bundled feature causing symbol conflicts with `tauri-plugin-sql`'s bundled SQLite — both compile the `sqlite3.c` amalgamation. If the versions diverge, duplicate symbol errors may appear at link time.
+  3. `keyring` 3 on Linux may fail without a running Secret Service daemon (GNOME Keyring or `secret-service` crate backend). The `async-secret-service` feature requires `dbus` at runtime.
+- **Mitigation**: All API usage follows the documented patterns in the task spec. The first `cargo check` or `cargo build` will surface any mismatches. Fixes are expected to be minor (method renames, field renames, or type adjustments).
+
+### Import requires app restart (v1 limitation)
+- **Status**: Known limitation (by design)
+- **Severity**: Low
+- **Context**: The JS frontend holds an open `Database` connection to `efficiency-memo.db` via `@tauri-apps/plugin-sql`. Replacing the file while the connection is open is unsafe on Windows due to file locking.
+- **Current behavior**: `sync_import` writes the verified backup to `efficiency-memo.db.next` and returns a success message instructing the user to restart. The app does not detect or apply the sidecar file automatically.
+- **Future work**: A startup hook could detect `.db.next`, close any pre-existing connections, atomically rename it over the live database, and then reopen. This requires coordination between the Rust backend (file rename) and JS frontend (close/reopen `Database` object).
+
+### No conflict resolution for multi-device sync
+- **Status**: Known limitation
+- **Severity**: Low
+- **Context**: Two devices exporting to the same WebDAV folder will overwrite each other's manifest.json. The last export wins; there is no merge, vector clock, or conflict detection.
+- **Future work**: Implement HLC (Hybrid Logical Clock) timestamps or CRDT-based merge for multi-device scenarios.
+
+### `dirs` crate returns OS-level data dir, not app-specific
+- **Status**: Informational
+- **Severity**: Low
+- **Context**: `get_device_id()` hashes `dirs::data_dir()` (e.g., `C:\Users\<user>\AppData\Roaming`), not the Tauri app data dir (`C:\Users\<user>\AppData\Roaming\com.efficiency-memo.app`). This means the device ID is stable across all apps for the same user on the same machine, not specific to EfficiencyMemo. For a single-app desktop tool this is functionally identical, but it may cause collisions if multiple apps use the same hashing scheme on the same WebDAV server.
+
 

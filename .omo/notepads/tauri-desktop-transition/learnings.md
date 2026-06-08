@@ -283,4 +283,40 @@ All 7 SQL queries converted from `?` to `$N`:
 
 **Lesson.** When porting DB queries between backends, verify table names against the target migration files directly. The abstraction layer may mask naming conventions.
 
+## Wave 3 / Task 10 — WebDAV Sync Engine
+
+### File Inventory (2 modified, 1 created)
+- `apps/desktop/src-tauri/Cargo.toml` — added 7 dependencies: `reqwest_dav 0.3` (WebDAV client), `sha2 0.10` + `hex 0.4` (SHA256 checksums), `chrono 0.4` (timestamps), `keyring 3` (OS keychain for credentials), `rusqlite 0.31` with `bundled` feature (direct SQLite access for WAL checkpoint + VACUUM INTO), `dirs 5` (stable device ID generation)
+- `apps/desktop/src-tauri/src/sync.rs` — new file (~200 lines): WebDAV sync engine with 4 Tauri commands
+- `apps/desktop/src-tauri/src/lib.rs` — added `mod sync;` and `invoke_handler` registering `sync_export`, `sync_import`, `sync_list`, `store_webdav_credentials`
+
+### Design Decisions
+
+**Two SQLite backends.** The app now links to two SQLite libraries: `tauri-plugin-sql` (via `sqlx`) for the JS-facing DB interface, and `rusqlite` (bundled) for the sync engine's WAL checkpoint and VACUUM INTO operations. Both use bundled SQLite compilation — no system-level SQLite dependency. Potential symbol conflicts are mitigated by both using the same amalgamation version through their respective crates. If link-time issues arise, `rusqlite` can be switched to use the system library.
+
+**Import sidecar pattern.** The JS side holds an open `Database` connection to `efficiency-memo.db` via `@tauri-apps/plugin-sql`. Replacing the file while the connection is open is unsafe on Windows (file locking). For v1, `sync_import` writes the verified backup to `<app_data_dir>/efficiency-memo.db.next` and returns a message instructing the user to restart the app. On restart, the app can detect the sidecar file and atomically rename it over the existing database before opening any connections.
+
+**Per-device backup isolation.** Each device gets its own folder under `/memo-backups/<device-id>/` on the WebDAV server. The device ID is a SHA256 hash (truncated to 8 bytes / 16 hex chars) of the platform data directory — stable across app restarts and app reinstalls on the same machine.
+
+**Credential storage via OS keychain.** WebDAV passwords are stored in the OS-native credential store: Windows Credential Manager, macOS Keychain, or Linux Secret Service (via the `async-secret-service` feature flag). No passwords are ever written to files or localStorage. The `store_webdav_credentials` command writes credentials; `sync_export`/`sync_import`/`sync_list` read them via `build_dav_client()`.
+
+**Manifest-driven import.** Each export writes a `manifest.json` alongside the backup with `{ device_id, schema_version, timestamp, sha256 }`. Import reads the manifest first to locate the latest backup and validate schema compatibility before downloading. The checksum is verified against the manifest before the sidecar copy, preventing corrupted restores.
+
+### Command Surface
+
+| Command | Parameters | Returns | Description |
+|---|---|---|---|
+| `sync_export` | `url, username, app` | `Result<String>` | WAL checkpoint → VACUUM INTO snapshot → SHA256 → upload → manifest |
+| `sync_import` | `url, username, app` | `Result<String>` | Fetch manifest → download latest → verify SHA256 → write `.db.next` sidecar |
+| `sync_list` | `url, username` | `Result<Vec<String>>` | PROPFIND the device folder, return `.db` + `manifest.json` filenames |
+| `store_webdav_credentials` | `username, password` | `Result<()>` | Write username+password to OS keychain |
+
+### Caveats
+
+- **Rust not installed**: `cargo check` was not executed. The Rust code follows Tauri v2 conventions and the documented `reqwest_dav` 0.3 API. Verification by inspection only. The `reqwest_dav::types::ListEntity` struct field names (`.href`) and method signatures (`.list()`, `.get()`, `.put()`, `.mkcol()`, `.build()`) are based on the crate's documented API surface. Any mismatches will be caught by the first `cargo check`.
+- **No auto-sync**: All sync operations are manual triggers only. The JS frontend (Task 11) will call these commands on user action.
+- **rusqlite + tauri-plugin-sql**: Both crates bundle SQLite. This has been done in production Tauri apps without issues, but the first `cargo build` should be watched for linker warnings about duplicate symbols.
+- **VACUUM INTO requires same filesystem**: The snapshot path is placed in the app data directory (same as the source DB) to avoid cross-filesystem copy errors on Linux/macOS.
+- **No conflict resolution**: Last-write-wins semantics. The manifest always points to the single latest backup. Multi-device sync with merge logic is deferred to a future version.
+
 

@@ -18,6 +18,13 @@ tauri = { version = "2", features = [] }
 tauri-plugin-sql = { version = "2", features = ["sqlite"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+reqwest_dav = "0.3"
+sha2 = "0.10"
+hex = "0.4"
+chrono = "0.4"
+keyring = { version = "3", features = ["async-secret-service", "apple-native", "windows-native"] }
+rusqlite = { version = "0.31", features = ["bundled"] }
+dirs = "5"
 
 [profile.release]
 panic = "abort"
