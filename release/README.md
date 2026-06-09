@@ -2,6 +2,8 @@
 
 A self-hosted productivity tool gallery that runs entirely in Docker.
 
+**Looking for the desktop app?** The recommended way to use EfficiencyMemo is now the [Tauri desktop app](../apps/desktop/README.md) — no Docker required. This Docker release is preserved as a web-only fallback.
+
 ## Quick Start
 
 1. Generate secrets and append them to your environment file:

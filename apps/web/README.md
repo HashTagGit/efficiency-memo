@@ -1,6 +1,6 @@
 # apps/web
 
-This is the web application package for EfficiencyMemo — the only deployable surface in the monorepo.
+This is the web application package for EfficiencyMemo — the original web deployable surface in the monorepo.
 
 See the [root README](../../README.md) for the full project overview, feature descriptions, and quick start guide.
 

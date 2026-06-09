@@ -8,6 +8,10 @@ Thank you for your interest in contributing. This guide covers everything you ne
 - pnpm >= 9
 - Docker (for local Supabase)
 - Supabase CLI
+- Rust toolchain (for desktop app; install via [rustup](https://rustup.rs/))
+  - Windows: [Microsoft C++ Build Tools](https://visualstudio.microsoft.com/visual-cpp-build-tools/) (Desktop development with C++)
+  - macOS: Xcode Command Line Tools (`xcode-select --install`)
+  - Linux: `build-essential`, `libwebkit2gtk-4.1-dev`, `libssl-dev`, `libgtk-3-dev`
 
 ## Local Setup
 
@@ -19,13 +23,18 @@ cp apps/web/.env.example apps/web/.env.local
 # Start Supabase (Docker)
 pnpm dev
 # Open http://localhost:3000
+
+# Alternative: Launch the desktop app (no Docker needed)
+pnpm --filter desktop tauri:dev
+# Opens a Tauri window with hot-reload; no Supabase required
 ```
 
 ## Workspace Layout
 
 ```
 EfficiencyMemo/
-├── apps/web/          # Next.js 16 app (deployable surface)
+├── apps/desktop/      # Tauri v2 desktop app (recommended for personal use)
+├── apps/web/          # Next.js 16 web app (legacy fallback)
 ├── packages/shared/   # Cross-tool types and constants
 ├── packages/ui/       # React + Tailwind v4 component library
 └── supabase/
@@ -39,9 +48,13 @@ EfficiencyMemo/
 | `pnpm dev` | Start all workspaces in parallel |
 | `pnpm build` | Build `apps/web` (only workspace with a build script) |
 | `pnpm lint` | Run ESLint in `apps/web` (only workspace with a lint script) |
-| `pnpm typecheck` | TypeScript check in `apps/web` and `packages/shared` |
-| `pnpm test` | Run Vitest (300 cases) |
+| `pnpm typecheck` | TypeScript check across all workspaces |
+| `pnpm test` | Run Vitest (341 cases) |
 | `pnpm test:e2e` | Run Playwright (53 specs) |
+| `pnpm --filter desktop tauri:dev` | Launch desktop app in dev mode |
+| `pnpm --filter desktop tauri:build` | Build production desktop installer |
+| `pnpm --filter desktop build` | Build desktop frontend (Vite only) |
+| `pnpm --filter desktop typecheck` | TypeScript check in desktop |
 
 ## Adding a New Tool
 
@@ -51,6 +64,8 @@ EfficiencyMemo/
 4. Add `index.ts` (calls `registerTool(manifest, componentLoader)`)
 5. Register in `apps/web/src/lib/tool-registry/discovery.ts` (`featureNames` array)
 6. Add `AGENTS.md` in the feature folder
+
+For the **desktop app**, create `apps/desktop/src/features/<tool-id>/` instead of `apps/web/src/features/<tool-id>/`. Follow the same pattern: `manifest.ts`, `component-loader.ts`, `index.ts`. Register in `apps/desktop/src/lib/tool-registry/discovery.ts` if the registry requires explicit enumeration (currently it imports all feature indexes).
 
 See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full pattern.
 

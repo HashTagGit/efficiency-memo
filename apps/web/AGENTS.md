@@ -1,7 +1,7 @@
 # apps/web
 
 ## Purpose
-`apps/web` is the only deployable surface in the workspace. It is a Next.js 16 App Router application that authenticates users against the local Supabase instance, gates a shell layout (sidebar + header), and renders the per-tool pages for Charger-Reminder and CoreHour through a dynamic tool registry.
+`apps/web` is the original web deployable surface in the workspace. It is a Next.js 16 App Router application that authenticates users against the local Supabase instance, gates a shell layout (sidebar + header), and renders the per-tool pages for Charger-Reminder and CoreHour through a dynamic tool registry.
 
 <!-- BEGIN:nextjs-agent-rules -->
 # This is NOT the Next.js you know
