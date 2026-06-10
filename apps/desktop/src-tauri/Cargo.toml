@@ -1,8 +1,8 @@
 [package]
 name = "efficiency-memo"
-version = "0.0.1"
+version = "0.1.0"
 description = "EfficiencyMemo Desktop - A unified tool gallery for daily productivity"
-authors = ["You"]
+authors = ["JunYe Lin <junyelin2000@163.com>"]
 edition = "2021"
 rust-version = "1.70"
 

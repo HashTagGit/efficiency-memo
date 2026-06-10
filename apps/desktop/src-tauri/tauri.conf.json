@@ -1,7 +1,7 @@
 {
  "$schema": "https://raw.githubusercontent.com/nicegui-dev/nicegui/main/tauri.v2.schema.json",
  "productName": "EfficiencyMemo",
- "version": "0.0.1",
+  "version": "0.1.0",
  "identifier": "com.efficiency-memo.app",
  "build": {
  "frontendDist": "../dist",
