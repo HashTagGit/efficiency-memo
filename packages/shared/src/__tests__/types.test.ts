@@ -66,7 +66,7 @@ describe('ToolManifest type', () => {
       enabled: true,
     } satisfies ToolManifest;
     expectTypeOf(manifest.routes).toBeArray();
-    expectTypeOf(manifest.routes[0]).toBeString();
+    expectTypeOf(manifest.routes[0]).toMatchTypeOf<string | undefined>();
   });
 
   it('requires enabled boolean field', () => {
@@ -96,18 +96,18 @@ describe('ToolManifest type', () => {
 
 describe('ToolRegistration type', () => {
   it('has manifest and component properties', () => {
-    const registration = {
-      manifest: {
-        id: 'test-tool',
-        name: 'Test Tool',
-        icon: '📋',
-        description: 'A test tool',
-        routes: ['/test'],
-        enabled: true,
-      },
-      component: async () => Promise.resolve({ default: () => null }),
-    } satisfies ToolRegistration;
-    expectTypeOf(registration.manifest).toEqualTypeOf<ToolManifest>();
+ const registration: ToolRegistration = {
+ manifest: {
+ id: 'test-tool',
+ name: 'Test Tool',
+ icon: '📋',
+ description: 'A test tool',
+ routes: ['/test'],
+ enabled: true,
+ },
+ component: async () => Promise.resolve({ default: () => null }),
+ };
+ expectTypeOf(registration.manifest).toEqualTypeOf<ToolManifest>();
     expectTypeOf(registration.component).toBeFunction();
   });
 });
@@ -145,11 +145,11 @@ describe('DashboardTool type', () => {
       lastUsed: '2024-01-15T10:30:00.000Z',
       usageCount: 42,
     };
-    expectTypeOf(tool.lastUsed).toBeString();
-    expectTypeOf(tool.usageCount).toBeNumber();
-  });
+    expectTypeOf(tool.lastUsed).toEqualTypeOf<string | undefined>();
+ expectTypeOf(tool.usageCount).toEqualTypeOf<number | undefined>();
+ });
 
-  it('has all ToolManifest fields plus dashboard fields', () => {
+ it('has all ToolManifest fields plus dashboard fields', () => {
     const tool: DashboardTool = {
       id: 'core-hour',
       name: 'CoreHour',
@@ -166,9 +166,9 @@ describe('DashboardTool type', () => {
     expectTypeOf(tool.description).toBeString();
     expectTypeOf(tool.routes).toBeArray();
     expectTypeOf(tool.enabled).toBeBoolean();
-    expectTypeOf(tool.lastUsed).toBeString();
-    expectTypeOf(tool.usageCount).toBeNumber();
-  });
+ expectTypeOf(tool.lastUsed).toEqualTypeOf<string | undefined>();
+ expectTypeOf(tool.usageCount).toEqualTypeOf<number | undefined>();
+ });
 });
 
 describe('Constants', () => {
