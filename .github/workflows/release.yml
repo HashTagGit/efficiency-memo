@@ -25,11 +25,20 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Type check desktop
-        run: pnpm --filter desktop typecheck
+      - name: Type check
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm -r lint
 
       - name: Test shared package
         run: pnpm --filter @memo/shared test
+
+      - name: Test UI package
+        run: pnpm --filter @memo/ui test
+
+      - name: Test desktop
+        run: pnpm --filter desktop test
 
   build:
     needs: test
