@@ -1,0 +1,78 @@
+WORKSPACE HEALTH CHECK — Task 13 (post Wave 1 deletions + Wave 2 doc edits)
+Date: 2026-06-10
+Branch: main
+
+==========================================================
+COMMAND RESULTS
+==========================================================
+
+[1] pnpm install
+    Exit code: 0
+    Duration: 1m 37.8s
+    Scope: all 4 workspace projects (note: shows 4 because desktop + 2 packages + 1 empty slot from deleted web slot)
+    Packages delta: -231 (apps/web deps purged from lockfile)
+    Network: WARN — ENOTFOUND registry.npmjs.org on first try, retried successfully (transient offline DNS)
+    Note: plain `pnpm install` (not --frozen-lockfile) was used because lockfile was regenerated to drop apps/web entries. After this single run, lockfile is consistent with `apps/*` glob.
+
+[2] pnpm typecheck
+    Exit code: 2 (FAIL)
+    Scope: 3 of 4 workspace projects (shared, ui, desktop)
+    BREAKDOWN:
+      - packages/shared: FAIL (9 type errors in src/__tests__/types.test.ts)
+      - packages/ui:     PASS
+      - apps/desktop:    PASS (exit 0 in standalone run: `pnpm --filter desktop typecheck`)
+
+    PRE-EXISTING ISSUE — CONFIRMED:
+      The 9 errors in packages/shared/src/__tests__/types.test.ts are pre-existing on origin/main HEAD.
+      Verified by stashing all uncommitted changes (including Wave 1/2 edits) and re-running typecheck:
+        same 9 errors reproduced on the un-modified tree.
+      Errors:
+        - (69,38)  expectTypeOf(manifest.routes[0]).ToBeString() — TS2349 not callable
+        - (110,55) expectTypeOf(registration.manifest).toEqualTypeOf<ToolManifest>() — TS2344
+        - (148,33)(149,35) expectTypeOf(tool.lastUsed).toBeString()/toBeNumber() — TS2349
+        - (169,33)(170,35) expectTypeOf(tool.enabled).toBeBoolean() etc — TS2349
+        - (176,5)(180,5)(181,5)(185,5) expect(APP_NAME) etc — TS2304 cannot find name 'expect'
+      Root cause: test file imports `expectTypeOf` from `'vitest'` (line 1) but vitest's
+      expect-type helpers live in the `expect-type` package, and `expect` is not imported.
+      Test RUNTIME passes (vitest auto-mocks at runtime); only the strict tsc compile fails.
+      Not a regression from Wave 1/2. Per task rules: noted, not fixed.
+
+[3] pnpm test
+    Exit code: 0
+    Scope: 3 of 4 workspace projects (shared, ui, desktop skipped because it has no `test` script)
+    RESULTS:
+      - packages/shared: 16/16 passed in 1.86s (src/__tests__/types.test.ts)
+      - packages/ui:     41/41 passed in 6.94s (sidebar, shell, card, modal, button)
+      - apps/desktop:    NO `test` script defined; package.json has no `test` entry
+    Total: 57/57 passed (matches AGENTS.md claim: 16 + 41 = 57)
+
+[4] pnpm-workspace.yaml
+    Unchanged. Still contains:
+        packages:
+          - 'apps/*'
+          - 'packages/*'
+    The `apps/*` glob auto-skips apps/web after deletion. No edits required.
+
+[5] Stale references audit
+    Grepped for `apps/web` across:
+      - package.json (root)            → 0 hits
+      - pnpm-workspace.yaml             → 0 hits
+      - tsconfig.json / tsconfig.base   → 0 hits (no tsconfig.json at root; tsconfig.base is in packages)
+      - apps/desktop/package.json       → 0 hits
+      - packages/*/package.json         → 0 hits
+    Clean.
+
+==========================================================
+SUMMARY
+==========================================================
+PASS: pnpm install (regenerated lockfile, -231 deps)
+PASS: pnpm test (57/57)
+FAIL: pnpm typecheck — but ONLY due to 1 pre-existing test-file issue in
+      packages/shared/src/__tests__/types.test.ts (reproduced on clean HEAD).
+      Desktop standalone typecheck passes (exit 0).
+      packages/ui typecheck passes.
+Decision: typecheck failure is pre-existing and out-of-scope for Wave 1/2.
+          Per task rules ("pre-existing issues: note them, do NOT fix unless asked")
+          and scope discipline ("Do NOT modify any config file"), file is left alone.
+          If follow-up wanted: add `import { expect, expectTypeOf } from 'vitest'` or
+          split test file out of tsc include glob.

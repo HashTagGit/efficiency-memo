@@ -7,7 +7,7 @@ import { SyncSettingsPage } from "./pages/settings/sync/page";
 
 // Lazy-load tool pages
 const ChargerReminderPage = lazy(() =>
-  import("./features/charger-reminder/pages/device-list-page").then((m) => ({
+  import("./features/charger-reminder/pages/charger-reminder-routes").then((m) => ({
     default: m.default ?? (() => null),
   }))
 );

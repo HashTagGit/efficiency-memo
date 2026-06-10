@@ -1,0 +1,19 @@
+TASK: Create docs/adr/0001-desktop-only-distribution.md
+
+Verification: Line count check
+Command: Get-Content "docs\adr\0001-desktop-only-distribution.md" | Measure-Object -Line
+Result: 14 lines
+Requirement: ≤60 lines
+Status: PASS
+
+Sections verified:
+- Title: ADR 0001: Desktop-Only Distribution
+- Status: Accepted
+- Context: EfficiencyMemo originally shipped as Docker-based web app...
+- Decision: Remove Docker and web distribution entirely...
+- Rationale: Desktop is local-first and offline-capable...
+- Trade-offs: Lost web accessibility + Supabase multi-user auth...
+- Consequences: Docs rewritten for desktop-only...
+
+File: docs/adr/0001-desktop-only-distribution.md
+Created: 2026-06-10

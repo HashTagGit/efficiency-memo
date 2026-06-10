@@ -1,7 +1,7 @@
 import { crManifest } from "./manifest";
 
-// Lazy-load the device list page component
+// Lazy-load the charger reminder routes component
 export const crComponentLoader = () =>
-  import("./pages/device-list-page").then((m) => ({
+  import("./pages/charger-reminder-routes").then((m) => ({
     default: m.default ?? (() => null),
   }));

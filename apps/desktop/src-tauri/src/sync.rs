@@ -1,14 +1,15 @@
 use chrono::Utc;
-use reqwest_dav::re_export::reqwest;
+use reqwest_dav::types::list_cmd::ListEntity;
 use reqwest_dav::types::Auth;
-use reqwest_dav::types::ListEntity;
-use reqwest_dav::DavClient;
+use reqwest_dav::types::Depth;
+use reqwest_dav::ClientBuilder;
+use reqwest_dav::Client;
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::PathBuf;
-use tauri::{command, AppHandle, Manager};
+use tauri::{AppHandle, Manager};
 
 const SCHEMA_VERSION: i64 = 3;
 const BACKUP_DIR: &str = "memo-backups";
@@ -16,11 +17,11 @@ const DB_FILENAME: &str = "efficiency-memo.db";
 const KEYRING_SERVICE: &str = "com.efficiency-memo.app.webdav";
 
 #[derive(Serialize, Deserialize, Debug)]
-struct Manifest {
-    device_id: String,
-    schema_version: i64,
-    timestamp: String,
-    sha256: String,
+pub(crate) struct Manifest {
+    pub(crate) device_id: String,
+    pub(crate) schema_version: i64,
+    pub(crate) timestamp: String,
+    pub(crate) sha256: String,
 }
 
 fn app_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
@@ -35,21 +36,21 @@ fn get_device_id() -> String {
     hex::encode(&hash[..8])
 }
 
-async fn build_dav_client(url: &str, username: &str) -> Result<DavClient, String> {
+async fn build_dav_client(url: &str, username: &str) -> Result<Client, String> {
     let entry = keyring::Entry::new(KEYRING_SERVICE, username)
         .map_err(|e| format!("Failed to access keychain: {e}"))?;
     let password = entry
         .get_password()
         .map_err(|e| format!("Failed to retrieve stored password: {e}"))?;
 
-    DavClient::new()
+    ClientBuilder::new()
         .set_host(url.to_string())
         .set_auth(Auth::Basic(username.to_string(), password))
         .build()
         .map_err(|e| format!("Failed to create WebDAV client: {e}"))
 }
 
-fn compute_sha256(path: &PathBuf) -> Result<String, String> {
+pub(crate) fn compute_sha256(path: &PathBuf) -> Result<String, String> {
     let bytes = fs::read(path).map_err(|e| format!("Failed to read file for checksum: {e}"))?;
     Ok(hex::encode(Sha256::digest(bytes)))
 }
@@ -202,6 +203,14 @@ pub async fn sync_import(url: String, username: String, app: AppHandle) -> Resul
         .map_err(|e| format!("Failed to write imported database: {e}"))?;
     let _ = fs::remove_file(&temp_path);
 
+    // Write manifest.json alongside .db.next so the startup sidecar check
+    // can verify the checksum before applying the import.
+    let manifest_local_path = data_dir.join("manifest.json");
+    let manifest_json =
+        serde_json::to_string(&manifest).map_err(|e| format!("Failed to serialize manifest: {e}"))?;
+    fs::write(&manifest_local_path, manifest_json)
+        .map_err(|e| format!("Failed to write import manifest: {e}"))?;
+
     Ok(format!(
         "Backup from {} imported and verified successfully. The database has been saved to 'efficiency-memo.db.next'. Please restart the application to complete the import.",
         manifest.timestamp
@@ -219,7 +228,7 @@ pub async fn sync_list(url: String, username: String) -> Result<Vec<String>, Str
     let device_dir = format!("/{}/{}/", BACKUP_DIR, device_id);
 
     // PROPFIND the device directory; return empty list if it does not exist
-    let entries = match client.list(&device_dir).await {
+    let entries = match client.list(&device_dir, Depth::Number(1)).await {
         Ok(entries) => entries,
         Err(_) => return Ok(Vec::new()),
     };
@@ -228,8 +237,11 @@ pub async fn sync_list(url: String, username: String) -> Result<Vec<String>, Str
     for entry in entries {
         // Extract the basename from the entry's href (full path).
         // href looks like "/memo-backups/<device-id>/<filename>"
-        let name = entry
-            .href
+        let href = match &entry {
+            ListEntity::File(f) => &f.href,
+            ListEntity::Folder(f) => &f.href,
+        };
+        let name = href
             .rsplit('/')
             .next()
             .filter(|n| !n.is_empty())

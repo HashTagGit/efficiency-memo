@@ -1,7 +1,8 @@
 // Learn more about Tauri commands at https://v2.tauri.app/develop/calling-rust/
 
-use tauri_plugin_sql::{Builder, Migration, MigrationKind};
+use tauri_plugin_sql::{Migration, MigrationKind};
 
+mod sidecar;
 mod sync;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -33,6 +34,15 @@ pub fn run() {
                 .add_migrations("sqlite:efficiency-memo.db", migrations)
                 .build(),
         )
+        .setup(|app| {
+            // Apply pending .db.next sidecar before any SQLite connection opens.
+            // The plugin is registered but connections are lazy — no DB file is
+            // open yet, so the atomic rename is safe.
+            if let Err(e) = sidecar::apply_pending_import(app.handle()) {
+                eprintln!("WARN: Failed to apply pending import: {e}");
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             sync::sync_export,
             sync::sync_import,

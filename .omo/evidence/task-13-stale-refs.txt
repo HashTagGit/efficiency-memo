@@ -1,0 +1,44 @@
+STALE REFERENCES AUDIT — Task 13
+Date: 2026-06-10
+Search target: literal string `apps/web`
+
+==========================================================
+GREP RESULTS
+==========================================================
+
+[1] package.json (root) — D:\documents\code\git\release\efficiency-memo\package.json
+    Pattern: apps/web
+    Result: 0 hits
+    Method: Select-String -Path "package.json" -Pattern "apps/web" -SimpleMatch
+    Outcome: CLEAN
+
+[2] pnpm-workspace.yaml
+    Pattern: apps/web
+    Result: 0 hits
+    Method: Select-String -Path "pnpm-workspace.yaml" -Pattern "apps/web" -SimpleMatch
+    Outcome: CLEAN (still has `apps/*` glob)
+
+[3] tsconfig.json / tsconfig.base.json (root)
+    Note: tsconfig.json does not exist at repo root. tsconfig.base.json not at root either.
+    Pattern: apps/web
+    Result: 0 hits (and 0 files to check at root)
+    Outcome: CLEAN (N/A)
+
+[4] apps/desktop/package.json
+    Pattern: apps/web
+    Result: 0 hits
+    Method: Select-String -Path "apps/desktop/package.json" -Pattern "apps/web" -SimpleMatch
+    Outcome: CLEAN
+
+[5] packages/*/package.json  (packages/shared, packages/ui)
+    Pattern: apps/web
+    Result: 0 hits
+    Method: Select-String -Path "packages/*/package.json" -Pattern "apps/web" -SimpleMatch
+    Outcome: CLEAN
+
+==========================================================
+SUMMARY
+==========================================================
+All config files in scope are free of stale `apps/web` references.
+The `apps/*` glob in pnpm-workspace.yaml naturally absorbs the deletion —
+no config edits required for workspace resolution.

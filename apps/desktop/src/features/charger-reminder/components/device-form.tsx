@@ -4,6 +4,13 @@ import React, { useState } from "react";
 import { Button } from "@memo/ui";
 import type { DevicePresetType, DeviceRecord } from "../contracts";
 
+function getInitialDeviceType(
+  device: DeviceRecord | null | undefined,
+  presets: DevicePreset[],
+): DevicePresetType {
+  return device?.device_type ?? presets[0]?.type ?? "wireless-mouse";
+}
+
 interface DevicePreset {
   type: DevicePresetType;
   label: string;
@@ -30,6 +37,7 @@ export function DeviceForm({ presets, device, mode, onSubmit }: DeviceFormProps)
   const [name, setName] = useState(device?.name ?? "");
   const [capacity, setCapacity] = useState(device?.capacity_mah?.toString() ?? "");
   const [threshold, setThreshold] = useState(device?.threshold_percent ?? presets[0]?.default_threshold ?? 25);
+  const [deviceType, setDeviceType] = useState<DevicePresetType>(getInitialDeviceType(device, presets));
   const [reminderEnabled, setReminderEnabled] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -62,7 +70,7 @@ export function DeviceForm({ presets, device, mode, onSubmit }: DeviceFormProps)
         capacity_mah: capacityNum,
         threshold_percent: threshold,
         reminder_enabled: reminderEnabled,
-        device_type: device?.device_type ?? presets[0]?.type ?? "wireless-mouse",
+        device_type: deviceType,
         notes: device?.notes ?? undefined,
       };
 
@@ -110,8 +118,8 @@ export function DeviceForm({ presets, device, mode, onSubmit }: DeviceFormProps)
           </label>
           <select
             id="deviceType"
-            value={device?.device_type ?? presets[0]?.type ?? "wireless-mouse"}
-            onChange={() => {}}
+            value={deviceType}
+            onChange={(e) => setDeviceType(e.target.value as DevicePresetType)}
             className="w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
           >
             {presets.map((preset) => (

@@ -1,0 +1,40 @@
+Task: 12-context
+Date: 2026-06-10
+Status: done
+
+Goal
+----
+Create docs/CONTEXT.md as a pure glossary of domain terms for the desktop-only EfficiencyMemo project, per the MUST-DO list. Save evidence here.
+
+What was done
+-------------
+1. Read existing context for tone/alignment:
+   - docs/adr/0001-desktop-only-distribution.md (accepted, v0.1.0-desktop, apps/web/ archived)
+   - docs/Installation.md (Tauri v2 desktop framing)
+   - README.md (Strategy A WebDAV sync terminology; per-device folders, last-write-wins)
+2. Wrote docs/CONTEXT.md with 9 one-line glossary entries:
+   1. Desktop Surface
+   2. Tool
+   3. Feature Copy
+   4. Shared Package
+   5. Tool Registry
+   6. WebDAV Sync
+   7. Local Auth
+   8. SQLite Storage
+   9. Archived Surface
+
+Constraints verified
+--------------------
+- Entry count: 9 (target <=9) ............... PASS
+- One-line definitions ....................... PASS
+- No code snippets ........................... PASS
+- File paths only for disambiguation ......... PASS (apps/desktop/, apps/desktop/src/features/, packages/shared/, packages/ui/, apps/desktop/src/features/, src-tauri/migrations/, apps/web/)
+- No spec/roadmap/implementation guide ....... PASS
+- Archived Surface entry documents web removal PASS (Next.js + Supabase, removed in v0.1.0-desktop, available in git history)
+- Complements (does not duplicate) ADR 0001 .. PASS (glossary is vocabulary; ADR is the decision)
+- Not committed .............................. PASS (no git operations performed)
+
+Complementary artifacts
+-----------------------
+- docs/adr/0001-desktop-only-distribution.md — the "why we are desktop-only" decision
+- docs/CONTEXT.md — the "what do we call things" glossary (this task)

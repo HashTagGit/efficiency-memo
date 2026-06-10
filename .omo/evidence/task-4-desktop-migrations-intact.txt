@@ -1,0 +1,13 @@
+TASK: Confirm apps/desktop/src-tauri/migrations/ is intact (desktop SQLite DDL — DO NOT TOUCH).
+DATE: 2026-06-10
+
+VERIFICATION:
+  - Test-Path apps/desktop/src-tauri/migrations -> True
+
+CONTENTS (3 SQLite DDL files, all preserved):
+  - 0001_cr_device_reminder.sql
+  - 0002_cr_seed_presets.sql
+  - 0003_ch_core_hour.sql
+
+NOTE: The supabase/ web SQL files (001/002/003 prefix) were deleted per task;
+      the desktop equivalents (0001/0002/0003 prefix) were left untouched.

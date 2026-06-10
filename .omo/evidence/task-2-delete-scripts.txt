@@ -1,0 +1,9 @@
+Task 2: Delete scripts/ directory
+
+Command executed:
+  Remove-Item -LiteralPath "scripts" -Recurse -Force
+
+Verification:
+  Test-Path -LiteralPath "scripts"  ->  False
+
+Result: scripts/ removed recursively. Nothing remains at that path.

@@ -9,9 +9,8 @@
  "beforeDevCommand": "pnpm dev",
  "beforeBuildCommand": "pnpm build"
  },
- "app": {
- "title": "EfficiencyMemo",
- "windows": [
+  "app": {
+  "windows": [
  {
  "title": "EfficiencyMemo",
  "width":1280,

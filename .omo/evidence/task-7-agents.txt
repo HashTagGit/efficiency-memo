@@ -1,0 +1,35 @@
+Task 7 Evidence: AGENTS.md Web Reference Removal
+=================================================
+
+Date: 2026-06-10
+File: AGENTS.md
+
+Changes Made:
+1. Removed web app from Purpose section (line 7)
+2. Removed apps/web/ from Context tree (line 18)
+3. Removed web app description (lines 27-28)
+4. Removed Supabase/Next.js SSR from Stack (line 30)
+5. Updated Tooling to remove web test counts (line 34)
+6. Removed web-only commands: pnpm dev, pnpm build, pnpm lint (lines 39-41, 46)
+7. Removed @/* path alias section (lines 48-51)
+8. Removed "use server" and e2e conventions (lines 53-58)
+9. Removed Supabase constraints (lines 63, 65)
+10. Removed Docker/Supabase CLI from Dependencies (line 70)
+11. Removed web dependency line (line 72)
+12. Removed "Local services (web)" and schema references (lines 74-75)
+13. Removed supabase/ directory from Context tree
+
+Verification:
+- grep for "docker" → 0 matches
+- grep for "apps/web" → 1 match (coupling constraint on line 48, intentionally preserved)
+- grep for "use server" → 0 matches
+- grep for "supabase" → 0 matches
+- grep for "next.js/nextjs" → 0 matches
+- grep for "playwright" → 0 matches
+
+Preserved:
+- Desktop stack details (Tauri 2, Vite 6, React Router 7, SQLite, WebDAV, keyring)
+- Desktop commands (tauri:dev, tauri:build, build, typecheck)
+- Coupling constraint (line 48)
+- Shared packages info (@memo/shared, @memo/ui)
+- SQLite schema constraint (apps/desktop/src-tauri/migrations/)
