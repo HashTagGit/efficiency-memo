@@ -8,7 +8,7 @@ import { getCurrentUser, signOut } from "../lib/auth";
 import { getRegisteredTools } from "../lib/tool-registry/registry";
 
 function getActiveToolId(pathname: string): string {
-  const toolMatch = pathname.match(/^\/tools\/([^\/]+)/);
+  const toolMatch = pathname.match(/^\/tools\/([^/]+)/);
   if (toolMatch) return toolMatch[1];
   if (pathname.startsWith("/settings")) return "settings";
   return "";

@@ -1,5 +1,3 @@
-import { registerTool } from "./registry";
-
 /**
  * Discover tools by importing feature index files.
  * Each feature's index.ts calls registerTool on import.
