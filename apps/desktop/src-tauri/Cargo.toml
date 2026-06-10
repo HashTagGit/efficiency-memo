@@ -22,7 +22,7 @@ reqwest_dav = "0.3"
 sha2 = "0.10"
 hex = "0.4"
 chrono = "0.4"
-keyring = { version = "3", features = ["async-secret-service", "apple-native", "windows-native"] }
+keyring = { version = "3", features = ["linux-native", "apple-native", "windows-native"] }
 rusqlite = { version = "0.31", features = ["bundled"] }
 dirs = "5"
 
