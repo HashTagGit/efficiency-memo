@@ -17,7 +17,7 @@ All notable changes to this project will be documented in this file.
 - `tauri-plugin-sql` — SQLite database access from the Tauri webview
 
 ### Changed
-- `apps/web/` remains available as a Docker-based legacy fallback; both surfaces share `packages/shared/` and `packages/ui/` via workspace references
+- `apps/web/` has been archived; desktop is the sole distribution surface
 - Desktop features are independent copies in `apps/desktop/src/features/` (not symlinks), to avoid coupling between surfaces
 - Sync is manual trigger only (Strategy A: per-device folders, last-write-wins); no background auto-sync in v1
 
@@ -50,11 +50,7 @@ All notable changes to this project will be documented in this file.
 - SQL migrations for Charger-Reminder (`001`, `002`) and CoreHour (`003`)
 
 ### Distribution
-- **Docker-only distribution** with bundled Supabase stack (Postgres + Auth + Studio + Inbucket)
-- **One-click setup** via `setup.sh` (Unix/macOS) or `setup.ps1` (Windows PowerShell 7+)
-- **GitHub Actions release pipeline**: pushes a pre-built Docker image to `ghcr.io` and a downloadable `efficiency-memo-v0.0.1.zip` containing `docker-compose.yml`, `.env.docker`, `scripts/`, and `release/README.md`
-- 3-stage Dockerfile (deps/builder/runner) using `node:20-alpine` and `pnpm` via `corepack`
-- All existing tests (341 Vitest + 53 Playwright) pass as the CI release gate
+- Initial release with Charger-Reminder and CoreHour tools.
 
 [0.1.0-desktop]: https://github.com/HashTagGit/efficiency-memo/releases/tag/v0.1.0-desktop
 [0.0.1]: https://github.com/HashTagGit/efficiency-memo/releases/tag/v0.0.1
