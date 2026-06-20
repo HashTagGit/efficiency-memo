@@ -1,4 +1,0 @@
-Fix: core-hour/__tests__/types.test.ts — generic constraint errors
-- Removed Record<string, unknown> constraint from checkFieldTypes<T> generic
-- Types like Session/Tag/CheckIn/SessionTag don't have index signatures, so they failed the constraint
-- Simple <T> suffices for compile-time shape verification

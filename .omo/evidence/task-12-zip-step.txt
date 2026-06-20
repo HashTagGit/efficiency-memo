@@ -1,3 +1,0 @@
-91: - name: Create zip archive
-94: zip -r ../efficiency-memo-${{ github.ref_name }}.zip .
-98: files: efficiency-memo-${{ github.ref_name }}.zip

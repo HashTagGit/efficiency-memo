@@ -1,3 +1,0 @@
-Fix: cross-tool-navigation.test.tsx — Error 1+2
-- vi.fn typed with _pathname?: string parameter (fixes "Expected 0 arguments, but got 1")
-- vi.importActual block removed; uses top-level import of getRegisteredTools (fixes "Property 'getRegisteredTools' does not exist on type 'Promise<ESModuleExports>'")

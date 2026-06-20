@@ -38,3 +38,6 @@ Thumbs.db
 # Tool-generated artifacts
 .understand-anything/
 .codegraph/
+
+# Planning artifacts
+.omo/

@@ -1,7 +1,0 @@
-
-release\README.md:5:## Quick Start
-release\README.md:55:## Prerequisites
-release\README.md:61:The setup script checks all prerequisites automatically and tells you what's missing.
-release\README.md:166:## Troubleshooting
-release\README.md:219:## Security Note
-

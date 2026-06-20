@@ -1,3 +1,0 @@
---- task-2-otp-success @ 2026-06-08T16:51:12Z ---
-HTTP_STATUS=200
-{}

@@ -1,4 +1,0 @@
-Fix: charger-reminder/auth/__tests__/mock.test.ts — Error 4
-- Rewrote all process.env.NODE_ENV assignments using a setNodeEnv helper with type assertion (Record<string, string | undefined>)
-- Bracket notation process.env["NODE_ENV"] was insufficient; needed full type cast to bypass readonly ProcessEnv.NODE_ENV
-- Used getNodeEnv() wrapper for reading to maintain consistency
