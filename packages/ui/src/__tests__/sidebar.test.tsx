@@ -137,4 +137,31 @@ describe('Sidebar', () => {
     const nameSpan = toolA.querySelector('[data-testid="tool-name"]');
     expect(nameSpan?.classList.contains('hidden')).toBe(false);
   });
+
+  it('uses design-token classes', () => {
+    render(
+      <Sidebar
+        tools={mockTools}
+        activeToolId="tool-a"
+        onToolSelect={vi.fn()}
+        isCollapsed={false}
+        onToggle={vi.fn()}
+      />
+    );
+
+    const sidebar = screen.getByTestId('sidebar');
+    expect(sidebar.className).toMatch(/bg-\[var\(--color-sidebar\)\]/);
+    expect(sidebar.className).toMatch(/text-foreground/);
+
+    const borderEl = sidebar.querySelector('.border-b');
+    expect(borderEl?.className).toMatch(/border-border/);
+
+    const activeItem = screen.getByTestId('sidebar-tool-item-tool-a');
+    expect(activeItem.className).toMatch(/bg-\[var\(--color-active\)\]/);
+    expect(activeItem.className).toMatch(/text-foreground/);
+
+    const inactiveItem = screen.getByTestId('sidebar-tool-item-tool-b');
+    expect(inactiveItem.className).toMatch(/text-muted/);
+    expect(inactiveItem.className).toMatch(/hover:bg-\[var\(--color-sidebar-hover\)\]/);
+  });
 });

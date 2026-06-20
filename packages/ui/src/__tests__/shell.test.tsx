@@ -143,4 +143,34 @@ describe('Shell', () => {
     // Mobile menu button should exist
     expect(screen.getByTestId('mobile-menu-button')).toBeInTheDocument();
   });
+
+  it('uses design-token classes', () => {
+    render(
+      <Shell
+        tools={mockTools}
+        activeToolId=""
+        onToolSelect={vi.fn()}
+        isCollapsed={false}
+        onToggle={vi.fn()}
+        userEmail="user@example.com"
+        onSignOut={vi.fn()}
+      >
+        <div>Content</div>
+      </Shell>
+    );
+
+    const shellRoot = screen.getByTestId('desktop-sidebar').parentElement;
+    expect(shellRoot?.className).toMatch(/bg-background/);
+
+    const header = screen.getByTestId('shell-header');
+    expect(header.className).toMatch(/bg-surface/);
+    expect(header.className).toMatch(/border-border/);
+
+    const email = screen.getByText('user@example.com');
+    expect(email.className).toMatch(/text-muted/);
+
+    const signOut = screen.getByTestId('sign-out-button');
+    expect(signOut.className).toMatch(/text-foreground/);
+    expect(signOut.className).toMatch(/bg-surface/);
+  });
 });

@@ -60,4 +60,28 @@ describe('Card', () => {
     render(<Card title="Test" description="Test" data-testid="my-card" />);
     expect(screen.getByTestId('my-card')).toBeInTheDocument();
   });
+
+  it('uses design-token classes', () => {
+    render(
+      <Card
+        title="Token Card"
+        description="Design tokens"
+        icon={<span data-testid="card-icon">icon</span>}
+      />
+    );
+    const card = screen.getByText('Token Card').closest('[role="button"]');
+    expect(card?.className).toMatch(/bg-card/);
+    expect(card?.className).toMatch(/border-border/);
+    expect(card?.className).toMatch(/text-foreground/);
+
+    const iconContainer = screen.getByTestId('card-icon').parentElement;
+    expect(iconContainer?.className).toMatch(/bg-accent\/10/);
+    expect(iconContainer?.className).toMatch(/text-accent/);
+
+    const title = screen.getByText('Token Card');
+    expect(title.className).toMatch(/text-foreground/);
+
+    const description = screen.getByText('Design tokens');
+    expect(description.className).toMatch(/text-muted/);
+  });
 });

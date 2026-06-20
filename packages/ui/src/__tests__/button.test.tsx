@@ -18,26 +18,27 @@ describe('Button', () => {
   it('renders primary variant by default', () => {
     render(<Button>Primary</Button>);
     const btn = screen.getByText('Primary');
-    // Primary should have a solid background (bg-blue-600 or similar)
-    expect(btn.className).toMatch(/bg-/);
+    expect(btn.className).toMatch(/bg-accent/);
   });
 
   it('renders secondary variant', () => {
     render(<Button variant="secondary">Secondary</Button>);
     const btn = screen.getByText('Secondary');
+    expect(btn.className).toMatch(/bg-surface/);
     expect(btn.className).toMatch(/border/);
   });
 
   it('renders ghost variant', () => {
     render(<Button variant="ghost">Ghost</Button>);
     const btn = screen.getByText('Ghost');
-    expect(btn.className).toMatch(/transparent|bg-transparent/);
+    expect(btn.className).toMatch(/text-foreground/);
+    expect(btn.className).toMatch(/hover:bg-surface/);
   });
 
   it('renders danger variant', () => {
     render(<Button variant="danger">Danger</Button>);
     const btn = screen.getByText('Danger');
-    expect(btn.className).toMatch(/red-/);
+    expect(btn.className).toMatch(/bg-danger/);
   });
 
   it('renders small size', () => {

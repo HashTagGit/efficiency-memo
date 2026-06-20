@@ -75,4 +75,23 @@ describe('Modal', () => {
     const dialog = screen.getByRole('dialog');
     expect(dialog.className).toMatch(/transition/);
   });
+
+  it('uses design-token classes', () => {
+    render(
+      <Modal isOpen={true} onClose={vi.fn()} title="Token Test">
+        <p>Content</p>
+      </Modal>
+    );
+    const dialog = screen.getByRole('dialog');
+    expect(dialog.className).toMatch(/bg-surface-strong/);
+    expect(dialog.className).toMatch(/border-border/);
+
+    const title = screen.getByText('Token Test');
+    expect(title.className).toMatch(/text-foreground/);
+
+    const closeButton = screen.getByLabelText('Close modal');
+    expect(closeButton.className).toMatch(/text-muted/);
+    expect(closeButton.className).toMatch(/hover:text-foreground/);
+    expect(closeButton.className).toMatch(/hover:bg-surface/);
+  });
 });
