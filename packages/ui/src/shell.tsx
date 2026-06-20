@@ -13,6 +13,7 @@ export interface ShellProps {
   userEmail: string;
   onSignOut: () => void;
   children: React.ReactNode;
+  className?: string;
 }
 
 export function Shell({
@@ -24,11 +25,13 @@ export function Shell({
   userEmail,
   onSignOut,
   children,
+  className,
+  ...rest
 }: ShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
-    <div className="flex h-screen w-full bg-neutral-50">
+    <div className={`flex h-screen w-full bg-background ${className ?? ''}`} {...rest}>
       {/* Desktop Sidebar */}
       <div data-testid="desktop-sidebar" className="hidden md:flex h-full flex-shrink-0">
         <Sidebar
@@ -77,14 +80,14 @@ export function Shell({
         {/* Header */}
         <header
           data-testid="shell-header"
-          className="flex items-center justify-between px-4 py-3 bg-white border-b border-neutral-200"
+          className="flex items-center justify-between px-4 py-3 bg-surface border-b border-border"
         >
           <div className="flex items-center gap-3">
             {/* Mobile menu button */}
             <button
               data-testid="mobile-menu-button"
               onClick={() => setMobileOpen(true)}
-              className="md:hidden p-2 rounded-md hover:bg-neutral-100 transition-colors"
+              className="md:hidden p-2 rounded-md hover:bg-surface transition-colors"
               aria-label="Open menu"
             >
               <svg
@@ -104,7 +107,7 @@ export function Shell({
               </svg>
             </button>
 
-            <span className="text-sm text-neutral-600 truncate max-w-[200px]">
+            <span className="text-sm text-muted truncate max-w-[200px]">
               {userEmail}
             </span>
           </div>
@@ -112,7 +115,7 @@ export function Shell({
           <button
             data-testid="sign-out-button"
             onClick={onSignOut}
-            className="px-3 py-1.5 text-sm font-medium text-neutral-700 bg-neutral-100 rounded-md hover:bg-neutral-200 transition-colors"
+            className="px-3 py-1.5 text-sm font-medium text-foreground bg-surface rounded-md hover:bg-surface-strong transition-colors"
           >
             Sign out
           </button>

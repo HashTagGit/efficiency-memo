@@ -9,6 +9,7 @@ export interface SidebarProps {
   onToolSelect: (toolId: string) => void;
   isCollapsed: boolean;
   onToggle: () => void;
+  className?: string;
 }
 
 export function Sidebar({
@@ -17,25 +18,29 @@ export function Sidebar({
   onToolSelect,
   isCollapsed,
   onToggle,
+  className,
+  ...rest
 }: SidebarProps) {
   return (
     <aside
       data-testid="sidebar"
+      {...rest}
       className={`
-        flex flex-col h-full bg-neutral-900 text-white
+        flex flex-col h-full bg-[var(--color-sidebar)] text-foreground
         transition-all duration-200 ease-in-out
         ${isCollapsed ? 'w-16' : 'w-60'}
+        ${className ?? ''}
       `}
     >
       {/* Header / Toggle */}
-      <div className="flex items-center justify-between p-3 border-b border-neutral-800">
+      <div className="flex items-center justify-between p-3 border-b border-border">
         {!isCollapsed && (
           <span className="font-semibold text-sm truncate">EfficiencyMemo</span>
         )}
         <button
           data-testid="sidebar-toggle"
           onClick={onToggle}
-          className="p-1.5 rounded-md hover:bg-neutral-800 transition-colors"
+          className="p-1.5 rounded-md hover:bg-[var(--color-sidebar-hover)] transition-colors"
           aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
         >
           <svg
@@ -70,8 +75,8 @@ export function Sidebar({
                     w-full flex items-center gap-3 px-3 py-2.5 rounded-lg
                     transition-colors duration-150
                     ${isActive
-                      ? 'bg-neutral-800 text-white'
-                      : 'text-neutral-400 hover:bg-neutral-800/50 hover:text-white'
+                      ? 'bg-[var(--color-active)] text-foreground'
+                      : 'text-muted hover:bg-[var(--color-sidebar-hover)] hover:text-foreground'
                     }
                   `}
                 >
