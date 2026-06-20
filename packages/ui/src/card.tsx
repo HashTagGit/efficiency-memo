@@ -9,6 +9,7 @@ export interface CardProps {
   onClick?: () => void;
   href?: string;
   'data-testid'?: string;
+  className?: string;
 }
 
 export function Card({
@@ -18,20 +19,24 @@ export function Card({
   onClick,
   href,
   'data-testid': dataTestId,
-}: CardProps) {
+  className,
+  ...rest
+}: CardProps & React.HTMLAttributes<HTMLDivElement | HTMLAnchorElement>) {
   const baseClasses =
-    'group relative flex flex-col gap-3 p-6 rounded-2xl border border-gray-200 bg-white shadow-sm transition-all duration-200 hover:scale-[1.02] hover:shadow-lg cursor-pointer';
+    'group relative flex flex-col gap-3 p-6 rounded-2xl border border-border bg-card shadow-sm text-foreground transition-all duration-200 hover:scale-[1.02] hover:shadow-lg cursor-pointer';
+
+  const mergedClasses = className ? `${baseClasses} ${className}` : baseClasses;
 
   const content = (
     <>
       {icon && (
-        <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-blue-50 text-blue-600 transition-transform duration-200 group-hover:scale-110">
+        <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-accent/10 text-accent transition-transform duration-200 group-hover:scale-110">
           {icon}
         </div>
       )}
       <div className="flex flex-col gap-1">
-        <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-        <p className="text-sm text-gray-500 leading-relaxed">{description}</p>
+        <h3 className="text-lg font-semibold text-foreground">{title}</h3>
+        <p className="text-sm text-muted leading-relaxed">{description}</p>
       </div>
     </>
   );
@@ -41,8 +46,9 @@ export function Card({
       <a
         href={href}
         role="link"
-        className={baseClasses}
+        className={mergedClasses}
         data-testid={dataTestId}
+        {...(rest as React.AnchorHTMLAttributes<HTMLAnchorElement>)}
       >
         {content}
       </a>
@@ -53,7 +59,7 @@ export function Card({
     <div
       role="button"
       tabIndex={0}
-      className={baseClasses}
+      className={mergedClasses}
       onClick={onClick}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
@@ -62,6 +68,7 @@ export function Card({
         }
       }}
       data-testid={dataTestId}
+      {...rest}
     >
       {content}
     </div>
