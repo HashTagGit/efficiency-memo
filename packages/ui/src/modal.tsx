@@ -7,9 +7,10 @@ export interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
+  className?: string;
 }
 
-export function Modal({ isOpen, onClose, title, children }: ModalProps) {
+export function Modal({ isOpen, onClose, title, children, className, ...rest }: ModalProps) {
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -47,21 +48,23 @@ export function Modal({ isOpen, onClose, title, children }: ModalProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
-        className="relative z-10 w-full max-w-lg mx-4 bg-white rounded-2xl shadow-2xl transform transition-all duration-200 scale-100 opacity-100"
+        data-testid="modal"
+        className={`relative z-10 w-full max-w-lg mx-4 bg-surface-strong border border-border rounded-2xl shadow-2xl transform transition-all duration-200 scale-100 opacity-100${className ? ` ${className}` : ''}`}
         onClick={(e) => e.stopPropagation()}
+        {...rest}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-border">
           <h2
             id="modal-title"
-            className="text-lg font-semibold text-gray-900"
+            className="text-lg font-semibold text-foreground"
           >
             {title}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+            className="p-1 rounded-lg text-muted hover:text-foreground hover:bg-surface transition-colors"
             aria-label="Close modal"
           >
             <svg
