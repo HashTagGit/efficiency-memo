@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.0.2] - 2026-06-21
+
+### Changed
+- **`@memo/ui` design-token retune** — every component now uses the dark-theme design tokens defined in `apps/desktop/src/index.css` (`bg-accent`, `bg-surface`, `bg-card`, `text-foreground`, `text-muted`, `border-border`, `ring-accent`, etc.). Removed all hardcoded light-theme colors (`bg-white`, `bg-blue-600`, `text-gray-900`, `bg-neutral-50`, etc.) that were silently breaking the dark theme.
+  - `Button`, `Card`, `Modal`, `Sidebar`, `Shell` retuned to design tokens
+  - Card, Modal, Sidebar, Shell gained `className` and `...rest` prop forwarding for tailwind overrides
+- **Page migrations** — `apps/desktop/src/pages/dashboard`, `settings/sync`, and `sign-in` migrated from hardcoded colors to the new component library
+  - Sync page replaces 3 hand-rolled inputs and a hand-rolled status banner with `Input`, `Alert`, `PageHeader`, and `Button` components
+  - Dashboard and sign-in pages adopt `PageHeader`, `EmptyState`, `Input` for consistency with the rest of the app
+
+### Added
+- **`@memo/ui` new shared components** — four presentational components that replace repeated hand-rolled patterns across pages:
+  - `Input` — labeled text input with `error` and `disabled` states; `forwardRef`
+  - `Alert` — `info` / `success` / `warning` / `error` variants with optional dismiss button; `role="alert"`; `forwardRef`
+  - `EmptyState` — centered icon + title + description + optional `action` slot; `forwardRef`
+  - `PageHeader` — page title (uses `font-display` — Cormorant Garamond) + optional `subtitle` and `action`; `forwardRef`
+- **New tests** — 53 new tests across `Input` (17), `Alert` (13), `EmptyState` (12), `PageHeader` (11); existing 5 component test files updated for the new className patterns. `@memo/ui` test suite is now 98/98 passing across 9 test files.
+
+### Notes
+- No new runtime dependencies; no Rust/Tauri changes; `apps/desktop/src/index.css` design tokens untouched; `packages/shared/` untouched.
+- This release is a UI refactor with no behavior changes — every existing user flow and command surface is preserved.
+
 ## [0.1.0-desktop] - 2026-06-09
 
 ### Added
@@ -54,3 +76,4 @@ All notable changes to this project will be documented in this file.
 
 [0.1.0-desktop]: https://github.com/HashTagGit/efficiency-memo/releases/tag/v0.1.0-desktop
 [0.0.1]: https://github.com/HashTagGit/efficiency-memo/releases/tag/v0.0.1
+[0.0.2]: https://github.com/HashTagGit/efficiency-memo/releases/tag/v0.0.2

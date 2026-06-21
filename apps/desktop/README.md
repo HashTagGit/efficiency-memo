@@ -35,9 +35,9 @@ Produces:
 
 | Platform | Output |
 |---|---|
-| Windows | `apps/desktop/src-tauri/target/release/bundle/msi/EfficiencyMemo_0.0.1_x64_en-US.msi` and `bundle/nsis/EfficiencyMemo_0.0.1_x64-setup.exe` |
+| Windows | `apps/desktop/src-tauri/target/release/bundle/msi/EfficiencyMemo_0.0.2_x64_en-US.msi` and `bundle/nsis/EfficiencyMemo_0.0.2_x64-setup.exe` |
 | Windows (portable) | `apps/desktop/src-tauri/target/release/EfficiencyMemo.exe` |
-| macOS | `apps/desktop/src-tauri/target/release/bundle/dmg/EfficiencyMemo_0.0.1_x64.dmg` |
+| macOS | `apps/desktop/src-tauri/target/release/bundle/dmg/EfficiencyMemo_0.0.2_x64.dmg` |
 | Linux | `apps/desktop/src-tauri/target/release/bundle/{deb,appimage,rpm}/EfficiencyMemo_*.{deb,AppImage,rpm}` |
 
 Install the `.msi` (or platform equivalent) and launch from the Start menu. On first launch, the app creates its database in the OS app-data directory and runs all 3 migrations.

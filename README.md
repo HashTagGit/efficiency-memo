@@ -48,7 +48,7 @@ pnpm --filter desktop tauri:build
 ```
 
 Output:
-- Windows: `apps/desktop/src-tauri/target/release/bundle/msi/EfficiencyMemo_0.0.1_x64_en-US.msi`
+- Windows: `apps/desktop/src-tauri/target/release/bundle/msi/EfficiencyMemo_0.0.2_x64_en-US.msi`
 - Standalone `.exe`: `apps/desktop/src-tauri/target/release/EfficiencyMemo.exe`
 
 On first launch the app creates its database in `%APPDATA%/com.efficiency-memo.app/efficiency-memo.db` (Windows) or `~/Library/Application Support/com.efficiency-memo.app/efficiency-memo.db` (macOS). All 3 migrations run automatically.
@@ -118,7 +118,7 @@ Key design choices:
 ### Shared packages
 
 - `packages/shared/` — cross-tool types (`ToolManifest`) and constants (`APP_NAME`)
-- `packages/ui/` — `Button`, `Card`, `Modal`, `Sidebar`, `Shell` components. Consumed by the desktop app without modification.
+- `packages/ui/` — `Button`, `Card`, `Modal`, `Sidebar`, `Shell`, plus `Input`, `Alert`, `EmptyState`, `PageHeader`. Every component uses the dark-theme design tokens from `apps/desktop/src/index.css`. Consumed by the desktop app without modification.
 
 ## Tech Stack
 
