@@ -39,7 +39,7 @@ describe('Input', () => {
   });
 
   it('applies disabled classes', () => {
-    const { container } = render(<Input disabled />);
+    render(<Input disabled />);
     const input = screen.getByTestId('input');
     expect(input.className).toMatch(/disabled:opacity-50/);
     expect(input.className).toMatch(/disabled:cursor-not-allowed/);
