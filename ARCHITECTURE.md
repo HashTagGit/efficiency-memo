@@ -6,14 +6,14 @@
 EfficiencyMemo/
 ├── apps/desktop/          # Tauri v2 app (recommended for personal use)
 │   ├── src/               # Vite + React SPA frontend
-│   └── src-tauri/         # Rust native shell + SQLite + WebDAV sync
+│   └── src-tauri/         # Rust native shell + SQLite
 ├── packages/shared/       # Cross-tool types (ToolManifest, etc.)
 └── packages/ui/           # React + Tailwind v4 primitives
 ```
 
 **Key workspaces**:
 
-- `apps/desktop` — the recommended desktop deployable surface. Tauri v2 with Rust native shell, Vite + React SPA, local SQLite, and optional WebDAV sync.
+- `apps/desktop` — the desktop deployable surface. Tauri v2 with Rust native shell, Vite + React SPA, and local SQLite.
 - `packages/shared` — pure TypeScript types and constants. Zero runtime dependencies.
 - `packages/ui` — React component library with Tailwind v4 as a peer dependency.
 
@@ -30,12 +30,12 @@ The desktop app lives in `apps/desktop/` and is the recommended deployable surfa
 - Rust native shell (`src-tauri/`) + Vite/React SPA webview.
 - `main.rs` launches the shell.
 - `lib.rs` registers plugins and Tauri commands.
-- `sync.rs` provides 4 WebDAV commands.
+- `lib.rs` registers the SQL and notification plugins.
 
 ### SQLite Storage
 
 - Tauri plugin-sql opens `sqlite:efficiency-memo.db` in the OS app-data directory.
-- 3 SQLite DDL migrations in `src-tauri/migrations/` (ported from Supabase).
+- 4 SQLite DDL migrations in `src-tauri/migrations/`.
 - `lib/db.ts` wraps `Database.load()` with `dbSelect()`/`dbExecute()` helpers.
 - `DevicePersistenceContract` in `features/charger-reminder/db-tauri.ts` (8 CRUD methods).
 - `DbResult` interface in `features/core-hour/db-tauri.ts`.
@@ -47,20 +47,17 @@ The desktop app lives in `apps/desktop/` and is the recommended deployable surfa
 - `localStorage` session key: `efficiency-memo-session`.
 - Mock auth via `VITE_ENABLE_AUTH_MOCK=true` or `?mock_session=1`.
 
-### WebDAV Sync
+### CoreHour Workflow
 
-- Manual trigger (user clicks button in Settings → Sync).
-- `sync_export`: WAL checkpoint → VACUUM INTO → SHA256 → upload to `/memo-backups/<device-id>/<timestamp>.db` + manifest.json.
-- `sync_import`: download manifest → verify SHA256 → write to `efficiency-memo.db.next` → restart required.
-- `sync_list`: PROPFIND per-device folder.
-- `store_webdav_credentials`: OS keychain via `keyring` crate.
-- Per-device folders, last-write-wins, no conflict resolution (v1).
+- `features/core-hour/` owns the Timer, History, Tags, and Settings routes.
+- An active session persists elapsed and categorized seconds in local storage; after a restart it restores paused.
+- Check-ins record one optional tag, an optional note, and an explicit duration.
+- The native notification plugin reminds users only when a due check-in occurs in the background.
 
 ### Tool Sharing
 
-- Both surfaces consume `packages/shared/` and `packages/ui/` via `workspace:*`.
-- Desktop has feature copies in `apps/desktop/src/features/` (not symlinks — independent copies to avoid coupling).
-- Tool registry pattern mirrors web: `registerTool(manifest, componentLoader)` on import.
+- Desktop consumes `packages/shared/` and `packages/ui/` via `workspace:*`.
+- The CoreHour manifest is enabled. Charger Reminder is retained but disabled; WebDAV sync code is outside the current product focus.
 - React Router handles SPA routing (`BrowserRouter` with `<Routes>`).
 
 ### Data Locations
@@ -77,7 +74,7 @@ The desktop app lives in `apps/desktop/` and is the recommended deployable surfa
 | Routing | react-router-dom (SPA) |
 | Storage | SQLite (local file) |
 | Auth | Local (no server) |
-| Sync | Manual WebDAV |
+| Sync | Out of current product scope |
 | SSR | No (SPA) |
 | RLS | No (single-user file) |
 | Build output | `.exe`/`.msi`/`.dmg`/`.AppImage` |

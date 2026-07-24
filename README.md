@@ -1,27 +1,19 @@
 # EfficiencyMemo
 
-A unified tool gallery for daily productivity. Ships as a **Tauri v2 desktop app** with local SQLite storage and optional WebDAV sync.
+A local-first **CoreHour** desktop app for deliberate time tracking. It ships as a Tauri v2 application with local SQLite storage.
 
 ## About
 
-EfficiencyMemo is a pnpm monorepo that bundles independent productivity tools behind a single authenticated shell, so the same user account reaches every tool without re-onboarding. It currently ships two tools:
-
-- **Charger Reminder** — battery tracking with deterministic heuristic reminders
-- **CoreHour** — time tracking with periodic check-ins and tag-based session history
-
-New tools can be added by creating a feature folder under `apps/desktop/src/features/` and registering the tool manifest. The shell discovers tools automatically at build time.
+EfficiencyMemo is a pnpm monorepo centered on CoreHour. Sign in locally, start a session, record periodic check-ins, and review each day locally. Charger Reminder is disabled; WebDAV sync code is retained but outside the current product scope.
 
 ## Features
 
-### Charger Reminder — battery tracking with heuristic reminders
-- Track device batteries and get reminded to charge before they run out
-- Deterministic heuristic engine (v1) for reminder timing
-- Device presets, charge event logging, reminder preferences
-
 ### CoreHour — time tracking with periodic check-ins
-- Track how you spend your time with periodic check-ins and tag-based categorization
-- Timer with visibility auto-pause (1s interval)
-- Tag management, session history, settings
+- Choose a 15, 30, or 60 minute interval for the next session
+- Start, pause, continue, and end sessions; an interrupted session restores paused
+- Categorize a due check-in with one tag and an optional note, or skip it as uncategorized
+- Review and edit daily totals, tag totals, and check-ins
+- Receive one native notification when a check-in becomes due while the app is backgrounded
 
 ## Quick Start — Desktop App (recommended)
 
@@ -51,30 +43,19 @@ Output:
 - Windows: `apps/desktop/src-tauri/target/release/bundle/msi/EfficiencyMemo_0.0.2_x64_en-US.msi`
 - Standalone `.exe`: `apps/desktop/src-tauri/target/release/EfficiencyMemo.exe`
 
-On first launch the app creates its database in `%APPDATA%/com.efficiency-memo.app/efficiency-memo.db` (Windows) or `~/Library/Application Support/com.efficiency-memo.app/efficiency-memo.db` (macOS). All 3 migrations run automatically.
+On first launch the app creates its database in `%APPDATA%/com.efficiency-memo.app/efficiency-memo.db` (Windows) or `~/Library/Application Support/com.efficiency-memo.app/efficiency-memo.db` (macOS). All 4 migrations run automatically.
 
 ### Using the app
 
-1. **Sign in** — Enter any email. Local auth has no password or email verification (it's a single-user desktop tool). The email is stored in the local SQLite database and the current session is kept in local storage; only WebDAV passwords use the OS keychain.
-2. **Use the tools** — Sidebar shows Charger Reminder and CoreHour. Click any tool to navigate.
-3. **Set up sync (optional)** — Open **Settings → Sync** in the sidebar, enter your WebDAV server URL, username, and password. Password is stored in the OS keychain. Click "Export & Upload" to back up, "Download & Import" to restore on another device.
-4. **Restart required after import** — For safety, `sync_import` writes the downloaded database to `efficiency-memo.db.next`. Restart the app to swap it in.
+1. **Sign in** — Enter any email. Local auth has no password or email verification; the account is stored in local SQLite and the active session in local storage.
+2. **Create tags** — Open **CoreHour → Tags** and add the categories you want to use.
+3. **Set the interval** — Open **CoreHour → Settings**, choose 15, 30, or 60 minutes, then save. It applies to the next session.
+4. **Track time** — Open **CoreHour → Timer** and start a session. At each due check-in, choose one tag and an optional note, or skip. Allow the operating-system notification permission for background reminders.
+5. **Review the day** — Open **CoreHour → History** to select a date, inspect totals, and edit check-ins.
 
-### Sync (WebDAV)
+Use the native Tauri window opened by `tauri:dev`; `http://localhost:1420` is only the Vite development server and does not provide the Tauri SQLite bridge.
 
-EfficiencyMemo uses **manual WebDAV sync** (Strategy A: per-device folders, last-write-wins). It works with any WebDAV-compatible server — Nutstore, Nextcloud, Apache, or self-hosted.
-
-Per-device backup layout:
-```
-/memo-backups/<device-id>/
-  ├── manifest.json          # { device_id, schema_version, timestamp, sha256 }
-  ├── 20260608T153000Z.db    # snapshot at this timestamp
-  └── ...
-```
-
-Device IDs are stable hashes of the OS data directory, so the same machine always lands in the same folder. To set up multi-device sync, install the app on each device, sign in with the same email, and configure the same WebDAV server. Click "Export & Upload" on Device A, then "Download & Import" on Device B.
-
-For detailed setup instructions (Rust toolchain, platform-specific prerequisites, troubleshooting), see [docs/Installation.md](docs/Installation.md).
+For platform-specific setup and troubleshooting, see [docs/Installation.md](docs/Installation.md).
 
 ## Scripts
 
@@ -95,25 +76,23 @@ EfficiencyMemo is organized as a pnpm monorepo. The design system lives in `pack
 ```
 apps/desktop/
 ├── src/                   # React + Vite frontend (SPA, no SSR)
-│   ├── features/          # Tool implementations (charger-reminder, core-hour)
+│   ├── features/          # CoreHour and retained legacy feature code
 │   ├── pages/             # Route pages (dashboard, sign-in, tools/*, settings/sync)
 │   ├── components/        # Shell layout
 │   ├── lib/               # db wrapper, auth, sync wrapper, tool registry
 │   └── main.tsx           # React entry
 └── src-tauri/             # Rust native shell
-    ├── src/
-    │   ├── lib.rs         # Plugin registration (sql) + Tauri command handlers
-    │   └── sync.rs        # WebDAV sync engine (4 Tauri commands)
-    ├── migrations/        # 3 SQLite migration files
+    ├── src/               # Plugin registration and Tauri command handlers
+    ├── migrations/        # 4 SQLite migration files
     └── tauri.conf.json    # Bundle config (msi + nsis targets)
 ```
 
 Key design choices:
 - **No SSR** — Tauri uses a webview, not a browser, so server-side rendering is unnecessary. Vite + React Router handles all routing.
-- **Local SQLite** — Tauri plugin-sql opens `sqlite:efficiency-memo.db` from the OS app-data directory. All 3 migrations run on first launch.
-- **OS keychain** — WebDAV passwords are stored in Windows Credential Manager / macOS Keychain / Linux Secret Service via the `keyring` crate. They never touch disk in plain text.
-- **Manual sync** — No background auto-sync. The user clicks "Sync" in the settings page. v1 import requires an app restart (writes `efficiency-memo.db.next`).
-- **Per-device folders** — Each device's backups live in `/memo-backups/<device-id>/`. No merge, no conflict resolution; last-write-wins.
+- **Local SQLite** — Tauri plugin-sql opens `sqlite:efficiency-memo.db` from the OS app-data directory. All 4 migrations run on first launch.
+- **CoreHour session state** — Active-session progress is kept locally and restored as paused after an app restart, so closed-app time is never counted.
+- **Native notifications** — `tauri-plugin-notification` sends one system notification only when a check-in becomes due in the background.
+- **Deferred code** — Charger Reminder is retained but disabled. WebDAV sync is not part of the current product scope.
 
 ### Shared packages
 
@@ -131,8 +110,7 @@ Key design choices:
 | TypeScript | strict | All packages |
 | Tailwind CSS | v4 | Styling |
 | SQLite | via `tauri-plugin-sql` | Desktop storage |
-| WebDAV (`reqwest_dav`) | 0.3 | Desktop sync |
-| OS keychain (`keyring`) | 3 | Desktop credential storage |
+| Tauri notification plugin | 2 | Background CoreHour reminders |
 | Vitest | latest | Tests |
 | pnpm | ≥9 | Package manager |
 

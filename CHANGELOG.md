@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## Unreleased
+
+### Changed
+- CoreHour is the active product workflow. Charger Reminder is disabled; WebDAV sync is out of scope.
+- Documentation now describes the native Tauri window as the supported entry point; the Vite server is not a standalone application.
+
+### Added
+- CoreHour timer, history, tags, and settings routes for local sessions and daily review.
+- Persisted session duration and check-in duration through a fourth SQLite migration.
+- One native background notification per due CoreHour check-in.
+
 ## [0.0.2] - 2026-06-21
 
 ### Changed

@@ -26,6 +26,8 @@ pnpm --filter desktop tauri:dev
 
 The first launch takes a few minutes while Rust compiles the native shell. Subsequent launches are instant.
 
+Interact with the native Tauri window, not `http://localhost:1420`. That address is the Vite development server and lacks the Tauri bridge required for local SQLite access.
+
 To build a production installer:
 
 ```bash
@@ -106,7 +108,7 @@ On first launch the app creates its SQLite database automatically:
 - **macOS:** `~/Library/Application Support/com.efficiency-memo.app/efficiency-memo.db`
 - **Linux:** `~/.local/share/com.efficiency-memo.app/efficiency-memo.db`
 
-All 3 schema migrations run automatically on first launch. No manual setup is required.
+All 4 schema migrations run automatically on first launch. No manual setup is required.
 
 ### Dev server not starting
 

@@ -35,22 +35,15 @@ EfficiencyMemo/
 | Command | Description |
 |---|---|
 | `pnpm typecheck` | TypeScript check across all workspaces |
-| `pnpm test` | Run Vitest (57 cases) |
+| `pnpm test` | Run Vitest (142 cases) |
 | `pnpm --filter desktop tauri:dev` | Launch desktop app in dev mode |
 | `pnpm --filter desktop tauri:build` | Build production desktop installer |
 | `pnpm --filter desktop build` | Build desktop frontend (Vite only) |
 | `pnpm --filter desktop typecheck` | TypeScript check in desktop |
 
-## Adding a New Tool
+## CoreHour Scope
 
-1. Create `apps/desktop/src/features/<tool-id>/`
-2. Add `manifest.ts` (id, name, icon, description, routes)
-3. Add `component-loader.ts` (lazy import of entry page)
-4. Add `index.ts` (calls `registerTool(manifest, componentLoader)`)
-5. Register in `apps/desktop/src/lib/tool-registry/discovery.ts` (`featureNames` array)
-6. Add `AGENTS.md` in the feature folder
-
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for the full pattern.
+Current work belongs in `apps/desktop/src/features/core-hour/`. Keep the user workflow local: session timer, check-ins, tags, settings, and day history. Do not reactivate or remove Charger Reminder or WebDAV sync code without an explicit product decision.
 
 ## Code Conventions
 
