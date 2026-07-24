@@ -55,7 +55,7 @@ On first launch the app creates its database in `%APPDATA%/com.efficiency-memo.a
 
 ### Using the app
 
-1. **Sign in** — Enter any email. Local auth has no password or email verification (it's a single-user desktop tool). The email is stored in the OS keychain, not in the database.
+1. **Sign in** — Enter any email. Local auth has no password or email verification (it's a single-user desktop tool). The email is stored in the local SQLite database and the current session is kept in local storage; only WebDAV passwords use the OS keychain.
 2. **Use the tools** — Sidebar shows Charger Reminder and CoreHour. Click any tool to navigate.
 3. **Set up sync (optional)** — Open **Settings → Sync** in the sidebar, enter your WebDAV server URL, username, and password. Password is stored in the OS keychain. Click "Export & Upload" to back up, "Download & Import" to restore on another device.
 4. **Restart required after import** — For safety, `sync_import` writes the downloaded database to `efficiency-memo.db.next`. Restart the app to swap it in.
