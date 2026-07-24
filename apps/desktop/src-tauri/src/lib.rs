@@ -26,9 +26,16 @@ pub fn run() {
             sql: include_str!("../migrations/0003_ch_core_hour.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 4,
+            description: "store core hour durations",
+            sql: include_str!("../migrations/0004_ch_session_durations.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_notification::init())
         .plugin(
             tauri_plugin_sql::Builder::default()
                 .add_migrations("sqlite:efficiency-memo.db", migrations)

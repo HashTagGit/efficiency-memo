@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "EfficiencyMemo Desktop - A unified tool gallery for daily productivity"
 authors = ["JunYe Lin <junyelin2000@163.com>"]
 edition = "2021"
-rust-version = "1.70"
+rust-version = "1.77.2"
 
 [lib]
 name = "efficiency_memo_lib"
@@ -25,6 +25,7 @@ chrono = "0.4"
 keyring = { version = "3", features = ["linux-native", "apple-native", "windows-native"] }
 rusqlite = { version = "0.31", features = ["bundled"] }
 dirs = "5"
+tauri-plugin-notification = "2.0.0-beta.0"
 
 [profile.release]
 panic = "abort"

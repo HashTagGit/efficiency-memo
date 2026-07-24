@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('../db', () => ({
   dbExecute: vi.fn().mockResolvedValue(undefined),
+  dbSelect: vi.fn().mockResolvedValue([]),
 }))
 
 import {
@@ -12,6 +13,7 @@ import {
   isMockAuthEnabled,
   getMockUser,
 } from '../auth'
+import { dbSelect } from '../db'
 
 let store: Record<string, string>
 
@@ -46,6 +48,19 @@ describe('signIn', () => {
 
     const stored = getCurrentUser()
     expect(stored).toEqual(user)
+  })
+
+  it('reuses the existing local account for the same email', async () => {
+    vi.mocked(dbSelect).mockResolvedValueOnce([{
+      id: 'stable-user-id',
+      email: 'test@example.com',
+      created_at: '2026-01-01T00:00:00.000Z',
+      updated_at: '2026-01-01T00:00:00.000Z',
+    }])
+
+    const user = await signIn('test@example.com')
+
+    expect(user.id).toBe('stable-user-id')
   })
 })
 

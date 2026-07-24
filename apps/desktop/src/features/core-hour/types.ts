@@ -7,6 +7,8 @@ export interface Session {
   started_at: IsoTimestamp;
   ended_at: IsoTimestamp | null;
   interval_minutes: number;
+  elapsed_seconds: number;
+  recorded_seconds: number;
   synced: boolean;
 }
 
@@ -26,6 +28,7 @@ export interface CheckIn {
   checked_at: IsoTimestamp;
   skipped: boolean;
   note: string;
+  duration_seconds: number;
   synced: boolean;
 }
 
@@ -39,4 +42,10 @@ export interface SessionTag {
 
 export interface Settings {
   interval_minutes: number;
+}
+
+export interface CheckInWithTag extends CheckIn {
+  tag_id: Uuid | null;
+  tag_name: string | null;
+  tag_color: string | null;
 }

@@ -1,4 +1,4 @@
-import { dbExecute } from "./db";
+import { dbExecute, dbSelect } from "./db";
 
 export interface User {
   id: string;
@@ -10,13 +10,23 @@ export interface User {
 const SESSION_KEY = "efficiency-memo-session";
 
 export async function signIn(email: string): Promise<User> {
-  const id = crypto.randomUUID();
   const now = new Date().toISOString();
-  await dbExecute(
-    `INSERT OR REPLACE INTO users (id, email, created_at, updated_at) VALUES ($1, $2, $3, $4)`,
-    [id, email, now, now],
+  const [existing] = await dbSelect<User>(
+    "SELECT id, email, created_at, updated_at FROM users WHERE email = $1 ORDER BY updated_at DESC LIMIT 1",
+    [email],
   );
-  const user = { id, email, created_at: now, updated_at: now };
+  const user = existing
+    ? { ...existing, updated_at: now }
+    : { id: crypto.randomUUID(), email, created_at: now, updated_at: now };
+
+  if (existing) {
+    await dbExecute("UPDATE users SET updated_at = $1 WHERE id = $2", [now, user.id]);
+  } else {
+    await dbExecute(
+      "INSERT INTO users (id, email, created_at, updated_at) VALUES ($1, $2, $3, $4)",
+      [user.id, user.email, user.created_at, user.updated_at],
+    );
+  }
   localStorage.setItem(SESSION_KEY, JSON.stringify(user));
   return user;
 }

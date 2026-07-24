@@ -1,68 +1,43 @@
-import React, { useState } from "react";
-
-const INTERVAL_OPTIONS = [
-  { value: 15, label: "15 minutes" },
-  { value: 30, label: "30 minutes" },
-  { value: 45, label: "45 minutes" },
-  { value: 60, label: "1 hour" },
-  { value: 90, label: "1.5 hours" },
-  { value: 120, label: "2 hours" },
-];
+import React, { useEffect, useState } from "react";
+import { Button } from "@memo/ui";
+import { checkInIntervalOptions, loadCheckInInterval, saveCheckInInterval } from "../settings";
 
 export default function SettingsPage() {
   const [intervalMinutes, setIntervalMinutes] = useState(30);
   const [saved, setSaved] = useState(false);
 
-  const handleSave = () => {
-    // In a real implementation this would persist to the database
+  useEffect(() => {
+    void loadCheckInInterval().then(setIntervalMinutes);
+  }, []);
+
+  async function save() {
+    await saveCheckInInterval(intervalMinutes);
     setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  };
+  }
 
   return (
-    <div data-testid="ch-settings-page" className="space-y-6">
-      {/* Check-in interval */}
-      <div className="rounded-lg border bg-card p-4">
-        <h3 className="text-sm font-semibold mb-1">Check-in Interval</h3>
-        <p className="text-xs text-muted-foreground mb-4">
-          How often CoreHour prompts you for a check-in during an active session.
-        </p>
-
-        <div className="flex flex-wrap gap-2">
-          {INTERVAL_OPTIONS.map((option) => (
-            <button
-              key={option.value}
-              onClick={() => setIntervalMinutes(option.value)}
-              data-testid={`ch-interval-${option.value}`}
-              className={`rounded-lg border px-4 py-2 text-sm font-medium transition-colors ${
-                intervalMinutes === option.value
-                  ? "border-accent bg-accent text-background"
-                  : "border-border bg-card text-foreground hover:bg-muted"
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
+    <div className="max-w-xl space-y-5" data-testid="ch-settings-page">
+      <div>
+        <h1 className="text-lg font-semibold">Check-in interval</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Applies when you start your next session.</p>
       </div>
-
-      {/* Save button */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={handleSave}
-          data-testid="ch-save-settings"
-          className="inline-flex items-center justify-center rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-background hover:bg-accent-strong"
-        >
-          Save Settings
-        </button>
-        {saved && (
-          <span
-            data-testid="ch-settings-saved"
-            className="text-sm text-green-600"
+      <div className="flex gap-2" role="radiogroup" aria-label="Check-in interval">
+        {checkInIntervalOptions.map((minutes) => (
+          <Button
+            key={minutes}
+            variant={intervalMinutes === minutes ? "primary" : "secondary"}
+            size="sm"
+            role="radio"
+            aria-checked={intervalMinutes === minutes}
+            onClick={() => setIntervalMinutes(minutes)}
           >
-            Settings saved!
-          </span>
-        )}
+            {minutes} min
+          </Button>
+        ))}
+      </div>
+      <div className="flex items-center gap-3">
+        <Button type="button" onClick={() => void save()} data-testid="ch-save-settings">Save</Button>
+        {saved && <span className="text-sm text-green-600">Saved</span>}
       </div>
     </div>
   );

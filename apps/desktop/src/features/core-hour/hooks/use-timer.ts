@@ -13,6 +13,7 @@ export interface TimerState {
   stop: () => void;
   pause: () => void;
   resume: () => void;
+  restore: (elapsedSeconds: number) => void;
 }
 
 export function useTimer(): TimerState {
@@ -70,25 +71,15 @@ export function useTimer(): TimerState {
     isPausedRef.current = false;
   }, []);
 
-  // ── Visibility API: auto-pause when tab/window hidden, auto-resume when visible ──
-  useEffect(() => {
-    if (!isRunning) return;
-
-    const handleVisibility = () => {
-      if (document.hidden) {
-        pauseTimer();
-      } else {
-        resumeTimer();
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibility);
-    };
-    // We intentionally re-bind when isRunning changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isRunning]);
+  const restoreTimer = useCallback((elapsedSeconds: number) => {
+    clearTimer();
+    tickRef.current = elapsedSeconds;
+    setElapsed(elapsedSeconds);
+    setIsRunning(true);
+    setIsPaused(true);
+    isRunningRef.current = true;
+    isPausedRef.current = true;
+  }, [clearTimer]);
 
   // ── Cleanup on unmount ──
   useEffect(() => {
@@ -105,5 +96,6 @@ export function useTimer(): TimerState {
     stop: stopTimer,
     pause: pauseTimer,
     resume: resumeTimer,
+    restore: restoreTimer,
   };
 }

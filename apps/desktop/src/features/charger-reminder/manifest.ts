@@ -6,5 +6,5 @@ export const crManifest: ToolManifest = {
   icon: "battery",
   description: "Track device batteries and get reminded to charge before they run out",
   routes: ["/tools/charger-reminder"],
-  enabled: true,
+  enabled: false,
 };
