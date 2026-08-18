@@ -26,6 +26,8 @@ keyring = { version = "3", features = ["linux-native", "apple-native", "windows-
 rusqlite = { version = "0.31", features = ["bundled"] }
 dirs = "5"
 tauri-plugin-notification = "2.0.0-beta.0"
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
 
 [profile.release]
 panic = "abort"

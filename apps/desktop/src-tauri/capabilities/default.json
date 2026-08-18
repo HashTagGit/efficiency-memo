@@ -9,6 +9,10 @@
     "sql:allow-execute",
     "sql:allow-select",
     "sql:allow-load",
-    "notification:default"
+    "notification:default",
+    "dialog:default",
+    "dialog:allow-save",
+    "fs:default",
+    "fs:allow-write-text-file"
   ]
 }
