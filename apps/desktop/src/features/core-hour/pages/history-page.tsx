@@ -1,10 +1,18 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Button, PageHeader } from "@memo/ui";
+import {
+  CartesianGrid,
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { dbExecute, dbSelect } from "../../../lib/db";
 import type { CheckInWithTag, Tag } from "../types";
 import { type ExportRange, rangeToFromDate, recordsToCsv, exportFilename } from "../export";
-
-type TagTotal = { name: string; color: string; duration_seconds: number };
+import { buildTagSlices, buildTrend, rangeDays, summarize, type DailyRow, type TagRow, type TrendRange } from "../analytics";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -19,31 +27,46 @@ export default function HistoryPage({ userId }: { userId: string }) {
   const [date, setDate] = useState(today);
   const [entries, setEntries] = useState<CheckInWithTag[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
-  const [totals, setTotals] = useState<TagTotal[]>([]);
+  const [analyticsRange, setAnalyticsRange] = useState<TrendRange>("7d");
+  const [dailyRows, setDailyRows] = useState<DailyRow[]>([]);
+  const [tagRows, setTagRows] = useState<TagRow[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [tagId, setTagId] = useState("");
   const [note, setNote] = useState("");
   const [exportRange, setExportRange] = useState<ExportRange>("30d");
   const [exporting, setExporting] = useState(false);
 
-  async function load() {
-    const [checkIns, availableTags, tagTotals] = await Promise.all([
+  const load = useCallback(async () => {
+    const [checkIns, availableTags] = await Promise.all([
       dbSelect<CheckInWithTag>(
         "SELECT ci.id, ci.session_id, ci.checked_at, ci.skipped, ci.note, ci.duration_seconds, ci.synced, e.tag_id, t.name AS tag_name, t.color AS tag_color FROM ch_check_ins ci JOIN ch_sessions s ON s.id = ci.session_id LEFT JOIN ch_check_in_entries e ON e.check_in_id = ci.id LEFT JOIN ch_tags t ON t.id = e.tag_id WHERE s.user_id = $1 AND date(ci.checked_at, 'localtime') = $2 ORDER BY ci.checked_at DESC",
         [userId, date],
       ),
       dbSelect<Tag>("SELECT * FROM ch_tags WHERE user_id = $1 AND is_archived = 0 ORDER BY created_at", [userId]),
-      dbSelect<TagTotal>(
-        "SELECT t.name, t.color, SUM(ci.duration_seconds) AS duration_seconds FROM ch_check_ins ci JOIN ch_sessions s ON s.id = ci.session_id JOIN ch_check_in_entries e ON e.check_in_id = ci.id JOIN ch_tags t ON t.id = e.tag_id WHERE s.user_id = $1 AND date(ci.checked_at, 'localtime') = $2 GROUP BY t.id, t.name, t.color ORDER BY duration_seconds DESC",
-        [userId, date],
-      ),
     ]);
     setEntries(checkIns.map((e) => ({ ...e, skipped: Boolean(e.skipped), duration_seconds: Number(e.duration_seconds) })));
     setTags(availableTags);
-    setTotals(tagTotals.map((t) => ({ ...t, duration_seconds: Number(t.duration_seconds) })));
-  }
+  }, [date, userId]);
 
-  useEffect(() => { void load(); }, [date]); // userId is constant for the desktop profile
+  useEffect(() => { void load(); }, [load]);
+
+  const loadAnalytics = useCallback(async () => {
+    const fromDate = rangeDays(analyticsRange)[0];
+    const [daily, byTag] = await Promise.all([
+      dbSelect<DailyRow>(
+        "SELECT date(ci.checked_at, 'localtime') AS day, SUM(ci.duration_seconds) AS duration_seconds FROM ch_check_ins ci JOIN ch_sessions s ON s.id = ci.session_id WHERE s.user_id = $1 AND date(ci.checked_at, 'localtime') >= $2 GROUP BY day ORDER BY day",
+        [userId, fromDate],
+      ),
+      dbSelect<TagRow>(
+        "SELECT t.name, t.color, SUM(ci.duration_seconds) AS duration_seconds FROM ch_check_ins ci JOIN ch_sessions s ON s.id = ci.session_id JOIN ch_check_in_entries e ON e.check_in_id = ci.id JOIN ch_tags t ON t.id = e.tag_id WHERE s.user_id = $1 AND date(ci.checked_at, 'localtime') >= $2 GROUP BY t.id, t.name, t.color ORDER BY duration_seconds DESC",
+        [userId, fromDate],
+      ),
+    ]);
+    setDailyRows(daily);
+    setTagRows(byTag);
+  }, [analyticsRange, userId]);
+
+  useEffect(() => { void loadAnalytics(); }, [loadAnalytics]);
 
   async function saveEntry(entry: CheckInWithTag) {
     await dbExecute("UPDATE ch_check_ins SET skipped = $1, note = $2, synced = 0 WHERE id = $3", [tagId ? 0 : 1, note.trim(), entry.id]);
@@ -74,6 +97,9 @@ export default function HistoryPage({ userId }: { userId: string }) {
   }
 
   const totalSeconds = entries.reduce((sum, e) => sum + e.duration_seconds, 0);
+  const trend = buildTrend(dailyRows, analyticsRange);
+  const summary = summarize(trend);
+  const tagSlices = buildTagSlices(tagRows);
 
   return (
     <div className="max-w-2xl space-y-6" data-testid="ch-history-page">
@@ -108,6 +134,73 @@ export default function HistoryPage({ userId }: { userId: string }) {
           className="rounded-lg border border-border bg-surface text-foreground px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
         />
       </label>
+
+      <section className="space-y-4" data-testid="ch-history-analytics" aria-label="CoreHour analytics">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">Focus overview</h2>
+            <p className="text-sm text-muted">Daily totals and tag share for the selected period.</p>
+          </div>
+          <label className="flex items-center gap-2 text-sm text-muted">
+            Range
+            <select
+              value={analyticsRange}
+              onChange={(ev) => setAnalyticsRange(ev.target.value as TrendRange)}
+              className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+              aria-label="Analytics range"
+            >
+              <option value="7d">Last 7 days</option>
+              <option value="30d">Last 30 days</option>
+            </select>
+          </label>
+        </div>
+
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            ["Total", `${summary.totalMinutes} min`],
+            ["Active days", String(summary.activeDays)],
+            ["Daily average", `${summary.dailyAverage} min`],
+          ].map(([label, value]) => (
+            <div key={label} className="rounded-lg border border-border bg-surface px-3 py-2">
+              <p className="text-xs text-muted">{label}</p>
+              <p className="mt-1 text-lg font-semibold text-foreground">{value}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="rounded-lg border border-border bg-surface px-3 py-3">
+          <p className="mb-2 text-xs font-medium text-muted">Minutes per day</p>
+          <div className="h-52 w-full" aria-label="Daily minutes line chart">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={trend} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
+                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
+                <XAxis dataKey="label" tick={{ fill: "var(--muted)", fontSize: 11 }} tickLine={false} axisLine={false} />
+                <YAxis allowDecimals={false} tick={{ fill: "var(--muted)", fontSize: 11 }} tickLine={false} axisLine={false} width={42} />
+                <Tooltip contentStyle={{ background: "var(--surface-strong)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--foreground)" }} />
+                <Line type="monotone" dataKey="minutes" name="Minutes" stroke="var(--accent)" strokeWidth={2} dot={{ r: 2, fill: "var(--accent)" }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-border bg-surface px-3 py-3">
+          <p className="mb-3 text-xs font-medium text-muted">Tag share</p>
+          {tagSlices.length > 0 ? (
+            <div className="space-y-2">
+              {tagSlices.map((slice) => (
+                <div key={slice.name} className="flex items-center gap-2 text-sm">
+                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: slice.color }} aria-hidden="true" />
+                  <span className="min-w-0 flex-1 truncate text-foreground">{slice.name}</span>
+                  <span className="text-muted">{slice.minutes} min</span>
+                  <span className="w-10 text-right text-muted">{slice.percentage}%</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted">No tagged check-ins in this period.</p>
+          )}
+        </div>
+      </section>
 
       <section className="space-y-2" data-testid="ch-history-entries">
         <h2 className="text-sm font-semibold text-foreground">Check-ins</h2>
