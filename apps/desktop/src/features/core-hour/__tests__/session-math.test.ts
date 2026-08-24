@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { hasProgressChanged, shouldPromptForCheckIn, unrecordedSeconds } from "../session-math";
+import {
+  hasProgressChanged,
+  shouldPromptForCheckIn,
+  unrecordedAfterPendingCheckIn,
+  unrecordedSeconds,
+} from "../session-math";
 
 describe("CoreHour session timing", () => {
   it("prompts only after a complete check-in interval", () => {
@@ -11,6 +16,11 @@ describe("CoreHour session timing", () => {
   it("keeps an unclassified remainder when a session ends", () => {
     expect(unrecordedSeconds(46 * 60, 30 * 60)).toBe(16 * 60);
     expect(unrecordedSeconds(30 * 60, 30 * 60)).toBe(0);
+  });
+
+  it("does not duplicate a pending check-in when a session ends", () => {
+    expect(unrecordedAfterPendingCheckIn(30 * 60, 0, 30 * 60)).toBe(0);
+    expect(unrecordedAfterPendingCheckIn(46 * 60, 0, 30 * 60)).toBe(16 * 60);
   });
 
   it("does not update an unchanged saved progress snapshot", () => {

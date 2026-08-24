@@ -13,6 +13,14 @@ export function unrecordedSeconds(
   return Math.max(0, elapsedSeconds - recordedSeconds);
 }
 
+export function unrecordedAfterPendingCheckIn(
+  elapsedSeconds: number,
+  recordedSeconds: number,
+  pendingDurationSeconds: number,
+): number {
+  return Math.max(0, unrecordedSeconds(elapsedSeconds, recordedSeconds) - pendingDurationSeconds);
+}
+
 export function hasProgressChanged(
   elapsedSeconds: number,
   recordedSeconds: number,

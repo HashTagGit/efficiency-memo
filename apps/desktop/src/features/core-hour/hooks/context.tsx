@@ -8,7 +8,7 @@ import {
 } from "react";
 import type { CheckInWithTag, Session, Tag } from "../types";
 import { dbExecute, dbSelect } from "../../../lib/db";
-import { hasProgressChanged, unrecordedSeconds } from "../session-math";
+import { hasProgressChanged, unrecordedAfterPendingCheckIn } from "../session-math";
 
 const SESSION_PROGRESS_KEY = "core-hour-active-session";
 
@@ -48,8 +48,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [activeSession, setActiveSession] = useState<Session | null>(null);
   const [pendingCheckIn, setPendingCheckIn] = useState<CheckInWithTag | null>(null);
   const activeRef = useRef(activeSession);
+  const pendingRef = useRef(pendingCheckIn);
   const completingRef = useRef(false);
   activeRef.current = activeSession;
+  pendingRef.current = pendingCheckIn;
 
   const loadSessions = useCallback(async (userId: string) => {
     const rows = await dbSelect<Record<string, unknown>>(
@@ -173,7 +175,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       "UPDATE ch_sessions SET ended_at = $1, elapsed_seconds = $2, synced = 0 WHERE id = $3",
       [endedAt, finalElapsed, current.id],
     );
-    const remainder = unrecordedSeconds(finalElapsed, finalRecorded);
+    const pending = pendingRef.current?.session_id === current.id ? pendingRef.current : null;
+    if (pending) {
+      await dbExecute(
+        "UPDATE ch_check_ins SET skipped = 1, note = '', synced = 0 WHERE id = $1",
+        [pending.id],
+      );
+    }
+    const remainder = unrecordedAfterPendingCheckIn(
+      finalElapsed,
+      finalRecorded,
+      pending?.duration_seconds ?? 0,
+    );
     if (remainder > 0) {
       await dbExecute(
         "INSERT INTO ch_check_ins (id, session_id, checked_at, skipped, note, duration_seconds, synced) VALUES ($1, $2, $3, 1, '', $4, 0)",
