@@ -5,6 +5,7 @@ import { useTags } from "../hooks/use-tags";
 import { shouldPromptForCheckIn, unrecordedSeconds } from "../session-math";
 import { useTimer } from "../hooks/use-timer";
 import { notifyCheckIn, requestCheckInNotifications } from "../notifications";
+import { useI18n } from "../../../lib/i18n";
 
 interface DashboardProps {
   userId: string;
@@ -24,6 +25,7 @@ function formatDuration(seconds: number): string {
 }
 
 export function Dashboard({ userId, intervalMinutes }: DashboardProps) {
+  const { t } = useI18n();
   const timer = useTimer();
   const { activeSession, pendingCheckIn, loadSessions, startSession, saveProgress, createCheckIn, completeCheckIn, endSession } = useSession();
   const { activeTags, loadTags } = useTags();
@@ -80,21 +82,21 @@ export function Dashboard({ userId, intervalMinutes }: DashboardProps) {
   return (
     <div className="space-y-6" data-testid="dashboard">
       <div className="rounded-xl border border-border bg-surface px-6 py-10 text-center shadow-sm" data-testid="timer-display">
-        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Focus session</p>
+        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted">{t("coreHour.focusSession")}</p>
         <div className="text-6xl font-bold tabular-nums tracking-tight text-foreground" data-testid="timer-value">
           {formatElapsed(timer.elapsed)}
         </div>
         <p className="mt-2 text-sm text-muted-foreground">
-          {pendingCheckIn ? "Check-in due" : timer.isPaused ? "Paused" : timer.isRunning ? "Running" : "Ready"}
+          {pendingCheckIn ? t("coreHour.checkInDue") : timer.isPaused ? t("coreHour.paused") : timer.isRunning ? t("coreHour.running") : t("coreHour.ready")}
         </p>
       </div>
 
       {pendingCheckIn ? (
-        <Alert variant="info" title="What were you doing?" data-testid="ch-pending-check-in">
+        <Alert variant="info" title={t("coreHour.whatWereYouDoing")} data-testid="ch-pending-check-in">
           <div className="space-y-4">
-          <p className="text-sm">Record the last {formatDuration(pendingCheckIn.duration_seconds)}.</p>
+          <p className="text-sm">{t("coreHour.recordLast", { duration: formatDuration(pendingCheckIn.duration_seconds) })}</p>
           {tags.length > 0 ? (
-            <div className="flex flex-wrap gap-2" aria-label="Choose a tag">
+            <div className="flex flex-wrap gap-2" aria-label={t("coreHour.chooseTag")}>
               {tags.map((tag) => (
                 <Button
                   key={tag.id}
@@ -107,36 +109,36 @@ export function Dashboard({ userId, intervalMinutes }: DashboardProps) {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted-foreground">Create a tag below to categorize this interval, or skip it.</p>
+            <p className="text-sm text-muted-foreground">{t("coreHour.createTag")}</p>
           )}
           <label className="block text-sm font-medium">
-            Note <span className="font-normal text-muted-foreground">(optional)</span>
-            <textarea value={note} onChange={(event) => setNote(event.target.value)} className="mt-1 min-h-20 w-full rounded-md border bg-background p-2" />
+            {t("coreHour.note")} <span className="font-normal text-muted-foreground">({t("coreHour.optional")})</span>
+            <textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder={t("coreHour.addNote")} className="mt-1 min-h-20 w-full rounded-md border bg-background p-2" />
           </label>
           <div className="flex gap-2">
-            <Button type="button" disabled={!selectedTagId} onClick={() => void handleCompleteCheckIn(selectedTagId)}>Save check-in</Button>
-            <Button type="button" variant="secondary" onClick={() => void handleCompleteCheckIn(null)}>Skip</Button>
+            <Button type="button" disabled={!selectedTagId} onClick={() => void handleCompleteCheckIn(selectedTagId)}>{t("coreHour.saveCheckIn")}</Button>
+            <Button type="button" variant="secondary" onClick={() => void handleCompleteCheckIn(null)}>{t("coreHour.skip")}</Button>
           </div>
           </div>
         </Alert>
       ) : (
         <div className="flex flex-wrap justify-center gap-3" data-testid="timer-controls">
-          {!activeSession && <Button variant="primary" size="lg" onClick={() => void handleStart()} data-testid="start-button">Start</Button>}
+          {!activeSession && <Button variant="primary" size="lg" onClick={() => void handleStart()} data-testid="start-button">{t("coreHour.start")}</Button>}
           {activeSession && !timer.isPaused && <>
-            <Button variant="secondary" size="lg" onClick={timer.pause} data-testid="pause-button">Pause</Button>
-            <Button variant="danger" size="lg" onClick={() => void handleStop()} data-testid="stop-button">End</Button>
+            <Button variant="secondary" size="lg" onClick={timer.pause} data-testid="pause-button">{t("coreHour.pause")}</Button>
+            <Button variant="danger" size="lg" onClick={() => void handleStop()} data-testid="stop-button">{t("coreHour.end")}</Button>
           </>}
           {activeSession && timer.isPaused && <>
-            <Button variant="primary" size="lg" onClick={timer.resume} data-testid="resume-button">Continue</Button>
-            <Button variant="danger" size="lg" onClick={() => void handleStop()} data-testid="stop-button">End</Button>
+            <Button variant="primary" size="lg" onClick={timer.resume} data-testid="resume-button">{t("coreHour.continue")}</Button>
+            <Button variant="danger" size="lg" onClick={() => void handleStop()} data-testid="stop-button">{t("coreHour.end")}</Button>
           </>}
         </div>
       )}
 
       {activeSession && (
         <div className="rounded-lg border border-border bg-surface px-4 py-3" data-testid="session-info">
-          <h2 className="text-sm font-semibold">Current session</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Check in every {currentInterval} minutes. Paused time is excluded.</p>
+            <h2 className="text-sm font-semibold">{t("coreHour.currentSession")}</h2>
+          <p className="mt-1 text-sm text-muted-foreground">{t("coreHour.intervalHint", { minutes: currentInterval })}</p>
         </div>
       )}
     </div>

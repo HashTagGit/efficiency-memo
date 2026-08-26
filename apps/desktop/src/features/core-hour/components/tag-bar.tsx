@@ -1,12 +1,14 @@
 import React, { useState } from "react";
 import { useTags } from "../hooks/use-tags";
 import { Button } from "@memo/ui";
+import { useI18n } from "../../../lib/i18n";
 
 interface TagBarProps {
   userId: string;
 }
 
 export function TagBar({ userId }: TagBarProps) {
+  const { t } = useI18n();
   const { activeTags, addTag, archiveTag } = useTags();
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState("#3b82f6");
@@ -32,11 +34,11 @@ export function TagBar({ userId }: TagBarProps) {
 
   return (
     <div className="space-y-4" data-testid="tag-bar">
-      <h3 className="text-sm font-semibold text-foreground">Tags</h3>
+      <h3 className="text-sm font-semibold text-foreground">{t("coreHour.tags")}</h3>
 
       {/* Tag list */}
       {tags.length === 0 && (
-        <p className="text-sm text-muted">No tags yet. Add one below.</p>
+        <p className="text-sm text-muted">{t("coreHour.createTagBefore")}</p>
       )}
 
       <ul className="flex flex-wrap gap-2" data-testid="tag-list">
@@ -75,7 +77,7 @@ export function TagBar({ userId }: TagBarProps) {
           type="text"
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
-          placeholder="Tag name..."
+          placeholder={t("coreHour.newTag")}
           className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
           onKeyDown={(e) => {
             if (e.key === "Enter") {
@@ -90,7 +92,7 @@ export function TagBar({ userId }: TagBarProps) {
           value={newColor}
           onChange={(e) => setNewColor(e.target.value)}
           className="h-9 w-9 cursor-pointer rounded-md border border-border bg-background p-0.5"
-          aria-label="Tag color"
+          aria-label={t("coreHour.color")}
           data-testid="tag-color-input"
         />
         <Button
@@ -102,7 +104,7 @@ export function TagBar({ userId }: TagBarProps) {
           onClick={handleAdd}
           data-testid="add-tag-button"
         >
-          Add
+          {t("coreHour.addTag")}
         </Button>
       </div>
     </div>

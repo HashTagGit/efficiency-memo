@@ -5,6 +5,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { Shell } from "@memo/ui";
 import type { ToolManifest } from "@memo/shared";
 import { getRegisteredTools } from "../lib/tool-registry/registry";
+import { currentLocaleLabel, useI18n } from "../lib/i18n";
 
 function getActiveToolId(pathname: string): string {
   const toolMatch = pathname.match(/^\/tools\/([^/]+)/);
@@ -17,6 +18,7 @@ export function ShellLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { locale, toggleLocale, t } = useI18n();
 
   const tools = getRegisteredTools().filter((tool) => tool.enabled);
   const activeToolId = getActiveToolId(location.pathname);
@@ -35,9 +37,9 @@ export function ShellLayout({ children }: { children: React.ReactNode }) {
   // Convert RegisteredTool[] to ToolManifest[] for Shell
   const toolManifests: ToolManifest[] = tools.map((tool) => ({
     id: tool.id,
-    name: tool.name,
+    name: tool.id === "core-hour" ? t("nav.coreHour") : tool.name,
     icon: tool.icon,
-    description: tool.description,
+    description: tool.id === "core-hour" ? t("nav.coreHourDescription") : tool.description,
     routes: tool.routes,
     enabled: tool.enabled,
   }));
@@ -47,7 +49,7 @@ export function ShellLayout({ children }: { children: React.ReactNode }) {
     ...toolManifests,
     {
       id: "settings",
-      name: "Settings",
+      name: t("nav.settings"),
       icon: "settings",
       description: "Sync and app settings",
       routes: ["/settings/sync"],
@@ -62,6 +64,21 @@ export function ShellLayout({ children }: { children: React.ReactNode }) {
       onToolSelect={handleToolSelect}
       isCollapsed={isCollapsed}
       onToggle={() => setIsCollapsed((prev) => !prev)}
+      labels={{
+        appName: t("app.name"),
+        tools: t("nav.tools"),
+        settings: t("nav.settings"),
+        lightMode: t("nav.lightMode"),
+        darkMode: t("nav.darkMode"),
+        switchToLight: t("nav.switchToLight"),
+        switchToDark: t("nav.switchToDark"),
+        collapseSidebar: t("nav.collapseSidebar"),
+        expandSidebar: t("nav.expandSidebar"),
+        language: t("nav.language"),
+      }}
+      localeLabel={currentLocaleLabel(locale)}
+      localeAriaLabel={t("nav.switchLanguage")}
+      onLocaleToggle={toggleLocale}
     >
       {children}
     </Shell>

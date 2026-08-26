@@ -136,4 +136,25 @@ describe('Shell', () => {
     expect(document.documentElement.dataset.theme).toBe('light');
     expect(localStorage.getItem('efficiency-memo-theme')).toBe('light');
   });
+
+  it('renders and invokes the locale control when configured', () => {
+    const onLocaleToggle = vi.fn();
+    render(
+      <Shell
+        tools={mockTools}
+        activeToolId=""
+        onToolSelect={vi.fn()}
+        isCollapsed={false}
+        onToggle={vi.fn()}
+        localeLabel="中文"
+        onLocaleToggle={onLocaleToggle}
+      >
+        <div>Content</div>
+      </Shell>
+    );
+
+    fireEvent.click(screen.getAllByTestId('locale-toggle')[0]);
+    expect(onLocaleToggle).toHaveBeenCalledTimes(1);
+    expect(screen.getAllByText('中文')).toHaveLength(2);
+  });
 });

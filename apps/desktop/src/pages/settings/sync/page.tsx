@@ -1,4 +1,5 @@
 import React, { useState, useCallback, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Button, Input, Alert, PageHeader } from "@memo/ui";
 import {
   storeWebdavCredentials,
@@ -6,6 +7,7 @@ import {
   syncImport,
   syncList,
 } from "../../../lib/sync";
+import { useI18n } from "../../../lib/i18n";
 
 const URL_KEY = "efficiency-memo-webdav-url";
 const USERNAME_KEY = "efficiency-memo-webdav-username";
@@ -19,6 +21,8 @@ interface SyncResult {
 }
 
 export function SyncSettingsPage() {
+  const navigate = useNavigate();
+  const { locale, t } = useI18n();
   const [url, setUrl] = useState("");
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -47,10 +51,10 @@ export function SyncSettingsPage() {
   }, []);
 
   const validateInputs = useCallback((): string | null => {
-    if (!url.trim()) return "WebDAV Server URL is required.";
-    if (!username.trim()) return "Username is required.";
+    if (!url.trim()) return t("sync.urlRequired");
+    if (!username.trim()) return t("sync.usernameRequired");
     return null;
-  }, [url, username]);
+  }, [url, username, t]);
 
   const handleSaveCredentials = useCallback(async () => {
     clearResult();
@@ -65,7 +69,7 @@ export function SyncSettingsPage() {
       await storeWebdavCredentials(username.trim(), password);
       setCredentialsSaved(true);
       setResult({
-        message: "Credentials saved to system keychain.",
+        message: t("sync.credentialsSaved"),
         type: "success",
       });
       // Persist URL and username (but NOT password)
@@ -74,12 +78,12 @@ export function SyncSettingsPage() {
       // Clear password from React state after saving
       setPassword("");
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to save credentials.";
+      const msg = err instanceof Error ? err.message : t("sync.saveFailed");
       setResult({ message: msg, type: "error" });
     } finally {
       setIsSavingCredentials(false);
     }
-  }, [clearResult, validateInputs, url, username, password]);
+  }, [clearResult, validateInputs, url, username, password, t]);
 
   const handleExport = useCallback(async () => {
     clearResult();
@@ -99,13 +103,13 @@ export function SyncSettingsPage() {
       setSyncStatus("success");
       setResult({ message, type: "success" });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Export failed.";
+      const msg = err instanceof Error ? err.message : t("sync.exportFailed");
       setSyncStatus("error");
       setResult({ message: msg, type: "error" });
     } finally {
       setIsExporting(false);
     }
-  }, [clearResult, validateInputs, url, username]);
+  }, [clearResult, validateInputs, url, username, t]);
 
   const handleImport = useCallback(async () => {
     clearResult();
@@ -124,17 +128,17 @@ export function SyncSettingsPage() {
       setLastSync(now);
       setSyncStatus("success");
       setResult({
-        message: `${message} Please restart the app to apply changes.`,
+        message: `${message} ${t("sync.importRestart")}`,
         type: "success",
       });
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Import failed.";
+      const msg = err instanceof Error ? err.message : t("sync.importFailed");
       setSyncStatus("error");
       setResult({ message: msg, type: "error" });
     } finally {
       setIsImporting(false);
     }
-  }, [clearResult, validateInputs, url, username]);
+  }, [clearResult, validateInputs, url, username, t]);
 
   const handleListBackups = useCallback(async () => {
     clearResult();
@@ -149,15 +153,15 @@ export function SyncSettingsPage() {
       const list = await syncList(url.trim(), username.trim());
       setBackups(list);
       if (list.length === 0) {
-        setResult({ message: "No remote backups found.", type: "info" });
+        setResult({ message: t("sync.noRemoteBackups"), type: "info" });
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to list backups.";
+      const msg = err instanceof Error ? err.message : t("sync.listFailed");
       setResult({ message: msg, type: "error" });
     } finally {
       setIsListing(false);
     }
-  }, [clearResult, validateInputs, url, username]);
+  }, [clearResult, validateInputs, url, username, t]);
 
   const statusDot = () => {
     switch (syncStatus) {
@@ -175,25 +179,31 @@ export function SyncSettingsPage() {
   const statusLabel = () => {
     switch (syncStatus) {
       case "syncing":
-        return "Syncing...";
+        return t("sync.syncing");
       case "success":
-        return "Success";
+        return t("sync.success");
       case "error":
-        return "Error";
+        return t("sync.error");
       default:
-        return "Idle";
+        return t("sync.idle");
     }
   };
 
   const formattedLastSync = lastSync
-    ? new Date(lastSync).toLocaleString()
-    : "Never";
+    ? new Date(lastSync).toLocaleString(locale)
+    : t("sync.never");
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <PageHeader
-        title="Sync Settings"
-        subtitle="Configure WebDAV cloud sync for your data"
+        title={t("sync.title")}
+        subtitle={t("sync.subtitle")}
+        action={
+          <Button variant="ghost" size="sm" className="gap-2" onClick={() => navigate("/dashboard")}>
+            <span aria-hidden="true">&larr;</span>
+            {t("sync.back")}
+          </Button>
+        }
       />
 
       {/* Result Alert */}
@@ -209,10 +219,10 @@ export function SyncSettingsPage() {
 
       {/* WebDAV Configuration Card */}
       <section className="bg-surface rounded-xl border border-border shadow-sm p-6">
-        <h2 className="text-lg font-semibold text-foreground mb-4">WebDAV Configuration</h2>
+        <h2 className="text-lg font-semibold text-foreground mb-4">{t("sync.configuration")}</h2>
         <div className="space-y-4">
           <Input
-            label="WebDAV Server URL"
+            label={t("sync.serverUrl")}
             id="webdav-url"
             type="url"
             value={url}
@@ -221,7 +231,7 @@ export function SyncSettingsPage() {
           />
 
           <Input
-            label="Username"
+            label={t("sync.username")}
             id="webdav-username"
             type="text"
             value={username}
@@ -231,15 +241,15 @@ export function SyncSettingsPage() {
 
           <div>
             <Input
-              label="Password"
+            label={t("sync.password")}
               id="webdav-password"
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Your WebDAV password"
+              placeholder={t("sync.passwordPlaceholder")}
             />
             <p className="mt-1 text-xs text-muted">
-              Your password will be stored securely in the OS keychain, not in the browser.
+              {t("sync.passwordHint")}
             </p>
           </div>
 
@@ -249,7 +259,7 @@ export function SyncSettingsPage() {
               isLoading={isSavingCredentials}
               disabled={!url.trim() || !username.trim()}
             >
-              Save Credentials
+              {t("sync.saveCredentials")}
             </Button>
           </div>
 
@@ -258,7 +268,7 @@ export function SyncSettingsPage() {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M20 6L9 17l-5-5" />
               </svg>
-              Credentials saved to keychain
+              {t("sync.credentialsSaved")}
             </p>
           )}
         </div>
@@ -266,14 +276,14 @@ export function SyncSettingsPage() {
 
       {/* Sync Actions Card */}
       <section className="bg-surface rounded-xl border border-border shadow-sm p-6">
-        <h2 className="text-lg font-semibold text-foreground mb-4">Sync Actions</h2>
+        <h2 className="text-lg font-semibold text-foreground mb-4">{t("sync.actions")}</h2>
         <div className="flex flex-wrap gap-3">
           <Button
             onClick={handleExport}
             isLoading={isExporting}
             disabled={!url.trim() || !username.trim()}
           >
-            Export & Upload
+            {t("sync.export")}
           </Button>
           <Button
             variant="secondary"
@@ -281,12 +291,12 @@ export function SyncSettingsPage() {
             isLoading={isImporting}
             disabled={!url.trim() || !username.trim()}
           >
-            Download & Import
+            {t("sync.import")}
           </Button>
         </div>
         {!credentialsSaved && (
           <p className="mt-3 text-sm text-warning">
-            Save your credentials first before running sync operations.
+            {t("sync.saveFirst")}
           </p>
         )}
       </section>
@@ -294,7 +304,7 @@ export function SyncSettingsPage() {
       {/* Sync History Card */}
       <section className="bg-surface rounded-xl border border-border shadow-sm p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-foreground">Remote Backups</h2>
+          <h2 className="text-lg font-semibold text-foreground">{t("sync.backups")}</h2>
           <Button
             variant="ghost"
             size="sm"
@@ -302,7 +312,7 @@ export function SyncSettingsPage() {
             isLoading={isListing}
             disabled={!url.trim() || !username.trim()}
           >
-            Refresh List
+            {t("sync.refresh")}
           </Button>
         </div>
 
@@ -323,8 +333,8 @@ export function SyncSettingsPage() {
               <polyline points="17 8 12 3 7 8" />
               <line x1="12" y1="3" x2="12" y2="15" />
             </svg>
-            <p className="text-sm">No backups found on the server.</p>
-            <p className="text-xs text-muted mt-1">Click Refresh List to fetch remote files.</p>
+            <p className="text-sm">{t("sync.noBackups")}</p>
+            <p className="text-xs text-muted mt-1">{t("sync.refreshHint")}</p>
           </div>
         ) : (
           <ul className="divide-y divide-border">
@@ -364,7 +374,7 @@ export function SyncSettingsPage() {
             </div>
           </div>
           <div className="text-sm text-muted">
-            Last synced: <span className="font-medium text-foreground">{formattedLastSync}</span>
+            {t("sync.lastSynced")}: <span className="font-medium text-foreground">{formattedLastSync}</span>
           </div>
         </div>
       </section>

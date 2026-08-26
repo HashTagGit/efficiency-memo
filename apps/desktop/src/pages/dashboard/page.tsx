@@ -2,6 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, EmptyState, PageHeader } from "@memo/ui";
 import { getRegisteredTools } from "../../lib/tool-registry/registry";
+import { useI18n } from "../../lib/i18n";
 
 function ToolIcon({ name }: { name: string }) {
   const iconMap: Record<string, React.ReactNode> = {
@@ -33,11 +34,12 @@ function ToolIcon({ name }: { name: string }) {
 
 export function DashboardPage() {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const tools = getRegisteredTools().filter((tool) => tool.enabled);
 
   return (
     <div className="mx-auto max-w-6xl">
-      <PageHeader title="Dashboard" subtitle="Your personal tool gallery" />
+      <PageHeader title={t("dashboard.title")} subtitle={t("dashboard.subtitle")} />
 
       {tools.length === 0 ? (
         <EmptyState
@@ -60,8 +62,8 @@ export function DashboardPage() {
               <rect width="7" height="5" x="3" y="16" rx="1" />
             </svg>
           }
-          title="No tools available yet"
-          description="Tools will appear here once they are registered in the system."
+          title={t("dashboard.noTools")}
+          description={t("dashboard.noToolsDescription")}
         />
       ) : (
         <div
@@ -71,8 +73,9 @@ export function DashboardPage() {
           {tools.map((tool) => (
             <Card
               key={tool.id}
-              title={tool.name}
-              description={tool.description}
+              title={tool.id === "core-hour" ? t("nav.coreHour") : tool.name}
+              description={tool.id === "core-hour" ? t("nav.coreHourDescription") : tool.description}
+              openLabel={t("dashboard.open")}
               icon={<ToolIcon name={tool.name} />}
               onClick={() => {
                 const route = tool.routes[0];

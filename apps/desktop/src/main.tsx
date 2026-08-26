@@ -5,6 +5,7 @@ import "./index.css";
 import { setDbOnStartup } from "./features/core-hour/db-tauri";
 import { ensureLocalUser } from "./lib/auth";
 import { discoverTools } from "./lib/tool-registry/discovery";
+import { I18nProvider } from "./lib/i18n";
 
 async function bootstrap() {
   await setDbOnStartup();
@@ -13,7 +14,9 @@ async function bootstrap() {
 
   ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
     <React.StrictMode>
-      <App />
+      <I18nProvider>
+        <App />
+      </I18nProvider>
     </React.StrictMode>,
   );
 }

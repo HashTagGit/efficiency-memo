@@ -21,8 +21,38 @@ export interface SidebarProps {
   onToggle: () => void;
   theme?: 'dark' | 'light';
   onThemeToggle?: () => void;
+  localeLabel?: string;
+  localeAriaLabel?: string;
+  onLocaleToggle?: () => void;
+  labels?: Partial<SidebarLabels>;
   className?: string;
 }
+
+export interface SidebarLabels {
+  appName: string;
+  tools: string;
+  settings: string;
+  lightMode: string;
+  darkMode: string;
+  switchToLight: string;
+  switchToDark: string;
+  collapseSidebar: string;
+  expandSidebar: string;
+  language: string;
+}
+
+const defaultLabels: SidebarLabels = {
+  appName: "EfficiencyMemo",
+  tools: "Tools",
+  settings: "Settings",
+  lightMode: "Light mode",
+  darkMode: "Dark mode",
+  switchToLight: "Switch to light mode",
+  switchToDark: "Switch to dark mode",
+  collapseSidebar: "Collapse sidebar",
+  expandSidebar: "Expand sidebar",
+  language: "Language",
+};
 
 export function Sidebar({
   tools,
@@ -32,9 +62,14 @@ export function Sidebar({
   onToggle,
   theme,
   onThemeToggle,
+  localeLabel,
+  localeAriaLabel,
+  onLocaleToggle,
+  labels: labelOverrides,
   className,
   ...rest
 }: SidebarProps) {
+  const labels = { ...defaultLabels, ...labelOverrides };
   return (
     <aside
       data-testid="sidebar"
@@ -49,14 +84,14 @@ export function Sidebar({
       {/* Header / Toggle */}
       <div className="flex items-center justify-between border-b border-border p-3">
         {!isCollapsed && (
-          <span className="font-semibold text-sm truncate">EfficiencyMemo</span>
+          <span className="truncate text-sm font-semibold">{labels.appName}</span>
         )}
         <button
           type="button"
           data-testid="sidebar-toggle"
           onClick={onToggle}
           className="p-1.5 rounded-md hover:bg-[var(--color-sidebar-hover)] transition-colors"
-          aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          aria-label={isCollapsed ? labels.expandSidebar : labels.collapseSidebar}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -76,7 +111,7 @@ export function Sidebar({
       </div>
 
       <nav className="flex-1 overflow-y-auto px-2 py-4" aria-label="Workspace">
-        {!isCollapsed && <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">Tools</p>}
+        {!isCollapsed && <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">{labels.tools}</p>}
         <ul className="space-y-1">
           {tools.filter((tool) => tool.id !== 'settings').map((tool) => {
             const isActive = tool.id === activeToolId;
@@ -139,7 +174,7 @@ export function Sidebar({
             type="button"
             onClick={onThemeToggle}
             className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-muted hover:bg-[var(--color-sidebar-hover)] hover:text-foreground"
-            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            aria-label={theme === 'dark' ? labels.switchToLight : labels.switchToDark}
             aria-pressed={theme === 'light'}
           >
             <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center">
@@ -149,7 +184,19 @@ export function Sidebar({
                 <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.7 6.7 0 0 0 9.8 9.8Z" /></svg>
               )}
             </span>
-            <span className={`truncate text-sm font-medium ${isCollapsed ? 'hidden' : 'block'}`}>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+            <span className={`truncate text-sm font-medium ${isCollapsed ? 'hidden' : 'block'}`}>{theme === 'dark' ? labels.lightMode : labels.darkMode}</span>
+          </button>
+        )}
+        {onLocaleToggle && localeLabel && (
+          <button
+            data-testid="locale-toggle"
+            type="button"
+            onClick={onLocaleToggle}
+            className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-muted hover:bg-[var(--color-sidebar-hover)] hover:text-foreground"
+            aria-label={localeAriaLabel ?? labels.language}
+          >
+            <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center text-xs font-semibold">文</span>
+            <span className={`truncate text-sm font-medium ${isCollapsed ? 'hidden' : 'block'}`}>{localeLabel}</span>
           </button>
         )}
       </div>

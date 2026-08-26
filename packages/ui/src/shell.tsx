@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { Sidebar } from './sidebar';
+import { Sidebar, type SidebarLabels } from './sidebar';
 import type { ToolManifest } from '@memo/shared';
 
 const THEME_KEY = 'efficiency-memo-theme';
@@ -26,6 +26,10 @@ export interface ShellProps {
   onToolSelect: (toolId: string) => void;
   isCollapsed: boolean;
   onToggle: () => void;
+  labels?: Partial<SidebarLabels>;
+  localeLabel?: string;
+  localeAriaLabel?: string;
+  onLocaleToggle?: () => void;
   children: React.ReactNode;
   className?: string;
 }
@@ -36,6 +40,10 @@ export function Shell({
   onToolSelect,
   isCollapsed,
   onToggle,
+  labels,
+  localeLabel,
+  localeAriaLabel,
+  onLocaleToggle,
   children,
   className,
   ...rest
@@ -65,6 +73,10 @@ export function Shell({
           onToggle={onToggle}
           theme={theme}
           onThemeToggle={toggleTheme}
+          labels={labels}
+          localeLabel={localeLabel}
+          localeAriaLabel={localeAriaLabel}
+          onLocaleToggle={onLocaleToggle}
         />
       </div>
 
@@ -98,6 +110,10 @@ export function Shell({
             onToggle={() => setMobileOpen(false)}
             theme={theme}
             onThemeToggle={toggleTheme}
+            labels={labels}
+            localeLabel={localeLabel}
+            localeAriaLabel={localeAriaLabel}
+            onLocaleToggle={onLocaleToggle}
           />
         </div>
       </div>
@@ -131,11 +147,11 @@ export function Shell({
             data-testid="mobile-theme-toggle"
             onClick={toggleTheme}
             className="ml-auto inline-flex items-center gap-2 rounded-md px-2.5 py-2 text-sm text-muted hover:bg-surface-strong hover:text-foreground"
-            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            aria-label={theme === 'dark' ? (labels?.switchToLight ?? 'Switch to light mode') : (labels?.switchToDark ?? 'Switch to dark mode')}
             aria-pressed={theme === 'light'}
           >
             <ThemeIcon theme={theme} />
-            <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
+            <span>{theme === 'dark' ? (labels?.lightMode ?? 'Light mode') : (labels?.darkMode ?? 'Dark mode')}</span>
           </button>
         </header>
 

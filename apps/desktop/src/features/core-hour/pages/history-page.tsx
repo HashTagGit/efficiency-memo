@@ -13,6 +13,7 @@ import { dbExecute, dbSelect } from "../../../lib/db";
 import type { CheckInWithTag, Tag } from "../types";
 import { type ExportRange, rangeToFromDate, recordsToCsv, exportFilename } from "../export";
 import { buildTagSlices, buildTrend, rangeDays, summarize, type DailyRow, type TagRow, type TrendRange } from "../analytics";
+import { useI18n } from "../../../lib/i18n";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -24,6 +25,7 @@ async function saveExport(csv: string, filename: string): Promise<void> {
 }
 
 export default function HistoryPage({ userId }: { userId: string }) {
+  const { t } = useI18n();
   const [date, setDate] = useState(today);
   const [entries, setEntries] = useState<CheckInWithTag[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
@@ -104,29 +106,29 @@ export default function HistoryPage({ userId }: { userId: string }) {
   return (
     <div className="max-w-2xl space-y-6" data-testid="ch-history-page">
       <PageHeader
-        title="History"
-        subtitle={`${Math.round(totalSeconds / 60)} min recorded on ${date}`}
+        title={t("coreHour.history")}
+        subtitle={t("coreHour.historySubtitle", { minutes: Math.round(totalSeconds / 60), date })}
         action={
           <div className="flex items-center gap-2">
             <select
               value={exportRange}
               onChange={(ev) => setExportRange(ev.target.value as ExportRange)}
               className="rounded-lg border border-border bg-surface text-foreground text-sm px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent"
-              aria-label="Export range"
+              aria-label={t("coreHour.exportRange")}
             >
-              <option value="7d">Last 7 days</option>
-              <option value="30d">Last 30 days</option>
-              <option value="all">All time</option>
+              <option value="7d">{t("coreHour.last7Days")}</option>
+              <option value="30d">{t("coreHour.last30Days")}</option>
+              <option value="all">{t("coreHour.allTime")}</option>
             </select>
             <Button variant="secondary" size="sm" isLoading={exporting} onClick={() => void handleExport()}>
-              Export CSV
+              {t("coreHour.exportCsv")}
             </Button>
           </div>
         }
       />
 
       <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-        Date
+        {t("coreHour.date")}
         <input
           type="date"
           value={date}
@@ -135,31 +137,31 @@ export default function HistoryPage({ userId }: { userId: string }) {
         />
       </label>
 
-      <section className="space-y-4" data-testid="ch-history-analytics" aria-label="CoreHour analytics">
+      <section className="space-y-4" data-testid="ch-history-analytics" aria-label={t("coreHour.focusOverview")}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="text-sm font-semibold text-foreground">Focus overview</h2>
-            <p className="text-sm text-muted">Daily totals and tag share for the selected period.</p>
+            <h2 className="text-sm font-semibold text-foreground">{t("coreHour.focusOverview")}</h2>
+            <p className="text-sm text-muted">{t("coreHour.focusOverviewDescription")}</p>
           </div>
           <label className="flex items-center gap-2 text-sm text-muted">
-            Range
+            {t("coreHour.range")}
             <select
               value={analyticsRange}
               onChange={(ev) => setAnalyticsRange(ev.target.value as TrendRange)}
               className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
-              aria-label="Analytics range"
+              aria-label={t("coreHour.range")}
             >
-              <option value="7d">Last 7 days</option>
-              <option value="30d">Last 30 days</option>
+              <option value="7d">{t("coreHour.last7Days")}</option>
+              <option value="30d">{t("coreHour.last30Days")}</option>
             </select>
           </label>
         </div>
 
         <div className="grid grid-cols-3 gap-2">
           {[
-            ["Total", `${summary.totalMinutes} min`],
-            ["Active days", String(summary.activeDays)],
-            ["Daily average", `${summary.dailyAverage} min`],
+            [t("coreHour.total"), `${summary.totalMinutes} ${t("coreHour.minutes")}`],
+            [t("coreHour.activeDays"), String(summary.activeDays)],
+            [t("coreHour.dailyAverage"), `${summary.dailyAverage} ${t("coreHour.minutes")}`],
           ].map(([label, value]) => (
             <div key={label} className="rounded-lg border border-border bg-surface px-3 py-2">
               <p className="text-xs text-muted">{label}</p>
@@ -169,22 +171,22 @@ export default function HistoryPage({ userId }: { userId: string }) {
         </div>
 
         <div className="rounded-lg border border-border bg-surface px-3 py-3">
-          <p className="mb-2 text-xs font-medium text-muted">Minutes per day</p>
-          <div className="h-52 w-full" aria-label="Daily minutes line chart">
+          <p className="mb-2 text-xs font-medium text-muted">{t("coreHour.minutesPerDay")}</p>
+          <div className="h-52 w-full" aria-label={t("coreHour.minutesPerDay")}>
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={trend} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
                 <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
                 <XAxis dataKey="label" tick={{ fill: "var(--muted)", fontSize: 11 }} tickLine={false} axisLine={false} />
                 <YAxis allowDecimals={false} tick={{ fill: "var(--muted)", fontSize: 11 }} tickLine={false} axisLine={false} width={42} />
                 <Tooltip contentStyle={{ background: "var(--surface-strong)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--foreground)" }} />
-                <Line type="monotone" dataKey="minutes" name="Minutes" stroke="var(--accent)" strokeWidth={2} dot={{ r: 2, fill: "var(--accent)" }} />
+                <Line type="monotone" dataKey="minutes" name={t("coreHour.minutes")} stroke="var(--accent)" strokeWidth={2} dot={{ r: 2, fill: "var(--accent)" }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
 
         <div className="rounded-lg border border-border bg-surface px-3 py-3">
-          <p className="mb-3 text-xs font-medium text-muted">Tag share</p>
+          <p className="mb-3 text-xs font-medium text-muted">{t("coreHour.tagShare")}</p>
           {tagSlices.length > 0 ? (
             <div className="space-y-2">
               {tagSlices.map((slice) => (
@@ -197,13 +199,13 @@ export default function HistoryPage({ userId }: { userId: string }) {
               ))}
             </div>
           ) : (
-            <p className="text-sm text-muted">No tagged check-ins in this period.</p>
+            <p className="text-sm text-muted">{t("coreHour.noTaggedCheckIns")}</p>
           )}
         </div>
       </section>
 
       <section className="space-y-2" data-testid="ch-history-entries">
-        <h2 className="text-sm font-semibold text-foreground">Check-ins</h2>
+        <h2 className="text-sm font-semibold text-foreground">{t("coreHour.checkIns")}</h2>
         {entries.map((entry) => (
           <article key={entry.id} className="rounded-lg border border-border bg-surface px-4 py-3">
             {editingId === entry.id ? (
@@ -213,38 +215,38 @@ export default function HistoryPage({ userId }: { userId: string }) {
                   onChange={(ev) => setTagId(ev.target.value)}
                   className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
                 >
-                  <option value="">Uncategorized</option>
+                  <option value="">{t("coreHour.uncategorized")}</option>
                   {tags.map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}
                 </select>
                 <textarea
                   value={note}
                   onChange={(ev) => setNote(ev.target.value)}
                   className="min-h-20 w-full rounded-lg border border-border bg-background p-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
-                  placeholder="Add a note…"
+                  placeholder={t("coreHour.addNote")}
                 />
                 <div className="flex gap-2">
-                  <Button size="sm" onClick={() => void saveEntry(entry)}>Save</Button>
-                  <Button variant="secondary" size="sm" onClick={() => setEditingId(null)}>Cancel</Button>
+                  <Button size="sm" onClick={() => void saveEntry(entry)}>{t("coreHour.save")}</Button>
+                  <Button variant="secondary" size="sm" onClick={() => setEditingId(null)}>{t("coreHour.cancel")}</Button>
                 </div>
               </div>
             ) : (
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-medium text-foreground">
-                    {entry.tag_name ?? <span className="text-muted">Uncategorized</span>}
-                    <span className="ml-2 font-normal text-muted">{Math.round(entry.duration_seconds / 60)} min</span>
+                    {entry.tag_name ?? <span className="text-muted">{t("coreHour.uncategorized")}</span>}
+                    <span className="ml-2 font-normal text-muted">{Math.round(entry.duration_seconds / 60)} {t("coreHour.minutes")}</span>
                   </p>
                   {entry.note && <p className="mt-0.5 text-sm text-muted">{entry.note}</p>}
                 </div>
                 <Button variant="ghost" size="sm" onClick={() => { setEditingId(entry.id); setTagId(entry.tag_id ?? ""); setNote(entry.note); }}>
-                  Edit
+                  {t("coreHour.edit")}
                 </Button>
               </div>
             )}
           </article>
         ))}
         {entries.length === 0 && (
-          <p className="py-8 text-center text-sm text-muted">No check-ins for this date.</p>
+          <p className="py-8 text-center text-sm text-muted">{t("coreHour.noCheckIns")}</p>
         )}
       </section>
     </div>

@@ -8,6 +8,7 @@ import HistoryPage from "./history-page";
 import SettingsPage from "./settings-page";
 import TagsPage from "./tags-page";
 import { loadCheckInInterval } from "../settings";
+import { useI18n } from "../../../lib/i18n";
 
 function CoreHourHome() {
   const [intervalMinutes, setIntervalMinutes] = useState(30);
@@ -21,6 +22,7 @@ function CoreHourHome() {
 }
 
 export default function CoreHourRoutes() {
+  const { t } = useI18n();
   const user = getCurrentUser();
   if (!user) return null;
 
@@ -28,12 +30,12 @@ export default function CoreHourRoutes() {
     <SessionProvider>
       <TagsProvider>
         <div className="space-y-6" data-testid="ch-dashboard">
-          <nav className="flex flex-wrap gap-1 rounded-lg border border-border bg-surface p-1 text-sm" aria-label="CoreHour navigation">
+          <nav className="flex flex-wrap gap-1 rounded-lg border border-border bg-surface p-1 text-sm" aria-label={t("coreHour.navigation")}>
             {[
-              ["/tools/core-hour", "Timer"],
-              ["/tools/core-hour/history", "History"],
-              ["/tools/core-hour/tags", "Tags"],
-              ["/tools/core-hour/settings", "Settings"],
+              ["/tools/core-hour", t("coreHour.timer")],
+              ["/tools/core-hour/history", t("coreHour.history")],
+              ["/tools/core-hour/tags", t("coreHour.tags")],
+              ["/tools/core-hour/settings", t("coreHour.settings")],
             ].map(([to, label]) => (
               <NavLink
                 key={to}

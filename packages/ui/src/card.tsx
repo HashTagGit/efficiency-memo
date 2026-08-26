@@ -8,6 +8,7 @@ export interface CardProps {
   icon?: React.ReactNode;
   onClick?: () => void;
   href?: string;
+  openLabel?: string;
   'data-testid'?: string;
   className?: string;
 }
@@ -18,6 +19,7 @@ export function Card({
   icon,
   onClick,
   href,
+  openLabel = "Open",
   'data-testid': dataTestId,
   className,
   ...rest
@@ -39,7 +41,7 @@ export function Card({
         <p className="text-sm text-muted leading-relaxed">{description}</p>
       </div>
       <span className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-accent" aria-hidden="true">
-        Open
+        {openLabel}
         <span className="transition-transform duration-200 group-hover:translate-x-0.5">&rarr;</span>
       </span>
     </>

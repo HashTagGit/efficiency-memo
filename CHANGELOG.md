@@ -5,6 +5,7 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 
 ### Changed
+- The desktop shell and CoreHour workflow now support persisted English and Simplified Chinese translations.
 - CoreHour is the active product workflow. Charger Reminder is disabled; WebDAV sync is out of scope.
 - Documentation now describes the native Tauri window as the supported entry point; the Vite server is not a standalone application.
 - The desktop app now opens with an automatic local profile instead of showing sign-in and sign-out controls.

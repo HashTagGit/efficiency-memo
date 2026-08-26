@@ -91,13 +91,15 @@ Key design choices:
 - **No SSR** — Tauri uses a webview, not a browser, so server-side rendering is unnecessary. Vite + React Router handles all routing.
 - **Local SQLite** — Tauri plugin-sql opens `sqlite:efficiency-memo.db` from the OS app-data directory. All 4 migrations run on first launch.
 - **CoreHour session state** — Active-session progress is kept locally and restored as paused after an app restart, so closed-app time is never counted.
+- **Bilingual workspace** — The desktop shell and CoreHour workflow support English and Simplified Chinese, with the selected language persisted locally.
+- **Theme preferences** — Switch between light and dark themes from the workspace shell; the preference is persisted locally.
 - **Native notifications** — `tauri-plugin-notification` sends one system notification only when a check-in becomes due in the background.
 - **Deferred code** — Charger Reminder is retained but disabled. WebDAV sync is not part of the current product scope.
 
 ### Shared packages
 
 - `packages/shared/` — cross-tool types (`ToolManifest`) and constants (`APP_NAME`)
-- `packages/ui/` — `Button`, `Card`, `Modal`, `Sidebar`, `Shell`, plus `Input`, `Alert`, `EmptyState`, `PageHeader`. Every component uses the dark-theme design tokens from `apps/desktop/src/index.css`. Consumed by the desktop app without modification.
+- `packages/ui/` — `Button`, `Card`, `Modal`, `Sidebar`, `Shell`, plus `Input`, `Alert`, `EmptyState`, `PageHeader`. Components consume the shared light/dark design tokens from `apps/desktop/src/index.css`. Consumed by the desktop app without modification.
 
 ## Tech Stack
 

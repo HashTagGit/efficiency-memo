@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import CoreHourRoutes from "../pages/dashboard-page";
+import { I18nProvider } from "../../../lib/i18n";
 
 vi.mock("../../../lib/auth", () => ({
   getCurrentUser: () => ({
@@ -17,9 +18,11 @@ describe("CoreHour navigation", () => {
   it("keeps every tab anchored to the CoreHour route after switching tabs", () => {
     const markup = renderToStaticMarkup(
       <MemoryRouter initialEntries={["/tools/core-hour/history"]}>
-        <Routes>
-          <Route path="/tools/core-hour/*" element={<CoreHourRoutes />} />
-        </Routes>
+        <I18nProvider>
+          <Routes>
+            <Route path="/tools/core-hour/*" element={<CoreHourRoutes />} />
+          </Routes>
+        </I18nProvider>
       </MemoryRouter>,
     );
 

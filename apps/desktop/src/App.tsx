@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ShellLayout } from "./components/shell-layout";
 import { DashboardPage } from "./pages/dashboard/page";
 import { SyncSettingsPage } from "./pages/settings/sync/page";
+import { useI18n } from "./lib/i18n";
 
 // Lazy-load tool pages
 const ChargerReminderPage = lazy(() =>
@@ -18,9 +19,10 @@ const CoreHourPage = lazy(() =>
 );
 
 function ToolFallback() {
+  const { t } = useI18n();
   return (
     <div className="flex items-center justify-center py-16">
-      <p className="text-muted">Loading tool...</p>
+      <p className="text-muted">{t("app.loading")}</p>
     </div>
   );
 }
