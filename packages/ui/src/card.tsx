@@ -23,7 +23,7 @@ export function Card({
   ...rest
 }: CardProps & React.HTMLAttributes<HTMLDivElement | HTMLAnchorElement>) {
   const baseClasses =
-    'group relative flex flex-col gap-3 p-6 rounded-2xl border border-border bg-card shadow-sm text-foreground transition-all duration-200 hover:scale-[1.02] hover:shadow-lg cursor-pointer';
+    'group relative flex min-h-44 flex-col gap-3 rounded-xl border border-border bg-card p-6 text-foreground shadow-sm transition-[border-color,background-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background cursor-pointer';
 
   const mergedClasses = className ? `${baseClasses} ${className}` : baseClasses;
 
@@ -34,10 +34,14 @@ export function Card({
           {icon}
         </div>
       )}
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-1 flex-col gap-1">
         <h3 className="text-lg font-semibold text-foreground">{title}</h3>
         <p className="text-sm text-muted leading-relaxed">{description}</p>
       </div>
+      <span className="mt-2 inline-flex items-center gap-1 text-sm font-medium text-accent" aria-hidden="true">
+        Open
+        <span className="transition-transform duration-200 group-hover:translate-x-0.5">&rarr;</span>
+      </span>
     </>
   );
 

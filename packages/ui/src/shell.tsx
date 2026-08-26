@@ -1,8 +1,24 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Sidebar } from './sidebar';
 import type { ToolManifest } from '@memo/shared';
+
+const THEME_KEY = 'efficiency-memo-theme';
+type Theme = 'dark' | 'light';
+
+function ThemeIcon({ theme }: { theme: Theme }) {
+  return theme === 'dark' ? (
+    <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="4" />
+      <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42" />
+    </svg>
+  ) : (
+    <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12.8A8.5 8.5 0 1 1 11.2 3a6.7 6.7 0 0 0 9.8 9.8Z" />
+    </svg>
+  );
+}
 
 export interface ShellProps {
   tools: ToolManifest[];
@@ -10,8 +26,6 @@ export interface ShellProps {
   onToolSelect: (toolId: string) => void;
   isCollapsed: boolean;
   onToggle: () => void;
-  userEmail: string;
-  onSignOut: () => void;
   children: React.ReactNode;
   className?: string;
 }
@@ -22,16 +36,25 @@ export function Shell({
   onToolSelect,
   isCollapsed,
   onToggle,
-  userEmail,
-  onSignOut,
   children,
   className,
   ...rest
 }: ShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [theme, setTheme] = useState<Theme>(() => (
+    typeof window !== 'undefined' && window.localStorage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark'
+  ));
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+    window.localStorage.setItem(THEME_KEY, theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme((current) => current === 'dark' ? 'light' : 'dark');
 
   return (
-    <div className={`flex h-screen w-full bg-background ${className ?? ''}`} {...rest}>
+    <div className={`flex h-[100dvh] w-full bg-background ${className ?? ''}`} {...rest}>
       {/* Desktop Sidebar */}
       <div data-testid="desktop-sidebar" className="hidden md:flex h-full flex-shrink-0">
         <Sidebar
@@ -40,6 +63,8 @@ export function Shell({
           onToolSelect={onToolSelect}
           isCollapsed={isCollapsed}
           onToggle={onToggle}
+          theme={theme}
+          onThemeToggle={toggleTheme}
         />
       </div>
 
@@ -71,6 +96,8 @@ export function Shell({
             }}
             isCollapsed={false}
             onToggle={() => setMobileOpen(false)}
+            theme={theme}
+            onThemeToggle={toggleTheme}
           />
         </div>
       </div>
@@ -80,44 +107,35 @@ export function Shell({
         {/* Header */}
         <header
           data-testid="shell-header"
-          className="flex items-center justify-between px-4 py-3 bg-surface border-b border-border"
+          className="flex items-center px-4 py-3 bg-surface border-b border-border md:hidden"
         >
-          <div className="flex items-center gap-3">
-            {/* Mobile menu button */}
-            <button
-              data-testid="mobile-menu-button"
-              onClick={() => setMobileOpen(true)}
-              className="md:hidden p-2 rounded-md hover:bg-surface transition-colors"
-              aria-label="Open menu"
+          <button type="button" data-testid="mobile-menu-button" onClick={() => setMobileOpen(true)} className="rounded-md p-2 text-muted hover:bg-surface-strong hover:text-foreground" aria-label="Open menu">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <line x1="3" y1="12" x2="21" y2="12" />
-                <line x1="3" y1="6" x2="21" y2="6" />
-                <line x1="3" y1="18" x2="21" y2="18" />
-              </svg>
-            </button>
-
-            <span className="text-sm text-muted truncate max-w-[200px]">
-              {userEmail}
-            </span>
-          </div>
-
+              <line x1="3" y1="12" x2="21" y2="12" />
+              <line x1="3" y1="6" x2="21" y2="6" />
+              <line x1="3" y1="18" x2="21" y2="18" />
+            </svg>
+          </button>
           <button
-            data-testid="sign-out-button"
-            onClick={onSignOut}
-            className="px-3 py-1.5 text-sm font-medium text-foreground bg-surface rounded-md hover:bg-surface-strong transition-colors"
+            type="button"
+            data-testid="mobile-theme-toggle"
+            onClick={toggleTheme}
+            className="ml-auto inline-flex items-center gap-2 rounded-md px-2.5 py-2 text-sm text-muted hover:bg-surface-strong hover:text-foreground"
+            aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            aria-pressed={theme === 'light'}
           >
-            Sign out
+            <ThemeIcon theme={theme} />
+            <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>
           </button>
         </header>
 

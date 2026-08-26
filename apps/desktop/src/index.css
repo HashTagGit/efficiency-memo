@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@source "../../../packages/ui/src";
 
 /* ─────────────────────────────────────────────────────────────
    Design Tokens — EfficiencyMemo Desktop
@@ -8,15 +9,15 @@
 
 :root {
   /* ── Base ── */
-  --background: #0a0c10;
-  --background-soft: #11141a;
-  --foreground: #f6efdf;
-  --muted: #b2ab9d;
-  --border: rgba(229, 197, 137, 0.18);
+  --background: #0f1217;
+  --background-soft: #171b22;
+  --foreground: #edf1f5;
+  --muted: #9da8b5;
+  --border: rgba(184, 196, 210, 0.18);
 
   /* ── Accent ── */
-  --accent: #d5a659;
-  --accent-strong: #f0cb86;
+  --accent: #d6a24a;
+  --accent-strong: #edbb63;
 
   /* ── Semantic ── */
   --success: #8ad49f;
@@ -25,24 +26,48 @@
   --warning: #e8c97a;
 
   /* ── Surface ── */
-  --surface: rgba(20, 24, 31, 0.9);
-  --surface-strong: rgba(28, 33, 43, 0.94);
-  --card: rgba(24, 28, 36, 0.92);
+  --surface: #171c24;
+  --surface-strong: #202733;
+  --card: #151a21;
 
   /* ── Sidebar ── */
-  --color-sidebar: rgba(16, 19, 26, 0.95);
-  --color-sidebar-hover: rgba(28, 33, 43, 0.88);
-  --color-active: rgba(213, 166, 89, 0.14);
+  --color-sidebar: #12171e;
+  --color-sidebar-hover: #202733;
+  --color-active: rgba(214, 162, 74, 0.14);
   --color-card: var(--card);
 
   /* ── Shadows ── */
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.24);
-  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.32);
-  --shadow-lg: 0 28px 80px rgba(0, 0, 0, 0.38);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.28);
+  --shadow-lg: 0 28px 80px rgba(0, 0, 0, 0.34);
 
   /* ── Spacing ── */
   --sidebar-width: 240px;
   --sidebar-width-collapsed: 64px;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --background: #f4f6f8;
+  --background-soft: #e9edf2;
+  --foreground: #1a2530;
+  --muted: #617080;
+  --border: #d7dfe7;
+  --accent: #9a650b;
+  --accent-strong: #b87810;
+  --success: #167243;
+  --danger: #b83a3a;
+  --info: #176b87;
+  --warning: #8b6500;
+  --surface: #ffffff;
+  --surface-strong: #edf1f5;
+  --card: #ffffff;
+  --color-sidebar: #ffffff;
+  --color-sidebar-hover: #eef2f6;
+  --color-active: rgba(154, 101, 11, 0.11);
+  --shadow-sm: 0 2px 8px rgba(31, 45, 61, 0.08);
+  --shadow-md: 0 8px 24px rgba(31, 45, 61, 0.12);
+  --shadow-lg: 0 28px 80px rgba(31, 45, 61, 0.16);
 }
 
 /* ─────────────────────────────────────────────────────────────
@@ -55,6 +80,7 @@
   --color-background-soft: var(--background-soft);
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted);
   --color-border: var(--border);
   --color-accent: var(--accent);
   --color-accent-strong: var(--accent-strong);
@@ -73,7 +99,7 @@
 
   /* Typography */
   --font-sans: "Manrope", ui-sans-serif, system-ui, sans-serif;
-  --font-display: "Cormorant Garamond", ui-serif, Georgia, serif;
+  --font-display: "Manrope", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, monospace;
 
   /* Spacing */
@@ -94,41 +120,25 @@
   box-sizing: border-box;
 }
 
-html {
-  color-scheme: dark;
-}
+html { color-scheme: dark; }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
-  background-image:
-    radial-gradient(circle at top, rgba(213, 166, 89, 0.17), transparent 30%),
-    radial-gradient(circle at 20% 20%, rgba(136, 106, 61, 0.16), transparent 25%),
-    linear-gradient(135deg, rgba(255, 255, 255, 0.02), transparent 55%),
-    linear-gradient(180deg, #10141c 0%, #0a0c10 72%);
+  background-image: none;
   min-height: 100vh;
   margin: 0;
 }
 
-/* Subtle grid overlay */
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  pointer-events: none;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 96px 96px;
-  mask-image: radial-gradient(circle at center, black, transparent 85%);
-  opacity: 0.18;
-}
-
 /* Selection */
 ::selection {
-  background: rgba(213, 166, 89, 0.34);
-  color: #fff9ef;
+  background: color-mix(in srgb, var(--accent) 34%, transparent);
+  color: var(--foreground);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
 
 /* Interactive transitions */

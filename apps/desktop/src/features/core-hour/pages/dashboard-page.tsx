@@ -28,11 +28,22 @@ export default function CoreHourRoutes() {
     <SessionProvider>
       <TagsProvider>
         <div className="space-y-6" data-testid="ch-dashboard">
-          <nav className="flex flex-wrap gap-4 border-b pb-3 text-sm" aria-label="CoreHour navigation">
-            <NavLink to="." end>Timer</NavLink>
-            <NavLink to="history">History</NavLink>
-            <NavLink to="tags">Tags</NavLink>
-            <NavLink to="settings">Settings</NavLink>
+          <nav className="flex flex-wrap gap-1 rounded-lg border border-border bg-surface p-1 text-sm" aria-label="CoreHour navigation">
+            {[
+              [".", "Timer"],
+              ["history", "History"],
+              ["tags", "Tags"],
+              ["settings", "Settings"],
+            ].map(([to, label]) => (
+              <NavLink
+                key={to}
+                to={to}
+                end={to === "."}
+                className={({ isActive }) => `rounded-md px-3 py-2 font-medium transition-colors ${isActive ? "bg-accent text-background" : "text-muted hover:bg-surface-strong hover:text-foreground"}`}
+              >
+                {label}
+              </NavLink>
+            ))}
           </nav>
           <Routes>
             <Route index element={<CoreHourHome />} />

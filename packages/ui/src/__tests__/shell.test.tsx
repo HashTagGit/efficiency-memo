@@ -16,8 +16,6 @@ describe('Shell', () => {
         onToolSelect={vi.fn()}
         isCollapsed={false}
         onToggle={vi.fn()}
-        userEmail="user@example.com"
-        onSignOut={vi.fn()}
       >
         <div data-testid="shell-children">Hello World</div>
       </Shell>
@@ -25,25 +23,6 @@ describe('Shell', () => {
 
     expect(screen.getByTestId('desktop-sidebar')).toBeInTheDocument();
     expect(screen.getAllByTestId('sidebar-tool-item-tool-a')[0]).toBeInTheDocument();
-  });
-
-  it('renders header with user email', () => {
-    render(
-      <Shell
-        tools={mockTools}
-        activeToolId=""
-        onToolSelect={vi.fn()}
-        isCollapsed={false}
-        onToggle={vi.fn()}
-        userEmail="user@example.com"
-        onSignOut={vi.fn()}
-      >
-        <div data-testid="shell-children">Hello World</div>
-      </Shell>
-    );
-
-    expect(screen.getByTestId('shell-header')).toBeInTheDocument();
-    expect(screen.getByText('user@example.com')).toBeInTheDocument();
   });
 
   it('renders children content', () => {
@@ -54,8 +33,6 @@ describe('Shell', () => {
         onToolSelect={vi.fn()}
         isCollapsed={false}
         onToggle={vi.fn()}
-        userEmail="user@example.com"
-        onSignOut={vi.fn()}
       >
         <div data-testid="shell-children">Hello World</div>
       </Shell>
@@ -63,26 +40,6 @@ describe('Shell', () => {
 
     expect(screen.getByTestId('shell-children')).toBeInTheDocument();
     expect(screen.getByText('Hello World')).toBeInTheDocument();
-  });
-
-  it('calls onSignOut when sign-out button is clicked', () => {
-    const onSignOut = vi.fn();
-    render(
-      <Shell
-        tools={mockTools}
-        activeToolId=""
-        onToolSelect={vi.fn()}
-        isCollapsed={false}
-        onToggle={vi.fn()}
-        userEmail="user@example.com"
-        onSignOut={onSignOut}
-      >
-        <div data-testid="shell-children">Hello World</div>
-      </Shell>
-    );
-
-    fireEvent.click(screen.getByTestId('sign-out-button'));
-    expect(onSignOut).toHaveBeenCalledTimes(1);
   });
 
   it('calls onToggle when sidebar toggle is clicked', () => {
@@ -94,8 +51,6 @@ describe('Shell', () => {
         onToolSelect={vi.fn()}
         isCollapsed={false}
         onToggle={onToggle}
-        userEmail="user@example.com"
-        onSignOut={vi.fn()}
       >
         <div data-testid="shell-children">Hello World</div>
       </Shell>
@@ -114,8 +69,6 @@ describe('Shell', () => {
         onToolSelect={onToolSelect}
         isCollapsed={false}
         onToggle={vi.fn()}
-        userEmail="user@example.com"
-        onSignOut={vi.fn()}
       >
         <div data-testid="shell-children">Hello World</div>
       </Shell>
@@ -133,8 +86,6 @@ describe('Shell', () => {
         onToolSelect={vi.fn()}
         isCollapsed={false}
         onToggle={vi.fn()}
-        userEmail="user@example.com"
-        onSignOut={vi.fn()}
       >
         <div data-testid="shell-children">Hello World</div>
       </Shell>
@@ -152,8 +103,6 @@ describe('Shell', () => {
         onToolSelect={vi.fn()}
         isCollapsed={false}
         onToggle={vi.fn()}
-        userEmail="user@example.com"
-        onSignOut={vi.fn()}
       >
         <div>Content</div>
       </Shell>
@@ -166,11 +115,25 @@ describe('Shell', () => {
     expect(header.className).toMatch(/bg-surface/);
     expect(header.className).toMatch(/border-border/);
 
-    const email = screen.getByText('user@example.com');
-    expect(email.className).toMatch(/text-muted/);
+  });
 
-    const signOut = screen.getByTestId('sign-out-button');
-    expect(signOut.className).toMatch(/text-foreground/);
-    expect(signOut.className).toMatch(/bg-surface/);
+  it('toggles and persists the selected theme', () => {
+    localStorage.removeItem('efficiency-memo-theme');
+    render(
+      <Shell
+        tools={mockTools}
+        activeToolId=""
+        onToolSelect={vi.fn()}
+        isCollapsed={false}
+        onToggle={vi.fn()}
+      >
+        <div>Content</div>
+      </Shell>
+    );
+
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    fireEvent.click(screen.getByTestId('mobile-theme-toggle'));
+    expect(document.documentElement.dataset.theme).toBe('light');
+    expect(localStorage.getItem('efficiency-memo-theme')).toBe('light');
   });
 });

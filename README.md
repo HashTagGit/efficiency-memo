@@ -4,7 +4,7 @@ A local-first **CoreHour** desktop app for deliberate time tracking. It ships as
 
 ## About
 
-EfficiencyMemo is a pnpm monorepo centered on CoreHour. Sign in locally, start a session, record periodic check-ins, and review each day locally. Charger Reminder is disabled; WebDAV sync code is retained but outside the current product scope.
+EfficiencyMemo is a pnpm monorepo centered on CoreHour. Launch the app, start a session, record periodic check-ins, and review each day locally. Charger Reminder is disabled; WebDAV sync code is retained but outside the current product scope.
 
 ## Features
 
@@ -47,7 +47,7 @@ On first launch the app creates its database in `%APPDATA%/com.efficiency-memo.a
 
 ### Using the app
 
-1. **Sign in** — Enter any email. Local auth has no password or email verification; the account is stored in local SQLite and the active session in local storage.
+1. **Launch the app** — A local profile is selected or created automatically; there is no sign-in step.
 2. **Create tags** — Open **CoreHour → Tags** and add the categories you want to use.
 3. **Set the interval** — Open **CoreHour → Settings**, choose 15, 30, or 60 minutes, then save. It applies to the next session.
 4. **Track time** — Open **CoreHour → Timer** and start a session. At each due check-in, choose one tag and an optional note, or skip. Allow the operating-system notification permission for background reminders.
@@ -77,9 +77,9 @@ EfficiencyMemo is organized as a pnpm monorepo. The design system lives in `pack
 apps/desktop/
 ├── src/                   # React + Vite frontend (SPA, no SSR)
 │   ├── features/          # CoreHour and retained legacy feature code
-│   ├── pages/             # Route pages (dashboard, sign-in, tools/*, settings/sync)
+│   ├── pages/             # Route pages (dashboard, tools/*, settings/sync)
 │   ├── components/        # Shell layout
-│   ├── lib/               # db wrapper, auth, sync wrapper, tool registry
+│   ├── lib/               # db/profile wrapper, sync wrapper, tool registry
 │   └── main.tsx           # React entry
 └── src-tauri/             # Rust native shell
     ├── src/               # Plugin registration and Tauri command handlers

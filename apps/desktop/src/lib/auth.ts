@@ -9,57 +9,30 @@ export interface User {
 
 const SESSION_KEY = "efficiency-memo-session";
 
-export async function signIn(email: string): Promise<User> {
-  const now = new Date().toISOString();
+export async function ensureLocalUser(): Promise<User> {
+  const stored = getCurrentUser();
   const [existing] = await dbSelect<User>(
-    "SELECT id, email, created_at, updated_at FROM users WHERE email = $1 ORDER BY updated_at DESC LIMIT 1",
-    [email],
+    "SELECT id, email, created_at, updated_at FROM users ORDER BY CASE WHEN id = $1 THEN 0 ELSE 1 END, updated_at DESC LIMIT 1",
+    [stored?.id ?? ""],
   );
-  const user = existing
-    ? { ...existing, updated_at: now }
-    : { id: crypto.randomUUID(), email, created_at: now, updated_at: now };
 
   if (existing) {
-    await dbExecute("UPDATE users SET updated_at = $1 WHERE id = $2", [now, user.id]);
-  } else {
-    await dbExecute(
-      "INSERT INTO users (id, email, created_at, updated_at) VALUES ($1, $2, $3, $4)",
-      [user.id, user.email, user.created_at, user.updated_at],
-    );
+    localStorage.setItem(SESSION_KEY, JSON.stringify(existing));
+    return existing;
   }
+
+  const now = new Date().toISOString();
+  const user = { id: "local-user", email: "local@efficiency-memo", created_at: now, updated_at: now };
+  await dbExecute(
+    "INSERT INTO users (id, email, created_at, updated_at) VALUES ($1, $2, $3, $4)",
+    [user.id, user.email, user.created_at, user.updated_at],
+  );
   localStorage.setItem(SESSION_KEY, JSON.stringify(user));
   return user;
-}
-
-export async function signOut(): Promise<void> {
-  localStorage.removeItem(SESSION_KEY);
 }
 
 export function getCurrentUser(): User | null {
   const raw = localStorage.getItem(SESSION_KEY);
   return raw ? (JSON.parse(raw) as User) : null;
-}
-
-export async function requireSessionUser(): Promise<User> {
-  const user = getCurrentUser();
-  if (!user) throw new Error("Unauthorized");
-  return user;
-}
-
-export function isMockAuthEnabled(): boolean {
-  return (
-    import.meta.env.VITE_ENABLE_AUTH_MOCK === "true" ||
-    (typeof window !== "undefined" &&
-      window.location.search.includes("mock_session=1"))
-  );
-}
-
-export async function getMockUser(): Promise<User> {
-  return {
-    id: "mock-user-id",
-    email: "mock@example.com",
-    created_at: "2026-01-01T00:00:00.000Z",
-    updated_at: "2026-01-01T00:00:00.000Z",
-  };
 }
 

@@ -22,6 +22,7 @@ interface DeviceFormProps {
   device?: DeviceRecord | null;
   mode: "create" | "edit";
   onSubmit?: (data: DeviceFormData) => Promise<void> | void;
+  onCancel?: () => void;
 }
 
 export interface DeviceFormData {
@@ -33,7 +34,7 @@ export interface DeviceFormData {
   notes?: string;
 }
 
-export function DeviceForm({ presets, device, mode, onSubmit }: DeviceFormProps) {
+export function DeviceForm({ presets, device, mode, onSubmit, onCancel }: DeviceFormProps) {
   const [name, setName] = useState(device?.name ?? "");
   const [capacity, setCapacity] = useState(device?.capacity_mah?.toString() ?? "");
   const [threshold, setThreshold] = useState(device?.threshold_percent ?? presets[0]?.default_threshold ?? 25);
@@ -85,20 +86,20 @@ export function DeviceForm({ presets, device, mode, onSubmit }: DeviceFormProps)
   }
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-6 shadow-sm" data-testid="device-form">
-      <h2 className="text-lg font-semibold text-gray-900 mb-6">
+    <div className="rounded-xl border border-border bg-surface p-6 shadow-sm" data-testid="device-form">
+      <h2 className="mb-6 text-lg font-semibold text-foreground">
         {mode === "create" ? "Add Device" : "Edit Device"}
       </h2>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {error && (
-          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600" role="alert">
+          <div className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm text-danger" role="alert">
             {error}
           </div>
         )}
 
         <div className="space-y-2">
-          <label htmlFor="name" className="text-sm font-semibold text-gray-700">
+          <label htmlFor="name" className="text-sm font-semibold text-foreground">
             Device Name *
           </label>
           <input
@@ -107,20 +108,20 @@ export function DeviceForm({ presets, device, mode, onSubmit }: DeviceFormProps)
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g., Xbox Controller Battery Pack"
-            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            className="w-full rounded-md border border-border bg-background px-4 py-3 text-base text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
             required
           />
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="deviceType" className="text-sm font-semibold text-gray-700">
+          <label htmlFor="deviceType" className="text-sm font-semibold text-foreground">
             Device Type *
           </label>
           <select
             id="deviceType"
             value={deviceType}
             onChange={(e) => setDeviceType(e.target.value as DevicePresetType)}
-            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            className="w-full rounded-md border border-border bg-background px-4 py-3 text-base text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
           >
             {presets.map((preset) => (
               <option key={preset.type} value={preset.type}>
@@ -131,8 +132,8 @@ export function DeviceForm({ presets, device, mode, onSubmit }: DeviceFormProps)
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="capacity" className="text-sm font-semibold text-gray-700">
-            Capacity (mAh) <span className="text-gray-400">— Optional</span>
+          <label htmlFor="capacity" className="text-sm font-semibold text-foreground">
+            Capacity (mAh) <span className="font-normal text-muted">(optional)</span>
           </label>
           <input
             id="capacity"
@@ -141,12 +142,12 @@ export function DeviceForm({ presets, device, mode, onSubmit }: DeviceFormProps)
             value={capacity}
             onChange={(e) => setCapacity(e.target.value)}
             placeholder="e.g., 2400"
-            className="w-full rounded-xl border border-gray-300 px-4 py-3 text-base text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+            className="w-full rounded-md border border-border bg-background px-4 py-3 text-base text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
           />
         </div>
 
         <div className="space-y-2">
-          <label htmlFor="threshold" className="text-sm font-semibold text-gray-700">
+          <label htmlFor="threshold" className="text-sm font-semibold text-foreground">
             Threshold ({threshold}%)
           </label>
           <input
@@ -156,9 +157,9 @@ export function DeviceForm({ presets, device, mode, onSubmit }: DeviceFormProps)
             max="100"
             value={threshold}
             onChange={(e) => setThreshold(parseInt(e.target.value, 10))}
-            className="w-full accent-blue-600"
+            className="w-full accent-accent"
           />
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-muted">
             Reminder triggers when battery drops to {threshold}%
           </p>
         </div>
@@ -169,9 +170,9 @@ export function DeviceForm({ presets, device, mode, onSubmit }: DeviceFormProps)
             type="checkbox"
             checked={reminderEnabled}
             onChange={(e) => setReminderEnabled(e.target.checked)}
-            className="h-5 w-5 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+            className="h-5 w-5 rounded border-border text-accent focus:ring-accent"
           />
-          <label htmlFor="reminderEnabled" className="text-sm font-semibold text-gray-700">
+          <label htmlFor="reminderEnabled" className="text-sm font-semibold text-foreground">
             Reminder Enabled
           </label>
         </div>
@@ -189,7 +190,7 @@ export function DeviceForm({ presets, device, mode, onSubmit }: DeviceFormProps)
           </Button>
 
           {mode === "edit" && (
-            <Button type="button" variant="secondary" size="lg">
+            <Button type="button" variant="secondary" size="lg" onClick={onCancel}>
               Cancel
             </Button>
           )}

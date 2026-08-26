@@ -40,12 +40,11 @@ The desktop app lives in `apps/desktop/` and is the recommended deployable surfa
 - `DevicePersistenceContract` in `features/charger-reminder/db-tauri.ts` (8 CRUD methods).
 - `DbResult` interface in `features/core-hour/db-tauri.ts`.
 
-### Local Auth
+### Local Profile
 
-- `lib/auth.ts`: `signIn`, `signOut`, `getCurrentUser`, `requireSessionUser`.
-- No passwords, no email verification, no Supabase.
-- `localStorage` session key: `efficiency-memo-session`.
-- Mock auth via `VITE_ENABLE_AUTH_MOCK=true` or `?mock_session=1`.
+- `lib/auth.ts` selects an existing SQLite user or creates `local-user` during startup.
+- No sign-in, passwords, email verification, or external auth service.
+- Existing installations keep their current user ID and associated data.
 
 ### CoreHour Workflow
 
@@ -73,7 +72,7 @@ The desktop app lives in `apps/desktop/` and is the recommended deployable surfa
 | Shell | Tauri v2 (Rust + Webview) |
 | Routing | react-router-dom (SPA) |
 | Storage | SQLite (local file) |
-| Auth | Local (no server) |
+| Profile | Automatic local SQLite user |
 | Sync | Out of current product scope |
 | SSR | No (SPA) |
 | RLS | No (single-user file) |

@@ -30,7 +30,7 @@ Packages are linked via `workspace:*` in `apps/desktop/package.json`.
 
 - **Desktop-only, no SSR.** The web surface was archived in v0.1.0-desktop (ADR-0001). Do not add web routes, Docker, or Supabase.
 - **Local SQLite only.** All persistence goes through `lib/db.ts` (`dbSelect` / `dbExecute`). Migrations live in `apps/desktop/src-tauri/migrations/` — add a new numbered file for any schema change.
-- **Local auth.** No passwords, no external auth service. Session stored in `localStorage` under key `efficiency-memo-session`. See `lib/auth.ts`.
+- **Local profile.** No sign-in or external auth service. Startup reuses the existing SQLite user or creates one automatically. See `lib/auth.ts`.
 - **SPA routing.** React Router with `BrowserRouter` + `<Routes>`. No file-system routing.
 - **Design tokens.** All UI uses dark-theme CSS variables defined in `apps/desktop/src/index.css`. Never use hardcoded Tailwind color utilities (`bg-white`, `text-gray-*`, `bg-blue-*`, etc.) in components or pages — use the token classes (`bg-surface`, `text-foreground`, `text-muted`, `bg-accent`, etc.).
 
@@ -52,7 +52,7 @@ Canonical glossary: [`docs/CONTEXT.md`](docs/CONTEXT.md). Use its terms in code,
 | **CoreHour** | The active product workflow (timing + check-ins) |
 | **Desktop Surface** | The Tauri app — the only deployable surface |
 | **Deferred Code** | Charger Reminder + WebDAV sync — retained but disabled |
-| **Local Auth** | Email-only auth, no password, stored in local SQLite + localStorage |
+| **Local Profile** | Single local SQLite user selected or created automatically at startup |
 | **SQLite Storage** | Local DB via `tauri-plugin-sql`; path is OS app-data dir |
 
 ## Component Library (`packages/ui/`)

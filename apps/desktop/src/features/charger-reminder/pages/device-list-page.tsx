@@ -44,7 +44,7 @@ export default function DeviceListPage() {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
-        <p className="text-red-600">{error}</p>
+        <p className="text-danger">{error}</p>
         <button
           onClick={loadDevices}
           className="mt-4 text-sm font-medium text-accent hover:underline"
@@ -67,7 +67,7 @@ export default function DeviceListPage() {
         <Link
           to="/tools/charger-reminder/new"
           data-testid="add-device-link"
-          className="inline-flex items-center justify-center rounded-lg bg-accent px-4 py-2.5 text-sm font-semibold text-background hover:bg-accent-strong"
+          className="inline-flex items-center justify-center rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-background transition-colors hover:bg-accent-strong"
         >
           Add Device
         </Link>
@@ -78,7 +78,7 @@ export default function DeviceListPage() {
           data-testid="empty-state"
           className="flex flex-col items-center justify-center py-16 text-center"
         >
-          <h2 className="text-lg font-semibold text-gray-700">
+          <h2 className="text-lg font-semibold text-foreground">
             No devices yet
           </h2>
           <p className="text-muted mt-1">

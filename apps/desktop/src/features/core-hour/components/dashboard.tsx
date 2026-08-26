@@ -79,11 +79,12 @@ export function Dashboard({ userId, intervalMinutes }: DashboardProps) {
 
   return (
     <div className="space-y-6" data-testid="dashboard">
-      <div className="text-center" data-testid="timer-display">
-        <div className="text-6xl font-bold tabular-nums text-foreground" data-testid="timer-value">
+      <div className="rounded-xl border border-border bg-surface px-6 py-10 text-center shadow-sm" data-testid="timer-display">
+        <p className="mb-3 text-xs font-semibold uppercase tracking-[0.14em] text-muted">Focus session</p>
+        <div className="text-6xl font-bold tabular-nums tracking-tight text-foreground" data-testid="timer-value">
           {formatElapsed(timer.elapsed)}
         </div>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="mt-2 text-sm text-muted-foreground">
           {pendingCheckIn ? "Check-in due" : timer.isPaused ? "Paused" : timer.isRunning ? "Running" : "Ready"}
         </p>
       </div>
@@ -119,7 +120,7 @@ export function Dashboard({ userId, intervalMinutes }: DashboardProps) {
           </div>
         </Alert>
       ) : (
-        <div className="flex justify-center gap-3" data-testid="timer-controls">
+        <div className="flex flex-wrap justify-center gap-3" data-testid="timer-controls">
           {!activeSession && <Button variant="primary" size="lg" onClick={() => void handleStart()} data-testid="start-button">Start</Button>}
           {activeSession && !timer.isPaused && <>
             <Button variant="secondary" size="lg" onClick={timer.pause} data-testid="pause-button">Pause</Button>
@@ -133,7 +134,7 @@ export function Dashboard({ userId, intervalMinutes }: DashboardProps) {
       )}
 
       {activeSession && (
-        <div className="border-t pt-4" data-testid="session-info">
+        <div className="rounded-lg border border-border bg-surface px-4 py-3" data-testid="session-info">
           <h2 className="text-sm font-semibold">Current session</h2>
           <p className="mt-1 text-sm text-muted-foreground">Check in every {currentInterval} minutes. Paused time is excluded.</p>
         </div>

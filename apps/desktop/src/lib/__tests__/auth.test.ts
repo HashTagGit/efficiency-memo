@@ -6,14 +6,10 @@ vi.mock('../db', () => ({
 }))
 
 import {
-  signIn,
-  signOut,
+  ensureLocalUser,
   getCurrentUser,
-  requireSessionUser,
-  isMockAuthEnabled,
-  getMockUser,
 } from '../auth'
-import { dbSelect } from '../db'
+import { dbExecute, dbSelect } from '../db'
 
 let store: Record<string, string>
 
@@ -36,21 +32,8 @@ beforeEach(() => {
   vi.clearAllMocks()
 })
 
-describe('signIn', () => {
-  it('creates a user and stores session in localStorage', async () => {
-    const user = await signIn('test@example.com')
-
-    expect(user.email).toBe('test@example.com')
-    expect(user.id).toBeTruthy()
-    expect(typeof user.id).toBe('string')
-    expect(user.created_at).toBeTruthy()
-    expect(user.updated_at).toBeTruthy()
-
-    const stored = getCurrentUser()
-    expect(stored).toEqual(user)
-  })
-
-  it('reuses the existing local account for the same email', async () => {
+describe('ensureLocalUser', () => {
+  it('reuses the existing local user', async () => {
     vi.mocked(dbSelect).mockResolvedValueOnce([{
       id: 'stable-user-id',
       email: 'test@example.com',
@@ -58,58 +41,18 @@ describe('signIn', () => {
       updated_at: '2026-01-01T00:00:00.000Z',
     }])
 
-    const user = await signIn('test@example.com')
+    const user = await ensureLocalUser()
 
     expect(user.id).toBe('stable-user-id')
-  })
-})
-
-describe('signOut', () => {
-  it('removes the session from localStorage', async () => {
-    await signIn('test@example.com')
-    expect(getCurrentUser()).not.toBeNull()
-
-    await signOut()
-    expect(getCurrentUser()).toBeNull()
-  })
-})
-
-describe('getCurrentUser', () => {
-  it('returns null when no session exists', () => {
-    expect(getCurrentUser()).toBeNull()
-  })
-
-  it('returns the user when session exists', async () => {
-    const user = await signIn('test@example.com')
     expect(getCurrentUser()).toEqual(user)
-  })
-})
-
-describe('requireSessionUser', () => {
-  it('returns the user when session exists', async () => {
-    const user = await signIn('test@example.com')
-    const result = await requireSessionUser()
-    expect(result).toEqual(user)
+    expect(dbExecute).not.toHaveBeenCalled()
   })
 
-  it('throws "Unauthorized" when no session exists', async () => {
-    await expect(requireSessionUser()).rejects.toThrow('Unauthorized')
-  })
-})
+  it('creates a default user when the database is empty', async () => {
+    const user = await ensureLocalUser()
 
-describe('getMockUser', () => {
-  it('returns a mock user with known values', async () => {
-    const user = await getMockUser()
-
-    expect(user.id).toBe('mock-user-id')
-    expect(user.email).toBe('mock@example.com')
-    expect(user.created_at).toBe('2026-01-01T00:00:00.000Z')
-    expect(user.updated_at).toBe('2026-01-01T00:00:00.000Z')
-  })
-})
-
-describe('isMockAuthEnabled', () => {
-  it('returns false by default', () => {
-    expect(isMockAuthEnabled()).toBe(false)
+    expect(user.id).toBe('local-user')
+    expect(getCurrentUser()).toEqual(user)
+    expect(dbExecute).toHaveBeenCalledOnce()
   })
 })

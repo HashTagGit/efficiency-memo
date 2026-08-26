@@ -32,11 +32,11 @@ export function TagBar({ userId }: TagBarProps) {
 
   return (
     <div className="space-y-4" data-testid="tag-bar">
-      <h3 className="text-sm font-semibold text-gray-900">Tags</h3>
+      <h3 className="text-sm font-semibold text-foreground">Tags</h3>
 
       {/* Tag list */}
       {tags.length === 0 && (
-        <p className="text-sm text-gray-500">No tags yet. Add one below.</p>
+        <p className="text-sm text-muted">No tags yet. Add one below.</p>
       )}
 
       <ul className="flex flex-wrap gap-2" data-testid="tag-list">
@@ -76,7 +76,7 @@ export function TagBar({ userId }: TagBarProps) {
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           placeholder="Tag name..."
-          className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm placeholder:text-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+          className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
@@ -89,7 +89,7 @@ export function TagBar({ userId }: TagBarProps) {
           type="color"
           value={newColor}
           onChange={(e) => setNewColor(e.target.value)}
-          className="h-9 w-9 cursor-pointer rounded-lg border border-gray-300 p-0.5"
+          className="h-9 w-9 cursor-pointer rounded-md border border-border bg-background p-0.5"
           aria-label="Tag color"
           data-testid="tag-color-input"
         />

@@ -9,6 +9,6 @@ A domain glossary for EfficiencyMemo. Use it as a shared vocabulary when discuss
 - **Deferred Code** — Charger Reminder is retained but disabled; WebDAV sync is outside the current product scope. Neither should change without an explicit product decision.
 - **Shared Package** — Cross-cutting code in `packages/shared/` (types and constants) and `packages/ui/` (React + Tailwind components); consumed by the desktop surface.
 - **Tool Registry** — The feature-manifest registry that exposes CoreHour and keeps legacy features disabled.
-- **Local Auth** — Single-user desktop authentication with no passwords or email verification; account identity is stored in local SQLite and the active session in local storage.
+- **Local Profile** — The single SQLite user selected or created automatically at startup; there is no sign-in step.
 - **SQLite Storage** — Local database accessed via `tauri-plugin-sql`; migrations live in `src-tauri/migrations/`.
 - **Archived Surface** — The original `apps/web/` Next.js + Supabase web app, removed in v0.1.0-desktop; available in git history if needed.

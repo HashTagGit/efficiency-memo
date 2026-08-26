@@ -74,7 +74,7 @@ function DeviceDetailPage() {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
-        <p className="text-red-600">{error}</p>
+        <p className="text-danger">{error}</p>
       </div>
     );
   }
@@ -141,7 +141,7 @@ function EditDevicePage() {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center py-16">
-        <p className="text-red-600">{error}</p>
+        <p className="text-danger">{error}</p>
       </div>
     );
   }
@@ -161,6 +161,7 @@ function EditDevicePage() {
         device={device.device}
         mode="edit"
         onSubmit={handleSubmit}
+        onCancel={() => navigate(`/tools/charger-reminder/${id}`)}
       />
     </div>
   );

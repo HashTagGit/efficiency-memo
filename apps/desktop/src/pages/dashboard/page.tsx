@@ -36,7 +36,7 @@ export function DashboardPage() {
   const tools = getRegisteredTools().filter((tool) => tool.enabled);
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="mx-auto max-w-6xl">
       <PageHeader title="Dashboard" subtitle="Your personal tool gallery" />
 
       {tools.length === 0 ? (

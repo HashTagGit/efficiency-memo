@@ -2,7 +2,6 @@ import React, { Suspense, lazy } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ShellLayout } from "./components/shell-layout";
 import { DashboardPage } from "./pages/dashboard/page";
-import { SignInPage } from "./pages/sign-in/page";
 import { SyncSettingsPage } from "./pages/settings/sync/page";
 
 // Lazy-load tool pages
@@ -30,7 +29,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/sign-in" element={<SignInPage />} />
+        <Route path="/sign-in" element={<Navigate to="/dashboard" replace />} />
 
         <Route
           path="/*"

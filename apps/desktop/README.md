@@ -54,13 +54,9 @@ Outputs static files to `apps/desktop/dist/`. The Tauri-specific commands (`invo
 
 ## First-time Setup
 
-1. **Launch the app.** The sign-in page appears.
+1. **Launch the app.** A local profile is selected or created automatically.
 
-2. **Sign in with any email.** Local auth has no password or email verification — it's a single-user desktop tool. Your email is stored in the OS keychain (not in the database).
-
-3. **(Optional) Configure WebDAV sync.** Open **Settings → Sync** in the sidebar. Enter your WebDAV server URL, username, and password. Password is saved to the OS keychain; URL and username are saved in `localStorage` (not the password).
-
-4. **Start using the tools.** Sidebar shows Charger Reminder and CoreHour.
+2. **Start using CoreHour.** Create tags, choose a check-in interval, and start a timer session.
 
 ## Data Locations
 
@@ -112,9 +108,9 @@ EfficiencyMemo uses **manual sync** for v1 — the user clicks a button, no back
 
 ### Setup multi-device sync
 
-1. Install the app on Device A. Sign in.
+1. Install and launch the app on Device A.
 2. On Device A, open **Settings → Sync**. Enter your WebDAV server URL, username, password. Click **Save Credentials**, then **Export & Upload**.
-3. Install the app on Device B. Sign in.
+3. Install and launch the app on Device B.
 4. On Device B, open **Settings → Sync**. Enter the same WebDAV URL, username, password. Click **Save Credentials**, then **Download & Import**. **Restart the app** to apply.
 
 ### After import — restart required
