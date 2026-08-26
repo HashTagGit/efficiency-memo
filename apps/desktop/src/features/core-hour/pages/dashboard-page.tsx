@@ -30,15 +30,15 @@ export default function CoreHourRoutes() {
         <div className="space-y-6" data-testid="ch-dashboard">
           <nav className="flex flex-wrap gap-1 rounded-lg border border-border bg-surface p-1 text-sm" aria-label="CoreHour navigation">
             {[
-              [".", "Timer"],
-              ["history", "History"],
-              ["tags", "Tags"],
-              ["settings", "Settings"],
+              ["/tools/core-hour", "Timer"],
+              ["/tools/core-hour/history", "History"],
+              ["/tools/core-hour/tags", "Tags"],
+              ["/tools/core-hour/settings", "Settings"],
             ].map(([to, label]) => (
               <NavLink
                 key={to}
                 to={to}
-                end={to === "."}
+                end={to === "/tools/core-hour"}
                 className={({ isActive }) => `rounded-md px-3 py-2 font-medium transition-colors ${isActive ? "bg-accent text-background" : "text-muted hover:bg-surface-strong hover:text-foreground"}`}
               >
                 {label}
