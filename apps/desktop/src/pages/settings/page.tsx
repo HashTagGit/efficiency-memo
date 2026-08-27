@@ -11,6 +11,10 @@ const paletteColors: Record<Palette, string[]> = {
   grove: ["#d6ace8", "#84d3a7", "#f0c56c"],
   tide: ["#61abc2", "#8aaee8", "#e2ba70"],
 };
+const companionShortcuts = [
+  { keys: ["Ctrl", "Shift", "M"], descriptionKey: "appSettings.companionShortcutToggle" },
+  { keys: ["Ctrl", "Shift", "Space"], descriptionKey: "appSettings.companionShortcutStartStop" },
+];
 
 export function AppSettingsPage() {
   const { mode, palette, setMode, setPalette } = useAppearance();
@@ -68,6 +72,26 @@ export function AppSettingsPage() {
             </label>
           ))}
         </div>
+      </section>
+
+      <section className="border-t border-border py-6" aria-labelledby="desktop-companion-heading">
+        <h2 id="desktop-companion-heading" className="text-base font-semibold text-foreground">{t("appSettings.companion")}</h2>
+        <p className="mt-1 text-sm text-muted">{t("appSettings.companionHint")}</p>
+        <dl className="mt-4 space-y-3">
+          {companionShortcuts.map((shortcut) => (
+            <div key={shortcut.descriptionKey} className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-4">
+              <dt className="flex shrink-0 items-center gap-1">
+                {shortcut.keys.map((key, index) => (
+                  <React.Fragment key={key}>
+                    {index > 0 ? <span aria-hidden="true" className="text-xs text-muted">+</span> : null}
+                    <kbd className="inline-flex items-center rounded-md border border-border bg-surface px-1.5 py-0.5 font-mono text-xs font-medium text-foreground">{key}</kbd>
+                  </React.Fragment>
+                ))}
+              </dt>
+              <dd className="text-sm text-foreground">{t(shortcut.descriptionKey)}</dd>
+            </div>
+          ))}
+        </dl>
       </section>
     </div>
   );

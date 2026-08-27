@@ -4,6 +4,7 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import CoreHourRoutes from "../pages/dashboard-page";
 import { I18nProvider } from "../../../lib/i18n";
+import { CoreHourRuntimeProvider } from "../runtime";
 
 vi.mock("../../../lib/auth", () => ({
   getCurrentUser: () => ({
@@ -19,9 +20,11 @@ describe("CoreHour navigation", () => {
     const markup = renderToStaticMarkup(
       <MemoryRouter initialEntries={["/tools/core-hour/history"]}>
         <I18nProvider>
-          <Routes>
-            <Route path="/tools/core-hour/*" element={<CoreHourRoutes />} />
-          </Routes>
+          <CoreHourRuntimeProvider>
+            <Routes>
+              <Route path="/tools/core-hour/*" element={<CoreHourRoutes />} />
+            </Routes>
+          </CoreHourRuntimeProvider>
         </I18nProvider>
       </MemoryRouter>,
     );

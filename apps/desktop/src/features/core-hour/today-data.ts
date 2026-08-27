@@ -47,6 +47,14 @@ export async function loadRecentActivities(userId: string): Promise<RecentActivi
   return rows.map((row) => ({ ...row, is_favorite: Boolean(row.is_favorite) }));
 }
 
+export async function loadLatestActivity(userId: string): Promise<RecentActivity | null> {
+  const [row] = await dbSelect<Omit<RecentActivity, "is_favorite"> & { is_favorite: number }>(
+    "SELECT s.activity, s.default_tag_id, t.name AS tag_name, t.color AS tag_color, s.is_favorite, s.started_at AS last_used_at FROM ch_sessions s LEFT JOIN ch_tags t ON t.id = s.default_tag_id WHERE s.user_id = $1 AND s.ended_at IS NOT NULL AND trim(s.activity) <> '' AND (s.default_tag_id IS NULL OR t.is_archived = 0) ORDER BY s.started_at DESC LIMIT 1",
+    [userId],
+  );
+  return row ? { ...row, is_favorite: Boolean(row.is_favorite) } : null;
+}
+
 export async function loadSessionsForDay(userId: string, now: Date): Promise<TodaySession[]> {
   const dayStart = new Date(now);
   dayStart.setHours(0, 0, 0, 0);

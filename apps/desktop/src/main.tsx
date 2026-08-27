@@ -8,6 +8,7 @@ import { discoverTools } from "./lib/tool-registry/discovery";
 import { I18nProvider } from "./lib/i18n";
 import { PauseHydrateProvider } from "./features/pause-hydrate/context";
 import { AppearanceProvider, initializeAppearance } from "./lib/appearance";
+import { CoreHourRuntimeProvider } from "./features/core-hour/runtime";
 import {
   applyPortablePreferences,
   takeAppliedRestorePreferences,
@@ -29,9 +30,11 @@ async function bootstrap() {
     <React.StrictMode>
       <I18nProvider>
         <AppearanceProvider>
-          <PauseHydrateProvider>
-            <App />
-          </PauseHydrateProvider>
+          <CoreHourRuntimeProvider>
+            <PauseHydrateProvider>
+              <App />
+            </PauseHydrateProvider>
+          </CoreHourRuntimeProvider>
         </AppearanceProvider>
       </I18nProvider>
     </React.StrictMode>,

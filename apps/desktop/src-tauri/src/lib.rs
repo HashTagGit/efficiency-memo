@@ -4,6 +4,7 @@ use tauri_plugin_sql::{Migration, MigrationKind};
 
 mod core_hour;
 mod data_control;
+mod desktop_companion;
 mod pause_hydrate;
 mod sidecar;
 mod sync;
@@ -57,6 +58,7 @@ pub fn run() {
     ];
 
     tauri::Builder::default()
+        .plugin(desktop_companion::shortcut_plugin())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
@@ -72,6 +74,7 @@ pub fn run() {
             if let Err(e) = sidecar::apply_pending_import(app.handle()) {
                 eprintln!("WARN: Failed to apply pending import: {e}");
             }
+            desktop_companion::setup(app)?;
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -86,6 +89,8 @@ pub fn run() {
             data_control::reset_local_data,
             data_control::take_applied_restore_preferences,
             system_idle::get_system_idle_seconds,
+            desktop_companion::show_main_window,
+            desktop_companion::update_desktop_companion,
             core_hour::save_core_hour_session_block,
             pause_hydrate::save_pause_hydrate_preferences,
             pause_hydrate::claim_pause_hydrate_reminders,

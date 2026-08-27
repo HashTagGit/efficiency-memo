@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { dbExecute, dbSelect } from "../../../lib/db";
 import {
   elapsedSecondsForDay,
+  loadLatestActivity,
   loadRecentActivities,
   loadTodaySessions,
   setActivityFavorite,
@@ -18,7 +19,7 @@ describe("CoreHour Today data", () => {
     vi.clearAllMocks();
   });
 
-  it("normalizes recent activities and completed sessions", async () => {
+  it("normalizes recent, latest, and completed sessions", async () => {
     vi.mocked(dbSelect)
       .mockResolvedValueOnce([{
         activity: "Write release notes",
@@ -27,6 +28,14 @@ describe("CoreHour Today data", () => {
         tag_color: "#d6a24a",
         is_favorite: 1,
         last_used_at: "2026-08-27T09:00:00.000Z",
+      }])
+      .mockResolvedValueOnce([{
+        activity: "Latest task",
+        default_tag_id: null,
+        tag_name: null,
+        tag_color: null,
+        is_favorite: 0,
+        last_used_at: "2026-08-27T11:00:00.000Z",
       }])
       .mockResolvedValueOnce([{
         id: "session-1",
@@ -41,9 +50,11 @@ describe("CoreHour Today data", () => {
       }]);
 
     const recent = await loadRecentActivities("local-user");
+    const latest = await loadLatestActivity("local-user");
     const today = await loadTodaySessions("local-user", new Date(2026, 7, 27, 12));
 
     expect(recent[0]).toMatchObject({ activity: "Write release notes", is_favorite: true });
+    expect(latest).toMatchObject({ activity: "Latest task", is_favorite: false });
     expect(today[0]).toMatchObject({ id: "session-1", elapsed_seconds: 3600, is_favorite: false });
   });
 
