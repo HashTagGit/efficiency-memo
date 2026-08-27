@@ -153,6 +153,7 @@ export function Dashboard({ userId, intervalMinutes, dailyGoalMinutes, timer }: 
   }
 
   function requestEnd() {
+    if (timer.uncertainInterval) return;
     setResumeAfterCancel(!timer.isPaused);
     if (!timer.isPaused) timer.pause();
     setConfirmingEnd(true);
@@ -164,6 +165,7 @@ export function Dashboard({ userId, intervalMinutes, dailyGoalMinutes, timer }: 
   }
 
   async function confirmEnd() {
+    if (timer.uncertainInterval) return;
     const completed = await endSession(timer.elapsed, activeSession?.recorded_seconds ?? 0);
     timer.stop();
     setConfirmingEnd(false);
@@ -242,7 +244,15 @@ export function Dashboard({ userId, intervalMinutes, dailyGoalMinutes, timer }: 
               {formatElapsed(timer.elapsed)}
             </div>
             <p className="mt-2 text-sm text-muted">
-              {pendingCheckIn ? t("coreHour.checkInDue") : timer.isPaused ? t("coreHour.paused") : timer.isRunning ? t("coreHour.running") : t("coreHour.ready")}
+              {pendingCheckIn
+                ? t("coreHour.checkInDue")
+                : timer.uncertainInterval
+                  ? t("coreHour.uncertainStatus")
+                  : timer.isPaused
+                    ? t("coreHour.paused")
+                    : timer.isRunning
+                      ? t("coreHour.running")
+                      : t("coreHour.ready")}
             </p>
 
             {activeSession ? (
@@ -336,8 +346,8 @@ export function Dashboard({ userId, intervalMinutes, dailyGoalMinutes, timer }: 
                     })}</p>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Button variant="secondary" onClick={cancelEnd}>{t("today.keepWorking")}</Button>
-                    <Button variant="danger" onClick={() => void confirmEnd()}>{t("today.confirmEnd")}</Button>
+                  <Button variant="secondary" disabled={Boolean(timer.uncertainInterval)} onClick={cancelEnd}>{t("today.keepWorking")}</Button>
+                  <Button variant="danger" disabled={Boolean(timer.uncertainInterval)} onClick={() => void confirmEnd()}>{t("today.confirmEnd")}</Button>
                   </div>
                 </div>
               )}
@@ -347,11 +357,14 @@ export function Dashboard({ userId, intervalMinutes, dailyGoalMinutes, timer }: 
                   <Button variant="danger" size="lg" onClick={requestEnd} data-testid="stop-button">{t("coreHour.end")}</Button>
                 </>
               )}
-              {activeSession && !confirmingEnd && timer.isPaused && (
+              {activeSession && !confirmingEnd && timer.isPaused && !timer.uncertainInterval && (
                 <>
                   <Button size="lg" onClick={timer.resume} data-testid="resume-button">{t("coreHour.continue")}</Button>
                   <Button variant="danger" size="lg" onClick={requestEnd} data-testid="stop-button">{t("coreHour.end")}</Button>
                 </>
+              )}
+              {activeSession && !confirmingEnd && timer.uncertainInterval && (
+                <p className="text-sm font-medium text-warning">{t("coreHour.timerPausedForReview")}</p>
               )}
             </div>
           )}

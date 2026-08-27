@@ -7,6 +7,7 @@ mod data_control;
 mod pause_hydrate;
 mod sidecar;
 mod sync;
+mod system_idle;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -84,6 +85,7 @@ pub fn run() {
             data_control::prepare_local_restore,
             data_control::reset_local_data,
             data_control::take_applied_restore_preferences,
+            system_idle::get_system_idle_seconds,
             core_hour::save_core_hour_session_block,
             pause_hydrate::save_pause_hydrate_preferences,
             pause_hydrate::claim_pause_hydrate_reminders,

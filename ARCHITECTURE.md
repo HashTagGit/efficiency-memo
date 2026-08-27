@@ -58,6 +58,8 @@ The desktop app lives in `apps/desktop/` and is the recommended deployable surfa
 - Daily focus goals reuse the existing `ch_settings` key-value table; no schema migration is required.
 - Manual session changes validate overlaps and update the session and its check-in durations in one SQLite transaction.
 - An active session persists elapsed and categorized seconds in local storage; after a restart it restores paused.
+- `timer-gaps.ts` models uncertain scheduler/system-idle spans and adjusts elapsed time only after explicit review; unresolved review state is stored with active-session progress.
+- Windows reads only the native last-input tick through `system_idle.rs`; unsupported platforms return no native idle signal and retain scheduler-gap protection.
 - Check-ins record one optional tag, an optional note, and an explicit duration.
 - The native notification plugin reminds users only when a due check-in occurs in the background.
 

@@ -11,6 +11,7 @@ EfficiencyMemo is a pnpm monorepo with independent tools behind one desktop work
 ### CoreHour — time tracking with periodic check-ins
 - Choose a 15, 30, or 60 minute interval for the next session
 - Start, pause, continue, and end sessions; an interrupted session restores paused
+- Review sleep, delayed-timer, and Windows system-idle intervals before they change confirmed focus time
 - Add missed time manually and edit completed session activity, tag, start, or end time
 - Plan focus blocks separately from recorded time, compare plan and actual in day/week timelines, and explicitly convert a plan into a session
 - Move plans between week days, resize them on a 15-minute grid, and review planned time, actual time, completion, and variance
@@ -73,6 +74,7 @@ On first launch the app creates its database in `%APPDATA%/com.efficiency-memo.a
 2. **Create tags** — Open **CoreHour → Tags** and add the categories you want to use.
 3. **Set your cadence** — Open **CoreHour → Settings**, choose a check-in interval and a daily focus goal, then save.
 4. **Track time** — Open **CoreHour → Today**, describe the activity or continue a recent favorite, then start a session. At each due check-in, choose one tag and an optional note, or skip. Allow the operating-system notification permission for background reminders.
+   If CoreHour detects an uncertain suspend or idle interval, review how much time to include before continuing.
 5. **Plan and review time** — Open **CoreHour → Timeline** to add planned focus, move or resize planned blocks, switch between day and week views, compare plan with actual, or use **Add time** for missed sessions.
 6. **Review the week** — Open **CoreHour → Insights** to compare confirmed focus with last week, inspect goal consistency, and review activity and tag trends. Plans never enter these totals.
 7. **Set healthy reminders** — Open **Pause & Hydrate**, enable either reminder, choose its interval, and save. Due reminders wait while CoreHour is active.

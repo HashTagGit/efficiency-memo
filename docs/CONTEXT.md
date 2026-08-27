@@ -49,6 +49,14 @@ _Avoid_: Auto-complete, scheduled timer
 A Planned Block the user intentionally did not execute; it remains part of plan-versus-actual review.
 _Avoid_: Deleted plan, failed session
 
+**Uncertain Interval**:
+A detected span during an active session whose inclusion is ambiguous because timer scheduling stopped or the device received no user input.
+_Avoid_: Confirmed time, activity log
+
+**Included Time**:
+The portion of an Uncertain Interval the user explicitly keeps in elapsed focus after review.
+_Avoid_: Automatic idle estimate
+
 ## Data control
 
 **Portable Backup**:

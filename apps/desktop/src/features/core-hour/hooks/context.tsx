@@ -9,13 +9,12 @@ import {
 import type { CheckInWithTag, Session, StartSessionInput, Tag } from "../types";
 import { dbExecute, dbSelect } from "../../../lib/db";
 import { hasProgressChanged, unrecordedAfterPendingCheckIn } from "../session-math";
-import { CORE_HOUR_SESSION_PROGRESS_KEY } from "../../../lib/storage-keys";
-
-type StoredProgress = {
-  sessionId: string;
-  elapsedSeconds: number;
-  recordedSeconds: number;
-};
+import type { UncertainInterval } from "../timer-gaps";
+import {
+  clearSessionProgress,
+  readSessionProgress,
+  writeSessionProgress,
+} from "../session-progress";
 
 function mapSession(row: Record<string, unknown>): Session {
   return {
@@ -36,9 +35,14 @@ function mapSession(row: Record<string, unknown>): Session {
 export interface SessionState {
   activeSession: Session | null;
   pendingCheckIn: CheckInWithTag | null;
+  restoredUncertainInterval: UncertainInterval | null;
   loadSessions: (userId: string) => Promise<void>;
   startSession: (input: StartSessionInput) => Promise<Session>;
-  saveProgress: (elapsedSeconds: number, recordedSeconds: number) => void;
+  saveProgress: (
+    elapsedSeconds: number,
+    recordedSeconds: number,
+    uncertainInterval?: UncertainInterval | null,
+  ) => void;
   createCheckIn: (durationSeconds: number) => Promise<void>;
   completeCheckIn: (tagId: string | null, note: string) => Promise<void>;
   endSession: (elapsedSeconds: number, recordedSeconds: number) => Promise<Session | null>;
@@ -49,6 +53,7 @@ const SessionContext = createContext<SessionState | null>(null);
 export function SessionProvider({ children }: { children: ReactNode }) {
   const [activeSession, setActiveSession] = useState<Session | null>(null);
   const [pendingCheckIn, setPendingCheckIn] = useState<CheckInWithTag | null>(null);
+  const [restoredUncertainInterval, setRestoredUncertainInterval] = useState<UncertainInterval | null>(null);
   const activeRef = useRef(activeSession);
   const pendingRef = useRef(pendingCheckIn);
   const completingRef = useRef(false);
@@ -63,7 +68,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       [userId],
     );
     const active = rows[0] ? mapSession(rows[0]) : null;
-    const stored = active ? readProgress(active.id) : null;
+    const stored = active ? readSessionProgress(active.id) : null;
+    setRestoredUncertainInterval(stored?.uncertainInterval ?? null);
     setActiveSession(
       active && stored
         ? { ...active, elapsed_seconds: stored.elapsedSeconds, recorded_seconds: stored.recordedSeconds }
@@ -102,11 +108,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         "INSERT INTO ch_sessions (id, user_id, started_at, ended_at, interval_minutes, elapsed_seconds, activity, default_tag_id, is_favorite, synced) VALUES ($1, $2, $3, NULL, $4, 0, $5, $6, $7, 0)",
         [session.id, session.user_id, session.started_at, session.interval_minutes, session.activity, session.default_tag_id, session.is_favorite ? 1 : 0],
       );
-      localStorage.setItem(CORE_HOUR_SESSION_PROGRESS_KEY, JSON.stringify({
+      writeSessionProgress({
         sessionId: session.id,
         elapsedSeconds: 0,
         recordedSeconds: 0,
-      } satisfies StoredProgress));
+        uncertainInterval: null,
+      });
       activeRef.current = session;
       setActiveSession(session);
       return session;
@@ -115,14 +122,19 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const saveProgress = useCallback((elapsedSeconds: number, recordedSeconds: number) => {
+  const saveProgress = useCallback((
+    elapsedSeconds: number,
+    recordedSeconds: number,
+    uncertainInterval: UncertainInterval | null = null,
+  ) => {
     const current = activeRef.current;
     if (!current) return;
-    localStorage.setItem(CORE_HOUR_SESSION_PROGRESS_KEY, JSON.stringify({
+    writeSessionProgress({
       sessionId: current.id,
       elapsedSeconds,
       recordedSeconds,
-    } satisfies StoredProgress));
+      uncertainInterval,
+    });
     setActiveSession((session) => {
       if (!session || !hasProgressChanged(
         session.elapsed_seconds,
@@ -171,8 +183,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
           [crypto.randomUUID(), current.id, tagId],
         );
       }
-      const progress = readProgress(current.session_id);
-      if (progress) saveProgress(progress.elapsedSeconds, progress.recordedSeconds + current.duration_seconds);
+      const progress = readSessionProgress(current.session_id);
+      if (progress) saveProgress(
+        progress.elapsedSeconds,
+        progress.recordedSeconds + current.duration_seconds,
+        progress.uncertainInterval,
+      );
       setPendingCheckIn(null);
     } finally {
       completingRef.current = false;
@@ -185,7 +201,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     if (endingRef.current) return null;
     endingRef.current = true;
     try {
-    const progress = readProgress(current.id);
+    const progress = readSessionProgress(current.id);
     const finalElapsed = progress?.elapsedSeconds ?? elapsedSeconds;
     const finalRecorded = progress?.recordedSeconds ?? recordedSeconds;
     const endedAt = new Date().toISOString();
@@ -224,8 +240,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         );
       }
     }
-    localStorage.removeItem(CORE_HOUR_SESSION_PROGRESS_KEY);
+    clearSessionProgress();
     setPendingCheckIn(null);
+    setRestoredUncertainInterval(null);
     activeRef.current = null;
     setActiveSession(null);
     return { ...current, ended_at: endedAt, elapsed_seconds: finalElapsed };
@@ -235,7 +252,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, []);
 
   return (
-    <SessionContext.Provider value={{ activeSession, pendingCheckIn, loadSessions, startSession, saveProgress, createCheckIn, completeCheckIn, endSession }}>
+    <SessionContext.Provider value={{ activeSession, pendingCheckIn, restoredUncertainInterval, loadSessions, startSession, saveProgress, createCheckIn, completeCheckIn, endSession }}>
       {children}
     </SessionContext.Provider>
   );
@@ -245,18 +262,6 @@ export function useSessionContext(): SessionState {
   const context = useContext(SessionContext);
   if (!context) throw new Error("useSessionContext must be used within SessionProvider");
   return context;
-}
-
-function readProgress(sessionId: string): StoredProgress | null {
-  const raw = localStorage.getItem(CORE_HOUR_SESSION_PROGRESS_KEY);
-  if (!raw) return null;
-  try {
-    const progress = JSON.parse(raw) as StoredProgress;
-    return progress.sessionId === sessionId ? progress : null;
-  } catch {
-    localStorage.removeItem(CORE_HOUR_SESSION_PROGRESS_KEY);
-    return null;
-  }
 }
 
 export interface TagsState {

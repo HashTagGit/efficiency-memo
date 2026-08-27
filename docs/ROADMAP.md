@@ -9,31 +9,27 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 - CoreHour sessions, check-ins, tags, daily goals, Today, Timeline, and Insights.
 - CoreHour planned blocks with separate day/week plan-versus-actual timelines and explicit conversion.
 - CoreHour direct plan move/resize plus selected-week and current-week plan-versus-actual review.
+- CoreHour uncertain-time resolution for scheduler/suspend gaps and Windows native system idle.
 - Pause & Hydrate with independent schedules, focus deferral, actions, notifications, and local history.
 - Data & Privacy Center with portable backup/restore preview, readable module exports, and scoped reset.
 - Domain color roles for focus, planned, actual, recovery, hydration, privacy, and suggestions across every palette and mode.
 
 ## Next releases
 
-### 1. CoreHour idle and suspend resolution
-
-- Detect sleep, suspend, and long idle gaps without silently counting them as focus.
-- Ask the user to keep, trim, or discard the uncertain interval before it enters confirmed history.
-- Reuse the same resolution path for later optional local activity suggestions.
-
-### 2. Desktop Companion
+### 1. Desktop Companion
 
 - System-tray state and commands for current focus and next healthy-work reminders.
 - Two shortcuts first: show/hide EfficiencyMemo and start/stop the latest CoreHour activity.
 - Reuse authoritative module commands; the tray never owns a second timer.
 
-### 3. Respectful reminder policy
+### 2. Respectful reminder policy
 
 - Active weekdays, working hours, quiet hours, and notification-permission status.
 - Natural movement-break completion from sufficient idle time; hydration always remains explicit.
 - DND-aware deferral with a grace period and no stale-reminder burst after resume.
+- Add reliable native idle adapters beyond Windows before enabling natural-break completion there.
 
-### 4. Local Activity Assist experiment
+### 3. Local Activity Assist experiment
 
 - Windows-first, off by default, foreground application name only.
 - Short raw retention, pause/exclusion/delete controls, and local-only processing.

@@ -15,6 +15,8 @@ All notable changes to this project will be documented in this file.
 - The desktop workspace now supports persisted light and dark themes with reorganized navigation and consistent action styling.
 
 ### Added
+- CoreHour uncertain-time review for suspend/background timer gaps and Windows system idle, with keep, trim, or discard decisions that persist across restart.
+- A privacy-limited Windows last-input clock adapter; no key, window, application, or content events are collected.
 - CoreHour direct planning with pointer/keyboard movement, cross-day Week moves, start/end resize handles, 15-minute snapping, and bilingual failure feedback.
 - Reusable selected-week and current-week plan-versus-actual review metrics for planned time, actual time, completion rate, and variance.
 - Data & Privacy Center with local record inventory, single-file portable backup, validated restore preview, readable module JSON exports, and scoped/full reset confirmation.

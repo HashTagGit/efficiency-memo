@@ -18,6 +18,7 @@ import { useI18n } from "../../../lib/i18n";
 import { shouldPromptForCheckIn, unrecordedSeconds } from "../session-math";
 import { notifyCheckIn } from "../notifications";
 import { Button } from "@memo/ui";
+import { UncertainTimeReview } from "../components/uncertain-time-review";
 
 function CoreHourHome({ timer }: { timer: TimerState }) {
   const [intervalMinutes, setIntervalMinutes] = useState(30);
@@ -50,7 +51,14 @@ export default function CoreHourRoutes() {
 function CoreHourWorkspace({ userId }: { userId: string }) {
   const { t } = useI18n();
   const timer = useTimer();
-  const { activeSession, pendingCheckIn, loadSessions, saveProgress, createCheckIn } = useSession();
+  const {
+    activeSession,
+    pendingCheckIn,
+    restoredUncertainInterval,
+    loadSessions,
+    saveProgress,
+    createCheckIn,
+  } = useSession();
   const { loadTags } = useTags();
 
   useEffect(() => {
@@ -59,12 +67,20 @@ function CoreHourWorkspace({ userId }: { userId: string }) {
   }, [loadSessions, loadTags, userId]);
 
   useEffect(() => {
-    if (activeSession && !timer.isRunning) timer.restore(activeSession.elapsed_seconds);
-  }, [activeSession, timer]);
+    if (activeSession && !timer.isRunning) {
+      timer.restore(activeSession.elapsed_seconds, restoredUncertainInterval);
+    }
+  }, [activeSession, restoredUncertainInterval, timer]);
 
   useEffect(() => {
-    if (activeSession && timer.isRunning) saveProgress(timer.elapsed, activeSession.recorded_seconds);
-  }, [activeSession, saveProgress, timer.elapsed, timer.isRunning]);
+    if (activeSession && timer.isRunning) {
+      saveProgress(
+        timer.elapsed,
+        activeSession.recorded_seconds,
+        timer.uncertainInterval,
+      );
+    }
+  }, [activeSession, saveProgress, timer.elapsed, timer.isRunning, timer.uncertainInterval]);
 
   useEffect(() => {
     if (!activeSession || pendingCheckIn || timer.isPaused) return;
@@ -108,16 +124,29 @@ function CoreHourWorkspace({ userId }: { userId: string }) {
               <span className="max-w-44 truncate font-medium">{activeSession.activity || t("today.unnamed")}</span>
               <span className="tabular-nums">{formatElapsed(timer.elapsed)}</span>
             </NavLink>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={timer.isPaused ? timer.resume : timer.pause}
-            >
-              {timer.isPaused ? t("coreHour.continue") : t("coreHour.pause")}
-            </Button>
+            {timer.uncertainInterval ? (
+              <span className="rounded-md border border-suggested/50 bg-suggested/10 px-2.5 py-1.5 text-xs font-semibold text-suggested">
+                {t("coreHour.reviewUncertain")}
+              </span>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={timer.isPaused ? timer.resume : timer.pause}
+              >
+                {timer.isPaused ? t("coreHour.continue") : t("coreHour.pause")}
+              </Button>
+            )}
           </div>
         )}
       </div>
+      {timer.uncertainInterval && (
+        <UncertainTimeReview
+          key={timer.uncertainInterval.detectedAt}
+          interval={timer.uncertainInterval}
+          onResolve={timer.resolveUncertainInterval}
+        />
+      )}
       <Routes>
         <Route index element={<CoreHourHome timer={timer} />} />
         <Route path="history" element={<HistoryPage userId={userId} />} />
