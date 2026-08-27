@@ -1,0 +1,3 @@
+# Use SQLite as the portable backup container
+
+EfficiencyMemo exports a single `.ememo` file that remains a SQLite snapshot and stores package metadata plus stable language and appearance preferences in an internal metadata table. Restore validates SQLite integrity and package/schema compatibility, stages the file beside the live database, and replaces it only during the next native startup with rollback protection. Keychain secrets, WebDAV connection state, and active CoreHour progress are excluded. This avoids a second archive format, encoding dependency, and hash protocol while keeping backup and restore local and inspectable.

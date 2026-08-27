@@ -7,9 +7,9 @@ export type ThemeMode = "light" | "dark" | "system";
 export type ResolvedTheme = "light" | "dark";
 export type Palette = (typeof PALETTES)[number];
 
-const THEME_MODE_KEY = "efficiency-memo-theme-mode";
+export const THEME_MODE_KEY = "efficiency-memo-theme-mode";
 const LEGACY_THEME_KEY = "efficiency-memo-theme";
-const PALETTE_KEY = "efficiency-memo-palette";
+export const PALETTE_KEY = "efficiency-memo-palette";
 
 export function resolveTheme(mode: ThemeMode, systemDark: boolean): ResolvedTheme {
   return mode === "system" ? (systemDark ? "dark" : "light") : mode;

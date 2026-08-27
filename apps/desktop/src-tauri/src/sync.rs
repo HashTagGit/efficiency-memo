@@ -9,9 +9,10 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::fs;
 use std::path::PathBuf;
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
-const SCHEMA_VERSION: i64 = 7;
+use crate::data_control::{database_dir, SCHEMA_VERSION};
+
 const BACKUP_DIR: &str = "memo-backups";
 const DB_FILENAME: &str = "efficiency-memo.db";
 const KEYRING_SERVICE: &str = "com.efficiency-memo.app.webdav";
@@ -22,10 +23,6 @@ pub(crate) struct Manifest {
     pub(crate) schema_version: i64,
     pub(crate) timestamp: String,
     pub(crate) sha256: String,
-}
-
-fn app_data_dir(app: &AppHandle) -> Result<PathBuf, String> {
-    app.path().app_data_dir().map_err(|e| e.to_string())
 }
 
 fn get_device_id() -> String {
@@ -64,7 +61,7 @@ pub(crate) fn compute_sha256(path: &PathBuf) -> Result<String, String> {
 /// 5. Uploads a manifest.json with metadata for future imports
 #[tauri::command]
 pub async fn sync_export(url: String, username: String, app: AppHandle) -> Result<String, String> {
-    let data_dir = app_data_dir(&app)?;
+    let data_dir = database_dir(&app)?;
     let db_path = data_dir.join(DB_FILENAME);
     let device_id = get_device_id();
     let timestamp = Utc::now().format("%Y%m%dT%H%M%SZ").to_string();
@@ -141,7 +138,7 @@ pub async fn sync_export(url: String, username: String, app: AppHandle) -> Resul
 /// the application for the import to take effect.
 #[tauri::command]
 pub async fn sync_import(url: String, username: String, app: AppHandle) -> Result<String, String> {
-    let data_dir = app_data_dir(&app)?;
+    let data_dir = database_dir(&app)?;
     let device_id = get_device_id();
 
     // 1. Build WebDAV client

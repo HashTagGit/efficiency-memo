@@ -79,11 +79,19 @@ The desktop app lives in `apps/desktop/` and is the recommended deployable surfa
 - `index.css` maps Ember, Grove, and Tide through the same semantic token names, so feature pages do not know which palette is active.
 - `/settings` is the primary global settings surface; the retained `/settings/sync` route is not linked from primary navigation.
 
+### Data Control
+
+- The native data-control module owns the portable-backup interface: snapshot, integrity validation, preview counts, restore staging, and transactional module reset.
+- A .ememo file remains SQLite and stores versioned package metadata plus locale, theme mode, and palette. Keychain secrets and active-session progress are excluded.
+- The startup sidecar applies a staged restore before SQL connections open, moves the live database and WAL sidecars to rollback names, and restores them if replacement cannot complete.
+- The Data & Privacy settings page owns user confirmation, readable module JSON exports, and known local-preference cleanup.
+- WebDAV remains outside the product surface and uses the same SQL-plugin application-config directory only for retained compatibility.
+
 ### Data Locations
 
 - Windows: `%APPDATA%\com.efficiency-memo.app\efficiency-memo.db`
 - macOS: `~/Library/Application Support/com.efficiency-memo.app/efficiency-memo.db`
-- Linux: `~/.local/share/com.efficiency-memo.app/efficiency-memo.db`
+- Linux: `$XDG_CONFIG_HOME/com.efficiency-memo.app/efficiency-memo.db` (normally `~/.config/...`)
 
 ### Key Design Differences
 

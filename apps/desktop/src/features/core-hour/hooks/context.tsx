@@ -9,8 +9,7 @@ import {
 import type { CheckInWithTag, Session, StartSessionInput, Tag } from "../types";
 import { dbExecute, dbSelect } from "../../../lib/db";
 import { hasProgressChanged, unrecordedAfterPendingCheckIn } from "../session-math";
-
-const SESSION_PROGRESS_KEY = "core-hour-active-session";
+import { CORE_HOUR_SESSION_PROGRESS_KEY } from "../../../lib/storage-keys";
 
 type StoredProgress = {
   sessionId: string;
@@ -103,7 +102,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         "INSERT INTO ch_sessions (id, user_id, started_at, ended_at, interval_minutes, elapsed_seconds, activity, default_tag_id, is_favorite, synced) VALUES ($1, $2, $3, NULL, $4, 0, $5, $6, $7, 0)",
         [session.id, session.user_id, session.started_at, session.interval_minutes, session.activity, session.default_tag_id, session.is_favorite ? 1 : 0],
       );
-      localStorage.setItem(SESSION_PROGRESS_KEY, JSON.stringify({
+      localStorage.setItem(CORE_HOUR_SESSION_PROGRESS_KEY, JSON.stringify({
         sessionId: session.id,
         elapsedSeconds: 0,
         recordedSeconds: 0,
@@ -119,7 +118,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const saveProgress = useCallback((elapsedSeconds: number, recordedSeconds: number) => {
     const current = activeRef.current;
     if (!current) return;
-    localStorage.setItem(SESSION_PROGRESS_KEY, JSON.stringify({
+    localStorage.setItem(CORE_HOUR_SESSION_PROGRESS_KEY, JSON.stringify({
       sessionId: current.id,
       elapsedSeconds,
       recordedSeconds,
@@ -225,7 +224,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         );
       }
     }
-    localStorage.removeItem(SESSION_PROGRESS_KEY);
+    localStorage.removeItem(CORE_HOUR_SESSION_PROGRESS_KEY);
     setPendingCheckIn(null);
     activeRef.current = null;
     setActiveSession(null);
@@ -249,13 +248,13 @@ export function useSessionContext(): SessionState {
 }
 
 function readProgress(sessionId: string): StoredProgress | null {
-  const raw = localStorage.getItem(SESSION_PROGRESS_KEY);
+  const raw = localStorage.getItem(CORE_HOUR_SESSION_PROGRESS_KEY);
   if (!raw) return null;
   try {
     const progress = JSON.parse(raw) as StoredProgress;
     return progress.sessionId === sessionId ? progress : null;
   } catch {
-    localStorage.removeItem(SESSION_PROGRESS_KEY);
+    localStorage.removeItem(CORE_HOUR_SESSION_PROGRESS_KEY);
     return null;
   }
 }

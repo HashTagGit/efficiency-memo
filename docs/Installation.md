@@ -106,7 +106,7 @@ On first launch the app creates its SQLite database automatically:
 
 - **Windows:** `%APPDATA%\\com.efficiency-memo.app\\efficiency-memo.db`
 - **macOS:** `~/Library/Application Support/com.efficiency-memo.app/efficiency-memo.db`
-- **Linux:** `~/.local/share/com.efficiency-memo.app/efficiency-memo.db`
+- **Linux:** `$XDG_CONFIG_HOME/com.efficiency-memo.app/efficiency-memo.db` (normally `~/.config/com.efficiency-memo.app/efficiency-memo.db`)
 
 All 7 schema migrations run automatically on first launch. No manual setup is required.
 

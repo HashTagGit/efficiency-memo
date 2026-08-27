@@ -2,6 +2,7 @@ import React from "react";
 import { PageHeader } from "@memo/ui";
 import { PALETTES, useAppearance, type Palette, type ThemeMode } from "../../lib/appearance";
 import { useI18n, type Locale } from "../../lib/i18n";
+import { SettingsNavigation } from "./settings-navigation";
 
 const themeModes: ThemeMode[] = ["light", "dark", "system"];
 const locales: Locale[] = ["en-US", "zh-CN"];
@@ -16,10 +17,11 @@ export function AppSettingsPage() {
   const { locale, setLocale, t } = useI18n();
 
   return (
-    <div className="mx-auto max-w-3xl" data-testid="app-settings-page">
+    <div className="mx-auto max-w-4xl" data-testid="app-settings-page">
       <PageHeader title={t("appSettings.title")} subtitle={t("appSettings.subtitle")} />
+      <SettingsNavigation />
 
-      <section className="border-t border-border py-6" aria-labelledby="appearance-heading">
+      <section className="py-6" aria-labelledby="appearance-heading">
         <h2 id="appearance-heading" className="text-base font-semibold text-foreground">{t("appSettings.appearance")}</h2>
         <p className="mt-1 max-w-2xl text-sm leading-relaxed text-muted">{t("appSettings.appearanceHint")}</p>
 

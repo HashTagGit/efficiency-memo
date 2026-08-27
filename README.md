@@ -28,7 +28,13 @@ EfficiencyMemo is a pnpm monorepo with independent tools behind one desktop work
 ### Appearance
 - Choose System, Light, or Dark mode independently from the color palette
 - Switch between Ember, Grove, and Tide palettes across every tool
+- Keep focus, planned, actual, recovery, hydration, privacy, and suggestion colors semantically consistent across palettes
 - Change application language from the same global settings page
+
+### Data & Privacy
+- Create a single-file local backup with record and preference preview before restore
+- Export readable CoreHour or Pause & Hydrate JSON without exposing keychain secrets
+- Reset one module or all local data with explicit destructive confirmation
 
 ## Quick Start — Desktop App (recommended)
 
@@ -70,6 +76,7 @@ On first launch the app creates its database in `%APPDATA%/com.efficiency-memo.a
 6. **Review the week** — Open **CoreHour → Insights** to compare confirmed focus with last week, inspect goal consistency, and review activity and tag trends. Plans never enter these totals.
 7. **Set healthy reminders** — Open **Pause & Hydrate**, enable either reminder, choose its interval, and save. Due reminders wait while CoreHour is active.
 8. **Adjust appearance** — Open **Settings** to choose a mode, color palette, and language. Changes preview and persist immediately.
+9. **Control your data** — Open **Settings → Data & privacy** to create a portable backup, preview a restore, export readable module JSON, or reset local records.
 
 Use the native Tauri window opened by `tauri:dev`; `http://localhost:1420` is only the Vite development server and does not provide the Tauri SQLite bridge.
 
@@ -111,6 +118,7 @@ Key design choices:
 - **CoreHour session state** — Active-session progress is kept locally and restored as paused after an app restart, so closed-app time is never counted.
 - **Bilingual workspace** — The desktop shell and active tools support English and Simplified Chinese, with the selected language persisted locally.
 - **Appearance preferences** — System/light/dark mode and Ember/Grove/Tide palettes are persisted locally; the workspace shell retains a quick mode toggle.
+- **Data control** — Portable .ememo files are validated SQLite snapshots with stable appearance preferences; restores are staged and applied before the next database connection opens.
 - **Native notifications** — `tauri-plugin-notification` handles due CoreHour check-ins and Pause & Hydrate reminders.
 - **Deferred code** — Charger Reminder is retained but disabled. WebDAV sync is not part of the current product scope.
 

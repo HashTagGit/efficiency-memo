@@ -8,10 +8,19 @@ import { discoverTools } from "./lib/tool-registry/discovery";
 import { I18nProvider } from "./lib/i18n";
 import { PauseHydrateProvider } from "./features/pause-hydrate/context";
 import { AppearanceProvider, initializeAppearance } from "./lib/appearance";
-
-initializeAppearance();
+import {
+  applyPortablePreferences,
+  takeAppliedRestorePreferences,
+} from "./lib/data-control";
 
 async function bootstrap() {
+  try {
+    const restoredPreferences = await takeAppliedRestorePreferences();
+    if (restoredPreferences) applyPortablePreferences(restoredPreferences);
+  } catch (error) {
+    console.warn("Restored preferences could not be applied.", error);
+  }
+  initializeAppearance();
   await setDbOnStartup();
   await ensureLocalUser();
   await discoverTools();

@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 
 ### Changed
+- SQLite snapshots, restore sidecars, and retained WebDAV helpers now resolve the same Tauri application-config directory used by tauri-plugin-sql.
+- Ember, Grove, and Tide now expose consistent focus, planned, actual, recovery, hydration, privacy, and suggestion color roles in both light and dark modes.
 - Global Settings now opens a dedicated appearance and language workspace instead of the deferred WebDAV sync page.
 - The desktop shell, CoreHour, and Pause & Hydrate now support persisted English and Simplified Chinese translations.
 - CoreHour and Pause & Hydrate are active product workflows. Charger Reminder is disabled; WebDAV sync is out of scope.
@@ -13,6 +15,8 @@ All notable changes to this project will be documented in this file.
 - The desktop workspace now supports persisted light and dark themes with reorganized navigation and consistent action styling.
 
 ### Added
+- Data & Privacy Center with local record inventory, single-file portable backup, validated restore preview, readable module JSON exports, and scoped/full reset confirmation.
+- Startup restore replacement with WAL/SHM rollback protection and preference application only after the database swap succeeds.
 - CoreHour Plan vs Actual with separate planned blocks, bilingual day/week timelines, skip/edit actions, and atomic conversion into confirmed sessions.
 - A seventh SQLite migration for CoreHour planned blocks and their optional links to actual sessions.
 - System/light/dark appearance modes and three persisted semantic color palettes: Ember, Grove, and Tide.

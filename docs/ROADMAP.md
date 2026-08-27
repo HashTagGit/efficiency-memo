@@ -7,46 +7,32 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 - Local profile, SQLite persistence, bilingual shell, and System/Light/Dark appearance.
 - Ember, Grove, and Tide palettes using shared semantic tokens.
 - CoreHour sessions, check-ins, tags, daily goals, Today, Timeline, and Insights.
+- CoreHour planned blocks with separate day/week plan-versus-actual timelines and explicit conversion.
 - Pause & Hydrate with independent schedules, focus deferral, actions, notifications, and local history.
-
-## Current release: CoreHour Plan vs Actual
-
-- Store plans separately from confirmed sessions.
-- Create, edit, skip, and explicitly convert a plan into an actual record.
-- Compare plans and actual records in day and Monday-to-Sunday week timelines.
-- Keep plans out of check-ins, CSV actual-time exports, goals, and Insights.
-
-Exit gate: the day/week UI makes intention and actual time distinguishable without explanation, and failed session validation never changes the source plan.
+- Data & Privacy Center with portable backup/restore preview, readable module exports, and scoped reset.
+- Domain color roles for focus, planned, actual, recovery, hydration, privacy, and suggestions across every palette and mode.
 
 ## Next releases
 
-### 1. Data & Privacy Center
-
-- Versioned local backup with a preview before restore.
-- Human-readable module exports and separate module/full-app reset actions.
-- Include stable preferences but exclude keychain secrets.
-
-This is the trust gate before automatic collection or hosted sync is considered.
-
-### 2. CoreHour direct planning and weekly review
+### 1. CoreHour direct planning and weekly review
 
 - Move and resize plan blocks after the current click/edit semantics are proven.
 - Show planned minutes, actual minutes, completion rate, and variance in a compact weekly review.
 - Resolve idle or suspend gaps explicitly instead of silently counting them.
 
-### 3. Desktop Companion
+### 2. Desktop Companion
 
 - System-tray state and commands for current focus and next healthy-work reminders.
 - Two shortcuts first: show/hide EfficiencyMemo and start/stop the latest CoreHour activity.
 - Reuse authoritative module commands; the tray never owns a second timer.
 
-### 4. Respectful reminder policy
+### 3. Respectful reminder policy
 
 - Active weekdays, working hours, quiet hours, and notification-permission status.
 - Natural movement-break completion from sufficient idle time; hydration always remains explicit.
 - DND-aware deferral with a grace period and no stale-reminder burst after resume.
 
-### 5. Local Activity Assist experiment
+### 4. Local Activity Assist experiment
 
 - Windows-first, off by default, foreground application name only.
 - Short raw retention, pause/exclusion/delete controls, and local-only processing.

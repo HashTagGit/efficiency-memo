@@ -58,6 +58,8 @@ Outputs static files to `apps/desktop/dist/`. The Tauri-specific commands (`invo
 
 2. **Start using CoreHour.** Create tags, choose a check-in interval, and start a timer session.
 
+3. **Protect local data.** Open **Settings → Data & privacy** to create a portable .ememo backup or export readable module JSON.
+
 ## Data Locations
 
 The SQLite database is stored in the OS app-data directory:
@@ -66,7 +68,7 @@ The SQLite database is stored in the OS app-data directory:
 |---|---|
 | Windows | `%APPDATA%\com.efficiency-memo.app\efficiency-memo.db` |
 | macOS | `~/Library/Application Support/com.efficiency-memo.app/efficiency-memo.db` |
-| Linux | `~/.local/share/com.efficiency-memo.app/efficiency-memo.db` |
+| Linux | `$XDG_CONFIG_HOME/com.efficiency-memo.app/efficiency-memo.db` (normally `~/.config/...`) |
 
 Database files (including WAL sidecars and import sidecars):
 - `efficiency-memo.db` — main database

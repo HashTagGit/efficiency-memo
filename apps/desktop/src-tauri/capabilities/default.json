@@ -11,6 +11,7 @@
     "sql:allow-load",
     "notification:default",
     "dialog:default",
+    "dialog:allow-open",
     "dialog:allow-save",
     "fs:default",
     "fs:allow-write-text-file"

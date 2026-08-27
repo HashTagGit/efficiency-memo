@@ -3,6 +3,7 @@
 use tauri_plugin_sql::{Migration, MigrationKind};
 
 mod core_hour;
+mod data_control;
 mod pause_hydrate;
 mod sidecar;
 mod sync;
@@ -77,6 +78,12 @@ pub fn run() {
             sync::sync_import,
             sync::sync_list,
             sync::store_webdav_credentials,
+            data_control::current_data_summary,
+            data_control::create_local_backup,
+            data_control::preview_local_backup,
+            data_control::prepare_local_restore,
+            data_control::reset_local_data,
+            data_control::take_applied_restore_preferences,
             core_hour::save_core_hour_session_block,
             pause_hydrate::save_pause_hydrate_preferences,
             pause_hydrate::claim_pause_hydrate_reminders,

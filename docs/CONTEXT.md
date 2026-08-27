@@ -48,3 +48,21 @@ _Avoid_: Auto-complete, scheduled timer
 **Skipped Plan**:
 A Planned Block the user intentionally did not execute; it remains part of plan-versus-actual review.
 _Avoid_: Deleted plan, failed session
+
+## Data control
+
+**Portable Backup**:
+A single local `.ememo` SQLite snapshot containing all database-backed records plus stable language and appearance preferences.
+_Avoid_: Cloud sync, human export
+
+**Backup Preview**:
+The validated package metadata and record counts shown before a Portable Backup can replace local data.
+_Avoid_: Import log, checksum
+
+**Human Export**:
+A readable, module-scoped JSON document for inspection or analysis; it is not a restorable application package.
+_Avoid_: Portable Backup
+
+**Module Reset**:
+A transactional deletion of one tool's user-owned records while preserving the local profile and other tools.
+_Avoid_: Sign out, uninstall
