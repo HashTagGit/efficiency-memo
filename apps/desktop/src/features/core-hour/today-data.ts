@@ -21,6 +21,24 @@ export interface TodaySession {
   is_favorite: boolean;
 }
 
+export function elapsedSecondsForDay(
+  startedAt: string,
+  endedAt: string | Date,
+  elapsedSeconds: number,
+  day: Date,
+): number {
+  const dayStart = new Date(day);
+  dayStart.setHours(0, 0, 0, 0);
+  const dayEnd = new Date(dayStart);
+  dayEnd.setDate(dayEnd.getDate() + 1);
+  const start = new Date(startedAt).getTime();
+  const end = new Date(endedAt).getTime();
+  const wallSeconds = Math.max(1, (end - start) / 1000);
+  const overlapSeconds = Math.max(0, (Math.min(end, dayEnd.getTime()) - Math.max(start, dayStart.getTime())) / 1000);
+  // ponytail: elapsed time has no pause slices; prorate until interval slices exist.
+  return Math.round(elapsedSeconds * Math.min(1, overlapSeconds / wallSeconds));
+}
+
 export async function loadRecentActivities(userId: string): Promise<RecentActivity[]> {
   const rows = await dbSelect<Omit<RecentActivity, "is_favorite"> & { is_favorite: number }>(
     "SELECT s.activity, s.default_tag_id, t.name AS tag_name, t.color AS tag_color, MAX(s.is_favorite) AS is_favorite, MAX(s.started_at) AS last_used_at FROM ch_sessions s LEFT JOIN ch_tags t ON t.id = s.default_tag_id WHERE s.user_id = $1 AND s.ended_at IS NOT NULL AND trim(s.activity) <> '' AND (s.default_tag_id IS NULL OR t.is_archived = 0) GROUP BY s.activity, s.default_tag_id, t.name, t.color ORDER BY is_favorite DESC, last_used_at DESC LIMIT 8",
@@ -40,15 +58,7 @@ export async function loadSessionsForDay(userId: string, now: Date): Promise<Tod
   );
   return rows.map((row) => ({
     ...row,
-    // ponytail: session-level elapsed cannot locate pauses across midnight;
-    // prorate by wall-clock overlap until interval slices are persisted.
-    elapsed_seconds: (() => {
-      const startedAt = new Date(row.started_at).getTime();
-      const endedAt = new Date(row.ended_at).getTime();
-      const wallSeconds = Math.max(1, (endedAt - startedAt) / 1000);
-      const overlapSeconds = Math.max(0, (Math.min(endedAt, dayEnd.getTime()) - Math.max(startedAt, dayStart.getTime())) / 1000);
-      return Math.round(Number(row.elapsed_seconds) * Math.min(1, overlapSeconds / wallSeconds));
-    })(),
+    elapsed_seconds: elapsedSecondsForDay(row.started_at, row.ended_at, Number(row.elapsed_seconds), now),
     is_favorite: Boolean(row.is_favorite),
   }));
 }

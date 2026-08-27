@@ -6,9 +6,14 @@ import { SessionProvider, useSession } from "../hooks/use-session";
 import { TagsProvider, useTags } from "../hooks/use-tags";
 import { useTimer, type TimerState } from "../hooks/use-timer";
 import HistoryPage from "./history-page";
+import InsightsPage from "./insights-page";
 import SettingsPage from "./settings-page";
 import TagsPage from "./tags-page";
-import { loadCheckInInterval } from "../settings";
+import {
+  DEFAULT_DAILY_FOCUS_GOAL,
+  loadCheckInInterval,
+  loadDailyFocusGoal,
+} from "../settings";
 import { useI18n } from "../../../lib/i18n";
 import { shouldPromptForCheckIn, unrecordedSeconds } from "../session-math";
 import { notifyCheckIn } from "../notifications";
@@ -16,13 +21,17 @@ import { Button } from "@memo/ui";
 
 function CoreHourHome({ timer }: { timer: TimerState }) {
   const [intervalMinutes, setIntervalMinutes] = useState(30);
+  const [dailyGoalMinutes, setDailyGoalMinutes] = useState(DEFAULT_DAILY_FOCUS_GOAL);
 
   useEffect(() => {
-    void loadCheckInInterval().then(setIntervalMinutes);
+    void Promise.all([loadCheckInInterval(), loadDailyFocusGoal()]).then(([interval, goal]) => {
+      setIntervalMinutes(interval);
+      setDailyGoalMinutes(goal);
+    });
   }, []);
 
   const user = getCurrentUser();
-  return user ? <Dashboard userId={user.id} intervalMinutes={intervalMinutes} timer={timer} /> : null;
+  return user ? <Dashboard userId={user.id} intervalMinutes={intervalMinutes} dailyGoalMinutes={dailyGoalMinutes} timer={timer} /> : null;
 }
 
 export default function CoreHourRoutes() {
@@ -73,6 +82,7 @@ function CoreHourWorkspace({ userId }: { userId: string }) {
             {[
               ["/tools/core-hour", t("coreHour.timer")],
               ["/tools/core-hour/history", t("coreHour.history")],
+              ["/tools/core-hour/insights", t("coreHour.insights")],
               ["/tools/core-hour/tags", t("coreHour.tags")],
               ["/tools/core-hour/settings", t("coreHour.settings")],
             ].map(([to, label]) => (
@@ -109,6 +119,7 @@ function CoreHourWorkspace({ userId }: { userId: string }) {
       <Routes>
         <Route index element={<CoreHourHome timer={timer} />} />
         <Route path="history" element={<HistoryPage userId={userId} />} />
+        <Route path="insights" element={<InsightsPage userId={userId} />} />
         <Route path="tags" element={<TagsPage userId={userId} />} />
         <Route path="settings" element={<SettingsPage />} />
       </Routes>

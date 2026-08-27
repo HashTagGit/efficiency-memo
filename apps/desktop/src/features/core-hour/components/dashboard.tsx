@@ -7,6 +7,7 @@ import { requestCheckInNotifications } from "../notifications";
 import {
   loadRecentActivities,
   loadTodaySessions,
+  elapsedSecondsForDay,
   setActivityFavorite,
   type RecentActivity,
   type TodaySession,
@@ -18,6 +19,7 @@ import { SessionEditor } from "./session-editor";
 interface DashboardProps {
   userId: string;
   intervalMinutes: number;
+  dailyGoalMinutes: number;
   timer: TimerState;
 }
 
@@ -61,7 +63,7 @@ function PencilIcon() {
   );
 }
 
-export function Dashboard({ userId, intervalMinutes, timer }: DashboardProps) {
+export function Dashboard({ userId, intervalMinutes, dailyGoalMinutes, timer }: DashboardProps) {
   const { locale, t } = useI18n();
   const { activeSession, pendingCheckIn, startSession, completeCheckIn, endSession } = useSession();
   const { activeTags } = useTags();
@@ -114,7 +116,14 @@ export function Dashboard({ userId, intervalMinutes, timer }: DashboardProps) {
 
   const tags = activeTags();
   const currentTag = tags.find((tag) => tag.id === (activeSession?.default_tag_id ?? defaultTagId));
-  const totalTodayMinutes = Math.round(todaySessions.reduce((sum, session) => sum + session.elapsed_seconds, 0) / 60);
+  const completedTodaySeconds = todaySessions.reduce((sum, session) => sum + session.elapsed_seconds, 0);
+  const now = new Date();
+  const activeTodaySeconds = activeSession
+    ? elapsedSecondsForDay(activeSession.started_at, now, timer.elapsed, now)
+    : 0;
+  const totalTodayMinutes = Math.round((completedTodaySeconds + activeTodaySeconds) / 60);
+  const goalPercentage = Math.min(100, Math.round(totalTodayMinutes / dailyGoalMinutes * 100));
+  const goalReached = totalTodayMinutes >= dailyGoalMinutes;
   const dateLabel = useMemo(
     () => new Intl.DateTimeFormat(locale, { weekday: "long", month: "long", day: "numeric" }).format(new Date()),
     [locale],
@@ -191,8 +200,27 @@ export function Dashboard({ userId, intervalMinutes, timer }: DashboardProps) {
           <h1 className="text-2xl font-semibold text-foreground">{t("today.title")}</h1>
           <p className="mt-1 text-sm text-muted">{dateLabel}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <p className="text-sm font-medium text-muted">{t("today.total", { minutes: totalTodayMinutes })}</p>
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="w-52" aria-label={t("today.goalProgress")}>
+            <div className="flex items-center justify-between gap-3 text-sm">
+              <span className="font-medium text-muted">{t("today.dailyGoal")}</span>
+              <span className={"tabular-nums font-semibold " + (goalReached ? "text-success" : "text-foreground")}>
+                {totalTodayMinutes} / {dailyGoalMinutes} {t("coreHour.minutes")}
+              </span>
+            </div>
+            <div
+              className="mt-2 h-2 overflow-hidden rounded-full bg-background-soft"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={dailyGoalMinutes}
+              aria-valuenow={Math.min(totalTodayMinutes, dailyGoalMinutes)}
+            >
+              <div
+                className={"h-full rounded-full transition-[width] " + (goalReached ? "bg-success" : "bg-accent")}
+                style={{ width: goalPercentage + "%" }}
+              />
+            </div>
+          </div>
           <Button
             variant="secondary"
             size="sm"

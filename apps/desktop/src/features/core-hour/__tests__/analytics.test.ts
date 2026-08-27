@@ -1,5 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { buildTagSlices, buildTrend, isoDay, rangeDays, summarize } from "../analytics";
+import {
+  buildActivityRanking,
+  buildTagSlices,
+  buildTrend,
+  buildWeekSummary,
+  isoDay,
+  rangeDays,
+  summarize,
+  weekDays,
+} from "../analytics";
 
 const FIXED = new Date(2026, 7, 18); // 2026-08-18, local time
 
@@ -67,13 +76,13 @@ describe("buildTrend", () => {
 
 describe("buildTagSlices", () => {
   const rows = [
-    { name: "Deep Work", color: "#d5a659", duration_seconds: 3600 },
-    { name: "Email", color: "#8fd3a4", duration_seconds: 1200 },
+    { id: "tag-1", name: "Deep Work", color: "#d5a659", duration_seconds: 3600 },
+    { id: "tag-2", name: "Email", color: "#8fd3a4", duration_seconds: 1200 },
   ];
 
   it("computes minutes and percentage share", () => {
     const slices = buildTagSlices(rows);
-    expect(slices[0]).toEqual({ name: "Deep Work", color: "#d5a659", minutes: 60, percentage: 75 });
+    expect(slices[0]).toEqual({ id: "tag-1", name: "Deep Work", color: "#d5a659", minutes: 60, percentage: 75 });
     expect(slices[1].percentage).toBe(25);
   });
 
@@ -83,7 +92,7 @@ describe("buildTagSlices", () => {
   });
 
   it("returns zero percentages instead of dividing by zero", () => {
-    const slices = buildTagSlices([{ name: "Idle", color: "#fff", duration_seconds: 0 }]);
+    const slices = buildTagSlices([{ id: "tag-3", name: "Idle", color: "#fff", duration_seconds: 0 }]);
     expect(slices[0].percentage).toBe(0);
   });
 
@@ -107,5 +116,54 @@ describe("summarize", () => {
 
   it("reports a zero average for an empty period", () => {
     expect(summarize(buildTrend([], "7d", FIXED))).toEqual({ totalMinutes: 0, activeDays: 0, dailyAverage: 0 });
+  });
+});
+
+describe("weekly review", () => {
+  const THURSDAY = new Date(2026, 7, 20);
+
+  it("uses a local Monday-to-Sunday calendar week", () => {
+    expect(weekDays(THURSDAY)).toEqual([
+      "2026-08-17",
+      "2026-08-18",
+      "2026-08-19",
+      "2026-08-20",
+      "2026-08-21",
+      "2026-08-22",
+      "2026-08-23",
+    ]);
+    expect(weekDays(THURSDAY, -1)[0]).toBe("2026-08-10");
+  });
+
+  it("compares weeks and only evaluates elapsed goal days", () => {
+    const summary = buildWeekSummary([
+      { day: "2026-08-10", duration_seconds: 3600 },
+      { day: "2026-08-17", duration_seconds: 7200 },
+      { day: "2026-08-18", duration_seconds: 3600 },
+      { day: "2026-08-20", duration_seconds: 10800 },
+    ], 120, THURSDAY);
+
+    expect(summary.totalMinutes).toBe(360);
+    expect(summary.previousTotalMinutes).toBe(60);
+    expect(summary.changePercent).toBe(500);
+    expect(summary.goalDays).toBe(2);
+    expect(summary.elapsedDays).toBe(4);
+  });
+
+  it("uses no percentage when the previous week is empty", () => {
+    expect(buildWeekSummary([], 120, THURSDAY).changePercent).toBeNull();
+  });
+});
+
+describe("buildActivityRanking", () => {
+  it("coerces SQLite values, sorts by duration, and limits the result", () => {
+    expect(buildActivityRanking([
+      { name: "Email", duration_seconds: "1200" as unknown as number },
+      { name: "Deep Work", duration_seconds: 3600 },
+      { name: "Planning", duration_seconds: 1800 },
+    ], 2)).toEqual([
+      { name: "Deep Work", minutes: 60 },
+      { name: "Planning", minutes: 30 },
+    ]);
   });
 });

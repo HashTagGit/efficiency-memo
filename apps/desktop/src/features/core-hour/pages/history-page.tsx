@@ -1,18 +1,9 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { Button, PageHeader } from "@memo/ui";
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import { dbExecute, dbSelect } from "../../../lib/db";
 import type { CheckInWithTag, Tag } from "../types";
 import { type ExportRange, rangeToFromDate, recordsToCsv, exportFilename } from "../export";
-import { buildTagSlices, buildTrend, isoDay, rangeDays, summarize, type DailyRow, type TagRow, type TrendRange } from "../analytics";
+import { isoDay } from "../analytics";
 import { useI18n } from "../../../lib/i18n";
 import { SessionEditor } from "../components/session-editor";
 import { loadSessionsForDay, type TodaySession } from "../today-data";
@@ -46,9 +37,6 @@ export default function HistoryPage({ userId }: { userId: string }) {
   const [date, setDate] = useState(today);
   const [entries, setEntries] = useState<CheckInWithTag[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
-  const [analyticsRange, setAnalyticsRange] = useState<TrendRange>("7d");
-  const [dailyRows, setDailyRows] = useState<DailyRow[]>([]);
-  const [tagRows, setTagRows] = useState<TagRow[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [tagId, setTagId] = useState("");
   const [note, setNote] = useState("");
@@ -75,24 +63,6 @@ export default function HistoryPage({ userId }: { userId: string }) {
 
   useEffect(() => { void load(); }, [load]);
 
-  const loadAnalytics = useCallback(async () => {
-    const fromDate = rangeDays(analyticsRange)[0];
-    const [daily, byTag] = await Promise.all([
-      dbSelect<DailyRow>(
-        "SELECT date(ci.checked_at, 'localtime') AS day, SUM(ci.duration_seconds) AS duration_seconds FROM ch_check_ins ci JOIN ch_sessions s ON s.id = ci.session_id WHERE s.user_id = $1 AND date(ci.checked_at, 'localtime') >= $2 GROUP BY day ORDER BY day",
-        [userId, fromDate],
-      ),
-      dbSelect<TagRow>(
-        "SELECT t.name, t.color, SUM(ci.duration_seconds) AS duration_seconds FROM ch_check_ins ci JOIN ch_sessions s ON s.id = ci.session_id JOIN ch_check_in_entries e ON e.check_in_id = ci.id JOIN ch_tags t ON t.id = e.tag_id WHERE s.user_id = $1 AND date(ci.checked_at, 'localtime') >= $2 GROUP BY t.id, t.name, t.color ORDER BY duration_seconds DESC",
-        [userId, fromDate],
-      ),
-    ]);
-    setDailyRows(daily);
-    setTagRows(byTag);
-  }, [analyticsRange, userId]);
-
-  useEffect(() => { void loadAnalytics(); }, [loadAnalytics]);
-
   async function saveEntry(entry: CheckInWithTag) {
     await dbExecute("UPDATE ch_check_ins SET skipped = $1, note = $2, synced = 0 WHERE id = $3", [tagId ? 0 : 1, note.trim(), entry.id]);
     await dbExecute("DELETE FROM ch_check_in_entries WHERE check_in_id = $1", [entry.id]);
@@ -100,7 +70,7 @@ export default function HistoryPage({ userId }: { userId: string }) {
       await dbExecute("INSERT INTO ch_check_in_entries (id, check_in_id, tag_id, percentage, synced) VALUES ($1, $2, $3, 100, 0)", [crypto.randomUUID(), entry.id, tagId]);
     }
     setEditingId(null);
-    await Promise.all([load(), loadAnalytics()]);
+    await load();
   }
 
   async function handleExport() {
@@ -122,10 +92,6 @@ export default function HistoryPage({ userId }: { userId: string }) {
   }
 
   const totalSeconds = entries.reduce((sum, e) => sum + e.duration_seconds, 0);
-  const trend = buildTrend(dailyRows, analyticsRange);
-  const summary = summarize(trend);
-  const tagSlices = buildTagSlices(tagRows);
-
   return (
     <div className="mx-auto max-w-5xl space-y-6" data-testid="ch-history-page">
       <PageHeader
@@ -206,73 +172,6 @@ export default function HistoryPage({ userId }: { userId: string }) {
         }}
       />
 
-      <section className="space-y-4" data-testid="ch-history-analytics" aria-label={t("coreHour.focusOverview")}>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="text-sm font-semibold text-foreground">{t("coreHour.focusOverview")}</h2>
-            <p className="text-sm text-muted">{t("coreHour.focusOverviewDescription")}</p>
-          </div>
-          <label className="flex items-center gap-2 text-sm text-muted">
-            {t("coreHour.range")}
-            <select
-              value={analyticsRange}
-              onChange={(ev) => setAnalyticsRange(ev.target.value as TrendRange)}
-              className="rounded-lg border border-border bg-surface px-2 py-1.5 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
-              aria-label={t("coreHour.range")}
-            >
-              <option value="7d">{t("coreHour.last7Days")}</option>
-              <option value="30d">{t("coreHour.last30Days")}</option>
-            </select>
-          </label>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2">
-          {[
-            [t("coreHour.total"), `${summary.totalMinutes} ${t("coreHour.minutes")}`],
-            [t("coreHour.activeDays"), String(summary.activeDays)],
-            [t("coreHour.dailyAverage"), `${summary.dailyAverage} ${t("coreHour.minutes")}`],
-          ].map(([label, value]) => (
-            <div key={label} className="rounded-lg border border-border bg-surface px-3 py-2">
-              <p className="text-xs text-muted">{label}</p>
-              <p className="mt-1 text-lg font-semibold text-foreground">{value}</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="rounded-lg border border-border bg-surface px-3 py-3">
-          <p className="mb-2 text-xs font-medium text-muted">{t("coreHour.minutesPerDay")}</p>
-          <div className="h-52 w-full" aria-label={t("coreHour.minutesPerDay")}>
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trend} margin={{ top: 8, right: 8, bottom: 0, left: -16 }}>
-                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" />
-                <XAxis dataKey="label" tick={{ fill: "var(--muted)", fontSize: 11 }} tickLine={false} axisLine={false} />
-                <YAxis allowDecimals={false} tick={{ fill: "var(--muted)", fontSize: 11 }} tickLine={false} axisLine={false} width={42} />
-                <Tooltip contentStyle={{ background: "var(--surface-strong)", border: "1px solid var(--border)", borderRadius: 8, color: "var(--foreground)" }} />
-                <Line type="monotone" dataKey="minutes" name={t("coreHour.minutes")} stroke="var(--accent)" strokeWidth={2} dot={{ r: 2, fill: "var(--accent)" }} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-
-        <div className="rounded-lg border border-border bg-surface px-3 py-3">
-          <p className="mb-3 text-xs font-medium text-muted">{t("coreHour.tagShare")}</p>
-          {tagSlices.length > 0 ? (
-            <div className="space-y-2">
-              {tagSlices.map((slice) => (
-                <div key={slice.name} className="flex items-center gap-2 text-sm">
-                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: slice.color }} aria-hidden="true" />
-                  <span className="min-w-0 flex-1 truncate text-foreground">{slice.name}</span>
-                  <span className="text-muted">{slice.minutes} min</span>
-                  <span className="w-10 text-right text-muted">{slice.percentage}%</span>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-muted">{t("coreHour.noTaggedCheckIns")}</p>
-          )}
-        </div>
-      </section>
-
       <section className="space-y-2" data-testid="ch-history-entries">
         <h2 className="border-b border-border pb-2 text-sm font-semibold text-foreground">{t("coreHour.checkIns")}</h2>
         {entries.map((entry) => (
@@ -330,7 +229,7 @@ export default function HistoryPage({ userId }: { userId: string }) {
           tags={tags}
           onClose={() => setEditorOpen(false)}
           onSaved={async () => {
-            await Promise.all([load(), loadAnalytics()]);
+            await load();
           }}
         />
       )}

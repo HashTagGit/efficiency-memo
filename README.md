@@ -13,6 +13,7 @@ EfficiencyMemo is a pnpm monorepo centered on CoreHour. Launch the app, start a 
 - Start, pause, continue, and end sessions; an interrupted session restores paused
 - Add missed time manually and edit completed session activity, tag, start, or end time
 - Review each day on a visual timeline and add a 30-minute session from an empty time slot
+- Set a daily focus target and review weekly progress, activity, and tag trends in Insights
 - Categorize a due check-in with one tag and an optional note, or skip it as uncategorized
 - Review daily totals, tag totals, sessions, and check-ins
 - Receive one native notification when a check-in becomes due while the app is backgrounded
@@ -51,9 +52,10 @@ On first launch the app creates its database in `%APPDATA%/com.efficiency-memo.a
 
 1. **Launch the app** — A local profile is selected or created automatically; there is no sign-in step.
 2. **Create tags** — Open **CoreHour → Tags** and add the categories you want to use.
-3. **Set the interval** — Open **CoreHour → Settings**, choose 15, 30, or 60 minutes, then save. It applies to the next session.
+3. **Set your cadence** — Open **CoreHour → Settings**, choose a check-in interval and a daily focus goal, then save.
 4. **Track time** — Open **CoreHour → Today**, describe the activity or continue a recent favorite, then start a session. At each due check-in, choose one tag and an optional note, or skip. Allow the operating-system notification permission for background reminders.
 5. **Review the day** — Open **CoreHour → Timeline** to select a date, inspect or edit session blocks, add missed time from an empty slot, and review totals and check-ins.
+6. **Review the week** — Open **CoreHour → Insights** to compare this week with last week, inspect goal consistency, and review activity and tag trends.
 
 Use the native Tauri window opened by `tauri:dev`; `http://localhost:1420` is only the Vite development server and does not provide the Tauri SQLite bridge.
 
