@@ -35,7 +35,7 @@ describe("CoreHour Today data", () => {
       }]);
 
     const recent = await loadRecentActivities("local-user");
-    const today = await loadTodaySessions("local-user");
+    const today = await loadTodaySessions("local-user", new Date(2026, 7, 27, 12));
 
     expect(recent[0]).toMatchObject({ activity: "Write release notes", is_favorite: true });
     expect(today[0]).toMatchObject({ id: "session-1", elapsed_seconds: 3600, is_favorite: false });
