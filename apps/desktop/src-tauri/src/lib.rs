@@ -55,6 +55,12 @@ pub fn run() {
             sql: include_str!("../migrations/0007_ch_planned_blocks.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 8,
+            description: "create pause and hydrate schedule policy",
+            sql: include_str!("../migrations/0008_pause_hydrate_schedule_policy.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()

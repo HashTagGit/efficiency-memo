@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Alert, Button, PageHeader } from "@memo/ui";
 import { useI18n } from "../../../lib/i18n";
 import { usePauseHydrate } from "../context";
+import { DEFAULT_SCHEDULE_POLICY } from "../data";
 import { REMINDER_KINDS, type ReminderAction, type ReminderKind } from "../types";
 
 type DraftPreferences = Record<ReminderKind, { enabled: boolean; intervalMinutes: number }>;
@@ -11,10 +12,43 @@ const emptyDraft: DraftPreferences = {
   hydration: { enabled: false, intervalMinutes: 45 },
 };
 
+interface ScheduleDraft {
+  activeWeekdays: number[];
+  workStart: string;
+  workEnd: string;
+  quietEnabled: boolean;
+  quietStart: string;
+  quietEnd: string;
+}
+
+const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6] as const;
+
+const timeInputClass =
+  "mt-1.5 h-10 w-full min-w-0 rounded-md border border-border bg-background px-3 tabular-nums text-foreground focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50";
+
+function minutesToTime(minutes: number): string {
+  return `${String(Math.floor(minutes / 60) % 24).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+}
+
+function timeToMinutes(value: string): number {
+  const [hours, minutes] = value.split(":").map(Number);
+  return Number.isFinite(hours) && Number.isFinite(minutes) ? hours * 60 + minutes : Number.NaN;
+}
+
+const emptySchedule: ScheduleDraft = {
+  activeWeekdays: [...DEFAULT_SCHEDULE_POLICY.activeWeekdays],
+  workStart: minutesToTime(DEFAULT_SCHEDULE_POLICY.workStartMinute),
+  workEnd: minutesToTime(DEFAULT_SCHEDULE_POLICY.workEndMinute),
+  quietEnabled: DEFAULT_SCHEDULE_POLICY.quietEnabled,
+  quietStart: minutesToTime(DEFAULT_SCHEDULE_POLICY.quietStartMinute),
+  quietEnd: minutesToTime(DEFAULT_SCHEDULE_POLICY.quietEndMinute),
+};
+
 export default function PauseHydratePage() {
   const { locale, t } = useI18n();
-  const { state, loading, savePreferences, act } = usePauseHydrate();
+  const { state, loading, notificationPermission, savePreferences, act, requestNotificationPermission } = usePauseHydrate();
   const [draft, setDraft] = useState<DraftPreferences>(emptyDraft);
+  const [schedule, setSchedule] = useState<ScheduleDraft>(emptySchedule);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -40,7 +74,24 @@ export default function PauseHydratePage() {
         intervalMinutes: state.reminders.hydration.intervalMinutes,
       },
     });
+    setSchedule({
+      activeWeekdays: [...state.schedulePolicy.activeWeekdays],
+      workStart: minutesToTime(state.schedulePolicy.workStartMinute),
+      workEnd: minutesToTime(state.schedulePolicy.workEndMinute),
+      quietEnabled: state.schedulePolicy.quietEnabled,
+      quietStart: minutesToTime(state.schedulePolicy.quietStartMinute),
+      quietEnd: minutesToTime(state.schedulePolicy.quietEndMinute),
+    });
   }, [dirty, state]);
+
+  const workStartMinute = timeToMinutes(schedule.workStart);
+  const workEndMinute = timeToMinutes(schedule.workEnd);
+  const quietStartMinute = timeToMinutes(schedule.quietStart);
+  const quietEndMinute = timeToMinutes(schedule.quietEnd);
+  const workInvalid = !Number.isFinite(workStartMinute) || !Number.isFinite(workEndMinute) || workStartMinute >= workEndMinute;
+  const quietInvalid = !Number.isFinite(quietStartMinute)
+    || !Number.isFinite(quietEndMinute)
+    || quietStartMinute === quietEndMinute;
 
   function updateDraft(kind: ReminderKind, value: Partial<DraftPreferences[ReminderKind]>) {
     setDraft((current) => ({ ...current, [kind]: { ...current[kind], ...value } }));
@@ -48,10 +99,37 @@ export default function PauseHydratePage() {
     setSaved(false);
   }
 
+  function updateSchedule(value: Partial<ScheduleDraft>) {
+    setSchedule((current) => ({ ...current, ...value }));
+    setDirty(true);
+    setSaved(false);
+  }
+
+  function toggleWeekday(day: number) {
+    const active = schedule.activeWeekdays.includes(day);
+    if (active && schedule.activeWeekdays.length === 1) return;
+    updateSchedule({
+      activeWeekdays: active
+        ? schedule.activeWeekdays.filter((weekday) => weekday !== day)
+        : [...schedule.activeWeekdays, day].sort((a, b) => a - b),
+    });
+  }
+
   async function handleSave() {
+    if (workInvalid || quietInvalid) return;
     setSaving(true);
     try {
-      await savePreferences(REMINDER_KINDS.map((kind) => ({ kind, ...draft[kind] })));
+      await savePreferences(
+        REMINDER_KINDS.map((kind) => ({ kind, ...draft[kind] })),
+        {
+          activeWeekdays: schedule.activeWeekdays,
+          workStartMinute,
+          workEndMinute,
+          quietEnabled: schedule.quietEnabled,
+          quietStartMinute,
+          quietEndMinute,
+        },
+      );
       setDirty(false);
       setSaved(true);
     } finally {
@@ -80,6 +158,17 @@ export default function PauseHydratePage() {
     return Number.isFinite(next.getTime()) ? dateTime.format(next) : t("pauseHydrate.off");
   }
 
+  const permissionDot =
+    notificationPermission === "granted" ? "bg-success"
+    : notificationPermission === "denied" ? "bg-danger"
+    : notificationPermission === "unsupported" ? "bg-muted"
+    : "bg-warning";
+  const permissionText =
+    notificationPermission === "granted" ? t("pauseHydrate.permissionGranted")
+    : notificationPermission === "denied" ? t("pauseHydrate.permissionDenied")
+    : notificationPermission === "unsupported" ? t("pauseHydrate.permissionUnsupported")
+    : t("pauseHydrate.permissionDefault");
+
   if (loading || !state) {
     return <p className="py-16 text-center text-sm text-muted">{t("app.loading")}</p>;
   }
@@ -96,6 +185,123 @@ export default function PauseHydratePage() {
           </div>
         }
       />
+
+      <section aria-labelledby="schedule-heading" className="space-y-5">
+        <div>
+          <h2 id="schedule-heading" className="text-base font-semibold text-foreground">{t("pauseHydrate.schedule")}</h2>
+          <p className="mt-1 text-sm leading-relaxed text-muted">{t("pauseHydrate.scheduleHint")}</p>
+        </div>
+
+        <fieldset>
+          <legend className="text-sm font-medium text-foreground">{t("pauseHydrate.activeDays")}</legend>
+          <div className="mt-2 flex flex-wrap rounded-md border border-border p-0.5">
+            {WEEKDAYS.map((day) => {
+              const active = schedule.activeWeekdays.includes(day);
+              return (
+                <Button
+                  key={day}
+                  variant={active ? "primary" : "ghost"}
+                  size="sm"
+                  aria-pressed={active}
+                  aria-label={t(`pauseHydrate.weekday${day}`)}
+                  className="min-w-12 flex-1 sm:flex-none"
+                  onClick={() => toggleWeekday(day)}
+                >
+                  {t(`pauseHydrate.weekdayShort${day}`)}
+                </Button>
+              );
+            })}
+          </div>
+        </fieldset>
+
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <fieldset className="min-w-0">
+            <legend className="text-sm font-medium text-foreground">{t("pauseHydrate.workHours")}</legend>
+            <div className="mt-2 grid grid-cols-2 gap-3">
+              <label className="text-xs text-muted">
+                {t("pauseHydrate.workStart")}
+                <input
+                  type="time"
+                  value={schedule.workStart}
+                  aria-invalid={workInvalid}
+                  onChange={(event) => updateSchedule({ workStart: event.target.value })}
+                  className={timeInputClass}
+                />
+              </label>
+              <label className="text-xs text-muted">
+                {t("pauseHydrate.workEnd")}
+                <input
+                  type="time"
+                  value={schedule.workEnd}
+                  aria-invalid={workInvalid}
+                  onChange={(event) => updateSchedule({ workEnd: event.target.value })}
+                  className={timeInputClass}
+                />
+              </label>
+            </div>
+            <p className="mt-2 text-xs text-danger" aria-live="polite">{workInvalid ? t("pauseHydrate.workHoursInvalid") : ""}</p>
+          </fieldset>
+
+          <fieldset className="min-w-0">
+            <legend className="text-sm font-medium text-foreground">{t("pauseHydrate.quietHours")}</legend>
+            <label className="mt-2 flex items-center gap-2 text-sm font-medium text-foreground">
+              <input
+                type="checkbox"
+                checked={schedule.quietEnabled}
+                onChange={(event) => updateSchedule({ quietEnabled: event.target.checked })}
+                className="h-4 w-4 accent-[var(--accent)]"
+              />
+              {t("pauseHydrate.quietHoursEnabled")}
+            </label>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              <label className="text-xs text-muted">
+                {t("pauseHydrate.quietStart")}
+                <input
+                  type="time"
+                  value={schedule.quietStart}
+                  disabled={!schedule.quietEnabled}
+                  aria-invalid={quietInvalid}
+                  onChange={(event) => updateSchedule({ quietStart: event.target.value })}
+                  className={timeInputClass}
+                />
+              </label>
+              <label className="text-xs text-muted">
+                {t("pauseHydrate.quietEnd")}
+                <input
+                  type="time"
+                  value={schedule.quietEnd}
+                  disabled={!schedule.quietEnabled}
+                  aria-invalid={quietInvalid}
+                  onChange={(event) => updateSchedule({ quietEnd: event.target.value })}
+                  className={timeInputClass}
+                />
+              </label>
+            </div>
+            <p className="mt-2 text-xs text-muted">{t("pauseHydrate.quietHoursHint")}</p>
+            <p className="mt-1 text-xs text-danger" aria-live="polite">{quietInvalid ? t("pauseHydrate.quietHoursInvalid") : ""}</p>
+          </fieldset>
+
+          <div className="min-w-0">
+            <h3 className="text-sm font-medium text-foreground">{t("pauseHydrate.notifications")}</h3>
+            <p className="mt-2 flex items-center gap-2 text-sm text-foreground" aria-live="polite">
+              <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${permissionDot}`} />
+              {permissionText}
+            </p>
+            {notificationPermission === "unsupported" ? (
+              <p className="mt-2 text-xs leading-relaxed text-muted">{t("pauseHydrate.permissionUnsupportedHint")}</p>
+            ) : notificationPermission === "granted" ? null : (
+              <Button
+                variant="secondary"
+                size="sm"
+                className="mt-3"
+                onClick={() => void requestNotificationPermission()}
+              >
+                {t(notificationPermission === "denied" ? "pauseHydrate.retryNotifications" : "pauseHydrate.enableNotifications")}
+              </Button>
+            )}
+          </div>
+        </div>
+      </section>
 
       <div className="grid gap-4 lg:grid-cols-2">
         {REMINDER_KINDS.map((kind) => {
@@ -167,7 +373,7 @@ export default function PauseHydratePage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3 border-b border-border pb-7">
-        <Button isLoading={saving} disabled={loading} onClick={() => void handleSave()}>{t("pauseHydrate.saveSettings")}</Button>
+        <Button isLoading={saving} disabled={loading || workInvalid || quietInvalid} onClick={() => void handleSave()}>{t("pauseHydrate.saveSettings")}</Button>
         <span className="text-sm text-success" aria-live="polite">{saved ? t("pauseHydrate.saved") : ""}</span>
       </div>
 

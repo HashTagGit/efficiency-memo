@@ -5,7 +5,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
 
-pub(crate) const SCHEMA_VERSION: i64 = 7;
+pub(crate) const SCHEMA_VERSION: i64 = 8;
+const MIN_SUPPORTED_SCHEMA_VERSION: i64 = 7;
 pub(crate) const DB_FILENAME: &str = "efficiency-memo.db";
 pub(crate) const SIDECAR_FILENAME: &str = "efficiency-memo.db.next";
 pub(crate) const PREFERENCES_NEXT_FILENAME: &str = "efficiency-memo.preferences.next.json";
@@ -77,6 +78,13 @@ const REQUIRED_SCHEMA: &[(&str, &[&str])] = &[
         ],
     ),
     ("ph_reminder_events", &["id", "user_id", "kind", "action", "occurred_at"]),
+    (
+        "ph_schedule_policies",
+        &[
+            "user_id", "active_weekdays_mask", "work_start_minute", "work_end_minute",
+            "quiet_enabled", "quiet_start_minute", "quiet_end_minute", "updated_at",
+        ],
+    ),
     (
         "ch_plans",
         &[
@@ -177,6 +185,9 @@ fn table_exists(connection: &Connection, table: &str) -> Result<bool, String> {
 
 fn validate_required_schema(connection: &Connection, schema_version: i64) -> Result<(), String> {
     for (table, required_columns) in REQUIRED_SCHEMA {
+        if schema_version < 8 && *table == "ph_schedule_policies" {
+            continue;
+        }
         if !table_exists(connection, table)? {
             return Err("invalid-backup".to_string());
         }
@@ -259,7 +270,7 @@ pub(crate) fn inspect_backup(path: &Path) -> Result<BackupPreview, String> {
     if schema_version > SCHEMA_VERSION {
         return Err("future-schema".to_string());
     }
-    if schema_version != SCHEMA_VERSION {
+    if schema_version < MIN_SUPPORTED_SCHEMA_VERSION {
         return Err("unsupported-package".to_string());
     }
     validate_required_schema(&connection, schema_version)
@@ -424,6 +435,9 @@ fn reset_data(connection: &mut Connection, scope: ResetScope, user_id: &str) -> 
             transaction
                 .execute("DELETE FROM ph_reminders WHERE user_id = ?1", [user_id])
                 .map_err(|error| error.to_string())?;
+            transaction
+                .execute("DELETE FROM ph_schedule_policies WHERE user_id = ?1", [user_id])
+                .map_err(|error| error.to_string())?;
         }
         ResetScope::All => {
             transaction
@@ -494,6 +508,7 @@ mod tests {
             include_str!("../migrations/0005_ch_session_activity.sql"),
             include_str!("../migrations/0006_pause_hydrate.sql"),
             include_str!("../migrations/0007_ch_planned_blocks.sql"),
+            include_str!("../migrations/0008_pause_hydrate_schedule_policy.sql"),
         ] {
             connection.execute_batch(migration).unwrap();
         }
@@ -512,7 +527,8 @@ mod tests {
                     (4, 'migration', 'installed', 1, X'', 0),
                     (5, 'migration', 'installed', 1, X'', 0),
                     (6, 'migration', 'installed', 1, X'', 0),
-                    (7, 'migration', 'installed', 1, X'', 0);
+                    (7, 'migration', 'installed', 1, X'', 0),
+                    (8, 'migration', 'installed', 1, X'', 0);
                 INSERT INTO users VALUES ('local-user', 'local@example.test', 'created', 'updated');
                 INSERT INTO ch_tags VALUES ('tag-1', 'local-user', 'Focus', '#000000', 0, 'created', 0);
                 INSERT INTO ch_sessions (
@@ -528,6 +544,7 @@ mod tests {
                 );
                 UPDATE ch_settings SET value = '60' WHERE key = 'interval_minutes';
                 INSERT INTO ph_reminders VALUES ('local-user', 'break', 1, 60, NULL, NULL, NULL, 'updated');
+                INSERT INTO ph_schedule_policies VALUES ('local-user', 31, 540, 1080, 0, 1320, 420, 'updated');
                 INSERT INTO ph_reminder_events VALUES ('event-1', 'local-user', 'break', 'completed', 'occurred');",
             )
             .unwrap();
@@ -549,22 +566,35 @@ mod tests {
         drop(database(&source));
 
         let preview = create_backup_at(&source, &destination, preferences()).unwrap();
-        assert_eq!(preview.schema_version, 7);
+        assert_eq!(preview.schema_version, 8);
         assert_eq!(preview.preferences, preferences());
         assert_eq!(preview.counts.core_hour_sessions, 1);
         assert_eq!(preview.counts.core_hour_plans, 1);
         assert_eq!(preview.counts.pause_hydrate_events, 1);
 
+        let legacy_destination = temp_path("backup-v7");
+        fs::copy(&destination, &legacy_destination).unwrap();
+        let legacy = Connection::open(&legacy_destination).unwrap();
+        legacy
+            .execute("UPDATE em_backup_metadata SET schema_version = 7", [])
+            .unwrap();
+        legacy
+            .execute("DELETE FROM _sqlx_migrations WHERE version = 8", [])
+            .unwrap();
+        legacy.execute("DROP TABLE ph_schedule_policies", []).unwrap();
+        drop(legacy);
+        assert_eq!(inspect_backup(&legacy_destination).unwrap().schema_version, 7);
+
         let backup = Connection::open(&destination).unwrap();
         backup
-            .execute("UPDATE em_backup_metadata SET schema_version = 8", [])
+            .execute("UPDATE em_backup_metadata SET schema_version = 9", [])
             .unwrap();
         drop(backup);
         assert_eq!(inspect_backup(&destination).unwrap_err(), "future-schema");
 
         let backup = Connection::open(&destination).unwrap();
         backup
-            .execute("UPDATE em_backup_metadata SET schema_version = 7", [])
+            .execute("UPDATE em_backup_metadata SET schema_version = 8", [])
             .unwrap();
         backup
             .execute("DELETE FROM _sqlx_migrations WHERE version = 6", [])
@@ -587,6 +617,7 @@ mod tests {
 
         let _ = fs::remove_file(source);
         let _ = fs::remove_file(destination);
+        let _ = fs::remove_file(legacy_destination);
     }
 
     #[test]
@@ -596,6 +627,17 @@ mod tests {
         let counts = reset_data(&mut connection, ResetScope::CoreHour, "local-user").unwrap();
         assert_eq!(counts.core_hour_sessions, 0);
         assert_eq!(counts.pause_hydrate_events, 1);
+        let policies: i64 = connection
+            .query_row("SELECT COUNT(*) FROM ph_schedule_policies", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(policies, 1);
+
+        let counts = reset_data(&mut connection, ResetScope::PauseHydrate, "local-user").unwrap();
+        assert_eq!(counts.pause_hydrate_events, 0);
+        let policies: i64 = connection
+            .query_row("SELECT COUNT(*) FROM ph_schedule_policies", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(policies, 0);
 
         connection
             .execute(

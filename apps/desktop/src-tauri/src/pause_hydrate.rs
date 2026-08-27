@@ -12,11 +12,35 @@ pub(crate) struct ReminderPreferenceInput {
     next_due_at: Option<String>,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+pub(crate) struct SchedulePolicyInput {
+    active_weekdays_mask: i64,
+    work_start_minute: i64,
+    work_end_minute: i64,
+    quiet_enabled: bool,
+    quiet_start_minute: i64,
+    quiet_end_minute: i64,
+}
+
+impl Default for SchedulePolicyInput {
+    fn default() -> Self {
+        Self {
+            active_weekdays_mask: 31,
+            work_start_minute: 540,
+            work_end_minute: 1080,
+            quiet_enabled: false,
+            quiet_start_minute: 1320,
+            quiet_end_minute: 420,
+        }
+    }
+}
+
 #[derive(Deserialize)]
 pub(crate) struct SavePreferencesInput {
     user_id: String,
     updated_at: String,
     preferences: Vec<ReminderPreferenceInput>,
+    policy: SchedulePolicyInput,
 }
 
 #[derive(Deserialize)]
@@ -34,7 +58,47 @@ fn valid_kind(kind: &str) -> bool {
     matches!(kind, "break" | "hydration")
 }
 
+fn valid_policy(policy: &SchedulePolicyInput) -> bool {
+    (1..=127).contains(&policy.active_weekdays_mask)
+        && (0..=1438).contains(&policy.work_start_minute)
+        && (1..=1439).contains(&policy.work_end_minute)
+        && policy.work_start_minute < policy.work_end_minute
+        && (0..=1439).contains(&policy.quiet_start_minute)
+        && (0..=1439).contains(&policy.quiet_end_minute)
+        && policy.quiet_start_minute != policy.quiet_end_minute
+}
+
+fn minute_in_window(minute: i64, start: i64, end: i64) -> bool {
+    if start < end {
+        minute >= start && minute < end
+    } else {
+        minute >= start || minute < end
+    }
+}
+
+fn schedule_allows(policy: &SchedulePolicyInput, weekday: i64, minute_of_day: i64) -> bool {
+    if !(0..=6).contains(&weekday) || !(0..=1439).contains(&minute_of_day) {
+        return false;
+    }
+    let active_day = policy.active_weekdays_mask & (1 << weekday) != 0;
+    let working = minute_in_window(
+        minute_of_day,
+        policy.work_start_minute,
+        policy.work_end_minute,
+    );
+    let quiet = policy.quiet_enabled
+        && minute_in_window(
+            minute_of_day,
+            policy.quiet_start_minute,
+            policy.quiet_end_minute,
+        );
+    active_day && working && !quiet
+}
+
 fn save_preferences(input: SavePreferencesInput, connection: &mut Connection) -> Result<bool, String> {
+    if !valid_policy(&input.policy) {
+        return Err("invalid-policy".to_string());
+    }
     let transaction = connection.transaction().map_err(|error| error.to_string())?;
     let mut newly_enabled = false;
     for preference in input.preferences {
@@ -71,12 +135,58 @@ fn save_preferences(input: SavePreferencesInput, connection: &mut Connection) ->
             )
             .map_err(|error| error.to_string())?;
     }
+    transaction
+        .execute(
+            "INSERT INTO ph_schedule_policies (user_id, active_weekdays_mask, work_start_minute, work_end_minute, quiet_enabled, quiet_start_minute, quiet_end_minute, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8) ON CONFLICT(user_id) DO UPDATE SET active_weekdays_mask = excluded.active_weekdays_mask, work_start_minute = excluded.work_start_minute, work_end_minute = excluded.work_end_minute, quiet_enabled = excluded.quiet_enabled, quiet_start_minute = excluded.quiet_start_minute, quiet_end_minute = excluded.quiet_end_minute, updated_at = excluded.updated_at",
+            params![
+                input.user_id,
+                input.policy.active_weekdays_mask,
+                input.policy.work_start_minute,
+                input.policy.work_end_minute,
+                input.policy.quiet_enabled,
+                input.policy.quiet_start_minute,
+                input.policy.quiet_end_minute,
+                input.updated_at,
+            ],
+        )
+        .map_err(|error| error.to_string())?;
     transaction.commit().map_err(|error| error.to_string())?;
     Ok(newly_enabled)
 }
 
-fn claim_pending(user_id: &str, now: &str, connection: &mut Connection) -> Result<Vec<String>, String> {
+fn claim_pending(
+    user_id: &str,
+    now: &str,
+    weekday: i64,
+    minute_of_day: i64,
+    connection: &mut Connection,
+) -> Result<Vec<String>, String> {
+    if !(0..=6).contains(&weekday) || !(0..=1439).contains(&minute_of_day) {
+        return Err("invalid-local-time".to_string());
+    }
     let transaction = connection.transaction().map_err(|error| error.to_string())?;
+    let policy = transaction
+        .query_row(
+            "SELECT active_weekdays_mask, work_start_minute, work_end_minute, quiet_enabled, quiet_start_minute, quiet_end_minute FROM ph_schedule_policies WHERE user_id = ?1",
+            [user_id],
+            |row| {
+                Ok(SchedulePolicyInput {
+                    active_weekdays_mask: row.get(0)?,
+                    work_start_minute: row.get(1)?,
+                    work_end_minute: row.get(2)?,
+                    quiet_enabled: row.get(3)?,
+                    quiet_start_minute: row.get(4)?,
+                    quiet_end_minute: row.get(5)?,
+                })
+            },
+        )
+        .optional()
+        .map_err(|error| error.to_string())?
+        .unwrap_or_default();
+    if !schedule_allows(&policy, weekday, minute_of_day) {
+        transaction.commit().map_err(|error| error.to_string())?;
+        return Ok(Vec::new());
+    }
     let active: bool = transaction
         .query_row(
             "SELECT EXISTS(SELECT 1 FROM ch_sessions WHERE user_id = ?1 AND ended_at IS NULL)",
@@ -154,8 +264,20 @@ pub(crate) fn save_pause_hydrate_preferences(input: SavePreferencesInput, app: A
 }
 
 #[tauri::command]
-pub(crate) fn claim_pause_hydrate_reminders(user_id: String, now: String, app: AppHandle) -> Result<Vec<String>, String> {
-    claim_pending(&user_id, &now, &mut connection(&app)?)
+pub(crate) fn claim_pause_hydrate_reminders(
+    user_id: String,
+    now: String,
+    weekday: i64,
+    minute_of_day: i64,
+    app: AppHandle,
+) -> Result<Vec<String>, String> {
+    claim_pending(
+        &user_id,
+        &now,
+        weekday,
+        minute_of_day,
+        &mut connection(&app)?,
+    )
 }
 
 #[tauri::command]
@@ -167,7 +289,7 @@ pub(crate) fn act_on_pause_hydrate_reminder(input: ReminderActionInput, app: App
 mod tests {
     use super::{
         apply_action, claim_pending, save_preferences, ReminderActionInput,
-        ReminderPreferenceInput, SavePreferencesInput,
+        ReminderPreferenceInput, SavePreferencesInput, SchedulePolicyInput,
     };
     use rusqlite::{params, Connection};
 
@@ -185,6 +307,12 @@ mod tests {
                 CREATE TABLE ph_reminder_events (
                     id TEXT PRIMARY KEY, user_id TEXT NOT NULL, kind TEXT NOT NULL,
                     action TEXT NOT NULL, occurred_at TEXT NOT NULL
+                );
+                CREATE TABLE ph_schedule_policies (
+                    user_id TEXT PRIMARY KEY, active_weekdays_mask INTEGER NOT NULL,
+                    work_start_minute INTEGER NOT NULL, work_end_minute INTEGER NOT NULL,
+                    quiet_enabled INTEGER NOT NULL, quiet_start_minute INTEGER NOT NULL,
+                    quiet_end_minute INTEGER NOT NULL, updated_at TEXT NOT NULL
                 );
                 ",
             )
@@ -216,6 +344,7 @@ mod tests {
                     interval_minutes: 60,
                     next_due_at: Some("2026-08-27T12:00:00Z".into()),
                 }],
+                policy: SchedulePolicyInput::default(),
             },
             &mut connection,
         )
@@ -243,12 +372,47 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            claim_pending("local-user", "2026-08-27T10:00:00Z", &mut connection).unwrap(),
+            claim_pending("local-user", "2026-08-27T10:00:00Z", 3, 600, &mut connection).unwrap(),
             vec!["break"]
         );
-        assert!(claim_pending("local-user", "2026-08-27T10:00:01Z", &mut connection)
+        assert!(claim_pending("local-user", "2026-08-27T10:00:01Z", 3, 600, &mut connection)
             .unwrap()
             .is_empty());
+    }
+
+    #[test]
+    fn schedule_policy_blocks_inactive_days_off_hours_and_overnight_quiet_time() {
+        let mut connection = database();
+        connection
+            .execute(
+                "INSERT INTO ph_reminders VALUES (?1, 'break', 1, 60, ?2, NULL, NULL, ?2)",
+                params!["local-user", "2026-08-27T09:00:00Z"],
+            )
+            .unwrap();
+        connection
+            .execute(
+                "INSERT INTO ph_schedule_policies VALUES (?1, 8, 540, 1080, 1, 1320, 600, ?2)",
+                params!["local-user", "2026-08-27T09:00:00Z"],
+            )
+            .unwrap();
+
+        assert!(claim_pending("local-user", "2026-08-28T10:01:00Z", 4, 601, &mut connection)
+            .unwrap()
+            .is_empty());
+        assert!(claim_pending("local-user", "2026-08-27T08:59:00Z", 3, 539, &mut connection)
+            .unwrap()
+            .is_empty());
+        assert!(claim_pending("local-user", "2026-08-27T09:30:00Z", 3, 570, &mut connection)
+            .unwrap()
+            .is_empty());
+        connection
+            .execute("UPDATE ph_schedule_policies SET quiet_enabled = 0", [])
+            .unwrap();
+        assert_eq!(
+            claim_pending("local-user", "2026-08-27T10:01:00Z", 3, 601, &mut connection)
+                .unwrap(),
+            vec!["break"]
+        );
     }
 
     #[test]

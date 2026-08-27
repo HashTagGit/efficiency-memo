@@ -73,6 +73,16 @@ interface ReminderEventExportRow {
   occurred_at: string;
 }
 
+interface SchedulePolicyExportRow {
+  active_weekdays_mask: number;
+  work_start_minute: number;
+  work_end_minute: number;
+  quiet_enabled: number;
+  quiet_start_minute: number;
+  quiet_end_minute: number;
+  updated_at: string;
+}
+
 interface CoreHourExportData {
   sessions: SessionExportRow[];
   plans: PlanExportRow[];
@@ -85,6 +95,7 @@ interface CoreHourExportData {
 interface PauseHydrateExportData {
   reminders: ReminderExportRow[];
   events: ReminderEventExportRow[];
+  schedulePolicy: SchedulePolicyExportRow | null;
 }
 
 interface HumanExport<TData extends object> {
@@ -135,11 +146,12 @@ async function loadCoreHourData(userId: string): Promise<CoreHourExportData> {
 }
 
 async function loadPauseHydrateData(userId: string): Promise<PauseHydrateExportData> {
-  const [reminders, events] = await Promise.all([
+  const [reminders, events, policies] = await Promise.all([
     dbSelect<ReminderExportRow>("SELECT kind, enabled, interval_minutes, next_due_at, pending_at, muted_until, updated_at FROM ph_reminders WHERE user_id = $1 ORDER BY kind", [userId]),
     dbSelect<ReminderEventExportRow>("SELECT id, kind, action, occurred_at FROM ph_reminder_events WHERE user_id = $1 ORDER BY occurred_at", [userId]),
+    dbSelect<SchedulePolicyExportRow>("SELECT active_weekdays_mask, work_start_minute, work_end_minute, quiet_enabled, quiet_start_minute, quiet_end_minute, updated_at FROM ph_schedule_policies WHERE user_id = $1", [userId]),
   ]);
-  return { reminders, events };
+  return { reminders, events, schedulePolicy: policies[0] ?? null };
 }
 
 export async function saveHumanExport(scope: HumanExportScope, userId: string): Promise<boolean> {

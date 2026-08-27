@@ -7,19 +7,27 @@ import {
   markNewPendingReminders,
   saveReminderPreferences,
 } from "./data";
-import { requestReminderNotifications, sendReminderNotification } from "./notifications";
+import {
+  reminderNotificationPermission,
+  requestReminderNotifications,
+  sendReminderNotification,
+} from "./notifications";
 import type {
   PauseHydrateState,
   ReminderAction,
   ReminderKind,
+  ReminderNotificationPermission,
   ReminderPreferenceInput,
+  SchedulePolicy,
 } from "./types";
 
 interface PauseHydrateContextValue {
   state: PauseHydrateState | null;
   loading: boolean;
+  notificationPermission: ReminderNotificationPermission;
   refresh: () => Promise<void>;
-  savePreferences: (preferences: ReminderPreferenceInput[]) => Promise<void>;
+  requestNotificationPermission: () => Promise<void>;
+  savePreferences: (preferences: ReminderPreferenceInput[], policy: SchedulePolicy) => Promise<void>;
   act: (kind: ReminderKind, action: ReminderAction) => Promise<void>;
 }
 
@@ -30,6 +38,7 @@ export function PauseHydrateProvider({ children }: { children: React.ReactNode }
   const { t } = useI18n();
   const [state, setState] = useState<PauseHydrateState | null>(null);
   const [loading, setLoading] = useState(true);
+  const [notificationPermission, setNotificationPermission] = useState<ReminderNotificationPermission>("unknown");
   const polling = useRef(false);
 
   const refresh = useCallback(async () => {
@@ -39,6 +48,16 @@ export function PauseHydrateProvider({ children }: { children: React.ReactNode }
   }, [userId]);
 
   useEffect(() => { void refresh(); }, [refresh]);
+
+  const refreshNotificationPermission = useCallback(async () => {
+    setNotificationPermission(await reminderNotificationPermission());
+  }, []);
+
+  const requestNotificationPermission = useCallback(async () => {
+    setNotificationPermission(await requestReminderNotifications());
+  }, []);
+
+  useEffect(() => { void refreshNotificationPermission(); }, [refreshNotificationPermission]);
 
   useEffect(() => {
     if (!userId) return;
@@ -62,10 +81,10 @@ export function PauseHydrateProvider({ children }: { children: React.ReactNode }
     return () => window.clearInterval(timer);
   }, [refresh, t, userId]);
 
-  const savePreferences = useCallback(async (preferences: ReminderPreferenceInput[]) => {
+  const savePreferences = useCallback(async (preferences: ReminderPreferenceInput[], policy: SchedulePolicy) => {
     if (!userId) return;
-    const newlyEnabled = await saveReminderPreferences(userId, preferences);
-    if (newlyEnabled) await requestReminderNotifications();
+    const newlyEnabled = await saveReminderPreferences(userId, preferences, policy);
+    if (newlyEnabled) setNotificationPermission(await requestReminderNotifications());
     await refresh();
   }, [refresh, userId]);
 
@@ -76,7 +95,15 @@ export function PauseHydrateProvider({ children }: { children: React.ReactNode }
   }, [refresh, userId]);
 
   return (
-    <PauseHydrateContext.Provider value={{ state, loading, refresh, savePreferences, act }}>
+    <PauseHydrateContext.Provider value={{
+      state,
+      loading,
+      notificationPermission,
+      refresh,
+      requestNotificationPermission,
+      savePreferences,
+      act,
+    }}>
       {children}
     </PauseHydrateContext.Provider>
   );
