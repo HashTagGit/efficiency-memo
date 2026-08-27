@@ -71,9 +71,11 @@ function CoreHourWorkspace({ userId }: { userId: string }) {
     if (shouldPromptForCheckIn(timer.elapsed, activeSession.recorded_seconds, activeSession.interval_minutes)) {
       timer.pause();
       void createCheckIn(unrecordedSeconds(timer.elapsed, activeSession.recorded_seconds));
-      if (document.hidden) void notifyCheckIn();
+      if (document.hidden) {
+        void notifyCheckIn(t("coreHour.checkInNotificationTitle"), t("coreHour.checkInNotificationBody"));
+      }
     }
-  }, [activeSession, createCheckIn, pendingCheckIn, timer]);
+  }, [activeSession, createCheckIn, pendingCheckIn, t, timer]);
 
   return (
     <div className="space-y-6" data-testid="ch-dashboard">

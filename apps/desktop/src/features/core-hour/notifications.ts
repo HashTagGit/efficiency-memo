@@ -12,13 +12,10 @@ export async function requestCheckInNotifications(): Promise<void> {
   }
 }
 
-export async function notifyCheckIn(): Promise<void> {
+export async function notifyCheckIn(title: string, body: string): Promise<void> {
   try {
     if (await isPermissionGranted()) {
-      sendNotification({
-        title: "CoreHour check-in",
-        body: "What did you spend the last interval doing?",
-      });
+      sendNotification({ title, body });
     }
   } catch {
     // The in-app check-in remains available when notifications are unavailable.

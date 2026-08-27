@@ -3,6 +3,7 @@ import { currentLocaleLabel, translate } from "../i18n";
 
 describe("i18n", () => {
   it("translates supported messages and interpolates values", () => {
+    expect(translate("zh-CN", "nav.coreHour")).toBe("核心时段");
     expect(translate("zh-CN", "coreHour.intervalHint", { minutes: 30 })).toBe("每 30 分钟记录一次，暂停时间不计入。");
     expect(translate("en-US", "coreHour.historySubtitle", { minutes: 15, date: "2026-08-26" })).toBe("15 min recorded on 2026-08-26");
   });
