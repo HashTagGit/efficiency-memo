@@ -90,8 +90,8 @@ export default function PauseHydratePage() {
         title={t("pauseHydrate.title")}
         subtitle={t("pauseHydrate.subtitle")}
         action={
-          <div className="max-w-64 border-l-2 border-info pl-3">
-            <p className="text-xs font-semibold text-info">{t("pauseHydrate.localOnly")}</p>
+          <div className="max-w-64 border-l-2 border-privacy pl-3">
+            <p className="text-xs font-semibold text-privacy">{t("pauseHydrate.localOnly")}</p>
             <p className="mt-1 text-xs leading-relaxed text-muted">{t("pauseHydrate.localOnlyHint")}</p>
           </div>
         }
@@ -101,7 +101,7 @@ export default function PauseHydratePage() {
         {REMINDER_KINDS.map((kind) => {
           const reminder = state.reminders[kind];
           const pending = Boolean(reminder.pendingAt);
-          const accent = kind === "break" ? "border-t-warning" : "border-t-info";
+          const accent = kind === "break" ? "border-t-recovery" : "border-t-hydration";
           return (
             <section key={kind} className={`rounded-lg border border-border border-t-2 ${accent} bg-surface p-5`} aria-labelledby={`${kind}-heading`}>
               <div className="flex flex-wrap items-start justify-between gap-3">

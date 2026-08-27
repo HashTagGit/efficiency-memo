@@ -26,6 +26,15 @@
   --info: #7ec8e3;
   --warning: #e8c97a;
 
+  /* ── Domain roles ── */
+  --focus: #d6a24a;
+  --planned: #7ec8e3;
+  --actual: #8ad49f;
+  --recovery: #d9a6d8;
+  --hydration: #65b9e7;
+  --privacy: #a7a3e8;
+  --suggested: #e8c97a;
+
   /* ── Surface ── */
   --surface: #171c24;
   --surface-strong: #202733;
@@ -61,6 +70,13 @@
   --danger: #b83a3a;
   --info: #176b87;
   --warning: #8b6500;
+  --focus: #9a650b;
+  --planned: #176b87;
+  --actual: #167243;
+  --recovery: #8b477f;
+  --hydration: #1475a2;
+  --privacy: #5c54a4;
+  --suggested: #8b6500;
   --surface: #ffffff;
   --surface-strong: #edf1f5;
   --card: #ffffff;
@@ -85,6 +101,13 @@
   --danger: #f6a0ac;
   --info: #8fbce7;
   --warning: #f0c56c;
+  --focus: #d6ace8;
+  --planned: #8fbce7;
+  --actual: #84d3a7;
+  --recovery: #f2a886;
+  --hydration: #72c9d4;
+  --privacy: #aea0e8;
+  --suggested: #f0c56c;
   --surface: #1d1920;
   --surface-strong: #28212c;
   --card: #1a161c;
@@ -109,6 +132,13 @@
   --danger: #b23545;
   --info: #245f99;
   --warning: #7d5700;
+  --focus: #6f4885;
+  --planned: #245f99;
+  --actual: #1e704b;
+  --recovery: #9a4939;
+  --hydration: #187180;
+  --privacy: #5a5197;
+  --suggested: #7d5700;
   --surface: #ffffff;
   --surface-strong: #f0ebf2;
   --card: #ffffff;
@@ -133,6 +163,13 @@
   --danger: #f0a0a6;
   --info: #8aaee8;
   --warning: #e2ba70;
+  --focus: #61abc2;
+  --planned: #8aaee8;
+  --actual: #83c79b;
+  --recovery: #e7a98b;
+  --hydration: #55c7d7;
+  --privacy: #a99be8;
+  --suggested: #e2ba70;
   --surface: #151d22;
   --surface-strong: #202b32;
   --card: #141b1f;
@@ -157,6 +194,13 @@
   --danger: #b43d48;
   --info: #315f9d;
   --warning: #86610a;
+  --focus: #216f88;
+  --planned: #315f9d;
+  --actual: #27724a;
+  --recovery: #a14934;
+  --hydration: #137484;
+  --privacy: #5a5197;
+  --suggested: #86610a;
   --surface: #ffffff;
   --surface-strong: #e8eff2;
   --card: #ffffff;
@@ -187,6 +231,13 @@
   --color-danger: var(--danger);
   --color-info: var(--info);
   --color-warning: var(--warning);
+  --color-focus: var(--focus);
+  --color-planned: var(--planned);
+  --color-actual: var(--actual);
+  --color-recovery: var(--recovery);
+  --color-hydration: var(--hydration);
+  --color-privacy: var(--privacy);
+  --color-suggested: var(--suggested);
   --color-surface: var(--surface);
   --color-surface-strong: var(--surface-strong);
   --color-card: var(--card);

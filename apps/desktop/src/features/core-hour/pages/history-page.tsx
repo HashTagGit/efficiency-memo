@@ -214,8 +214,8 @@ export default function HistoryPage({ userId }: { userId: string }) {
       </div>
 
       <div aria-label={t("coreHour.timelineLegend")} className="flex flex-wrap gap-4 text-xs text-muted">
-        <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-5 rounded-sm border border-dashed border-info bg-info/10" />{t("coreHour.planned")}</span>
-        <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-5 rounded-sm border-l-4 border-success bg-success/10" />{t("coreHour.actual")}</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-5 rounded-sm border border-dashed border-planned bg-planned/10" />{t("coreHour.planned")}</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-5 rounded-sm border-l-4 border-actual bg-actual/10" />{t("coreHour.actual")}</span>
         <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-5 rounded-sm border border-dotted border-border" />{t("coreHour.skippedPlan")}</span>
       </div>
 

@@ -106,9 +106,9 @@ export function DayTimeline({ date, sessions, plans, onAddPlan, onEditPlan, onEd
             {planLayout.map((item) => {
               const title = item.plan.title.trim() || t("coreHour.untitledPlan");
               const statusClass = item.plan.status === "planned"
-                ? "border-dashed border-info bg-info/10 text-foreground"
+                ? "border-dashed border-planned bg-planned/10 text-foreground"
                 : item.plan.status === "completed"
-                  ? "border-info/60 bg-info/5 text-foreground opacity-60"
+                  ? "border-planned/60 bg-planned/5 text-foreground opacity-60"
                   : "border-dotted border-border bg-surface text-muted opacity-70";
               return (
                 <button
@@ -137,7 +137,7 @@ export function DayTimeline({ date, sessions, plans, onAddPlan, onEditPlan, onEd
               );
             })}
             {layout.map((item) => {
-              const color = item.session.tag_color ?? "var(--success)";
+              const color = item.session.tag_color ?? "var(--actual)";
               return (
                 <button
                   key={item.session.id}
