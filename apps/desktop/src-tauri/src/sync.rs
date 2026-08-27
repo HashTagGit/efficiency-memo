@@ -11,7 +11,7 @@ use std::fs;
 use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 
-const SCHEMA_VERSION: i64 = 3;
+const SCHEMA_VERSION: i64 = 5;
 const BACKUP_DIR: &str = "memo-backups";
 const DB_FILENAME: &str = "efficiency-memo.db";
 const KEYRING_SERVICE: &str = "com.efficiency-memo.app.webdav";

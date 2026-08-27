@@ -6,7 +6,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { CheckInWithTag, Session, Tag } from "../types";
+import type { CheckInWithTag, Session, StartSessionInput, Tag } from "../types";
 import { dbExecute, dbSelect } from "../../../lib/db";
 import { hasProgressChanged, unrecordedAfterPendingCheckIn } from "../session-math";
 
@@ -27,6 +27,9 @@ function mapSession(row: Record<string, unknown>): Session {
     interval_minutes: Number(row.interval_minutes),
     elapsed_seconds: Number(row.elapsed_seconds ?? 0),
     recorded_seconds: 0,
+    activity: String(row.activity ?? ""),
+    default_tag_id: row.default_tag_id ? String(row.default_tag_id) : null,
+    is_favorite: Boolean(row.is_favorite),
     synced: Boolean(row.synced),
   };
 }
@@ -35,11 +38,11 @@ export interface SessionState {
   activeSession: Session | null;
   pendingCheckIn: CheckInWithTag | null;
   loadSessions: (userId: string) => Promise<void>;
-  startSession: (userId: string, intervalMinutes: number) => Promise<Session>;
+  startSession: (input: StartSessionInput) => Promise<Session>;
   saveProgress: (elapsedSeconds: number, recordedSeconds: number) => void;
   createCheckIn: (durationSeconds: number) => Promise<void>;
   completeCheckIn: (tagId: string | null, note: string) => Promise<void>;
-  endSession: (elapsedSeconds: number, recordedSeconds: number) => Promise<void>;
+  endSession: (elapsedSeconds: number, recordedSeconds: number) => Promise<Session | null>;
 }
 
 const SessionContext = createContext<SessionState | null>(null);
@@ -50,6 +53,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const activeRef = useRef(activeSession);
   const pendingRef = useRef(pendingCheckIn);
   const completingRef = useRef(false);
+  const startingRef = useRef(false);
+  const endingRef = useRef(false);
   activeRef.current = activeSession;
   pendingRef.current = pendingCheckIn;
 
@@ -76,7 +81,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const startSession = useCallback(async (userId: string, intervalMinutes: number) => {
+  const startSession = useCallback(async ({ userId, intervalMinutes, activity, defaultTagId, favorite }: StartSessionInput) => {
+    if (activeRef.current) return activeRef.current;
+    if (startingRef.current) throw new Error("A session is already starting.");
+    startingRef.current = true;
     const session: Session = {
       id: crypto.randomUUID(),
       user_id: userId,
@@ -85,19 +93,27 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       interval_minutes: intervalMinutes,
       elapsed_seconds: 0,
       recorded_seconds: 0,
+      activity: activity.trim(),
+      default_tag_id: defaultTagId,
+      is_favorite: favorite,
       synced: false,
     };
-    await dbExecute(
-      "INSERT INTO ch_sessions (id, user_id, started_at, ended_at, interval_minutes, elapsed_seconds, synced) VALUES ($1, $2, $3, NULL, $4, 0, 0)",
-      [session.id, session.user_id, session.started_at, session.interval_minutes],
-    );
-    localStorage.setItem(SESSION_PROGRESS_KEY, JSON.stringify({
-      sessionId: session.id,
-      elapsedSeconds: 0,
-      recordedSeconds: 0,
-    } satisfies StoredProgress));
-    setActiveSession(session);
-    return session;
+    try {
+      await dbExecute(
+        "INSERT INTO ch_sessions (id, user_id, started_at, ended_at, interval_minutes, elapsed_seconds, activity, default_tag_id, is_favorite, synced) VALUES ($1, $2, $3, NULL, $4, 0, $5, $6, $7, 0)",
+        [session.id, session.user_id, session.started_at, session.interval_minutes, session.activity, session.default_tag_id, session.is_favorite ? 1 : 0],
+      );
+      localStorage.setItem(SESSION_PROGRESS_KEY, JSON.stringify({
+        sessionId: session.id,
+        elapsedSeconds: 0,
+        recordedSeconds: 0,
+      } satisfies StoredProgress));
+      activeRef.current = session;
+      setActiveSession(session);
+      return session;
+    } finally {
+      startingRef.current = false;
+    }
   }, []);
 
   const saveProgress = useCallback((elapsedSeconds: number, recordedSeconds: number) => {
@@ -166,7 +182,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const endSession = useCallback(async (elapsedSeconds: number, recordedSeconds: number) => {
     const current = activeRef.current;
-    if (!current) return;
+    if (!current) return null;
+    if (endingRef.current) return null;
+    endingRef.current = true;
+    try {
     const progress = readProgress(current.id);
     const finalElapsed = progress?.elapsedSeconds ?? elapsedSeconds;
     const finalRecorded = progress?.recordedSeconds ?? recordedSeconds;
@@ -178,9 +197,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     const pending = pendingRef.current?.session_id === current.id ? pendingRef.current : null;
     if (pending) {
       await dbExecute(
-        "UPDATE ch_check_ins SET skipped = 1, note = '', synced = 0 WHERE id = $1",
-        [pending.id],
+        "UPDATE ch_check_ins SET skipped = $1, note = '', synced = 0 WHERE id = $2",
+        [current.default_tag_id ? 0 : 1, pending.id],
       );
+      if (current.default_tag_id) {
+        await dbExecute(
+          "INSERT INTO ch_check_in_entries (id, check_in_id, tag_id, percentage, synced) VALUES ($1, $2, $3, 100, 0)",
+          [crypto.randomUUID(), pending.id, current.default_tag_id],
+        );
+      }
     }
     const remainder = unrecordedAfterPendingCheckIn(
       finalElapsed,
@@ -188,14 +213,26 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       pending?.duration_seconds ?? 0,
     );
     if (remainder > 0) {
+      const checkInId = crypto.randomUUID();
       await dbExecute(
-        "INSERT INTO ch_check_ins (id, session_id, checked_at, skipped, note, duration_seconds, synced) VALUES ($1, $2, $3, 1, '', $4, 0)",
-        [crypto.randomUUID(), current.id, endedAt, remainder],
+        "INSERT INTO ch_check_ins (id, session_id, checked_at, skipped, note, duration_seconds, synced) VALUES ($1, $2, $3, $4, '', $5, 0)",
+        [checkInId, current.id, endedAt, current.default_tag_id ? 0 : 1, remainder],
       );
+      if (current.default_tag_id) {
+        await dbExecute(
+          "INSERT INTO ch_check_in_entries (id, check_in_id, tag_id, percentage, synced) VALUES ($1, $2, $3, 100, 0)",
+          [crypto.randomUUID(), checkInId, current.default_tag_id],
+        );
+      }
     }
     localStorage.removeItem(SESSION_PROGRESS_KEY);
     setPendingCheckIn(null);
+    activeRef.current = null;
     setActiveSession(null);
+    return { ...current, ended_at: endedAt, elapsed_seconds: finalElapsed };
+    } finally {
+      endingRef.current = false;
+    }
   }, []);
 
   return (

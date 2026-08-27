@@ -35,7 +35,7 @@ The desktop app lives in `apps/desktop/` and is the recommended deployable surfa
 ### SQLite Storage
 
 - Tauri plugin-sql opens `sqlite:efficiency-memo.db` in the OS app-data directory.
-- 4 SQLite DDL migrations in `src-tauri/migrations/`.
+- 5 SQLite DDL migrations in `src-tauri/migrations/`.
 - `lib/db.ts` wraps `Database.load()` with `dbSelect()`/`dbExecute()` helpers.
 - `DevicePersistenceContract` in `features/charger-reminder/db-tauri.ts` (8 CRUD methods).
 - `DbResult` interface in `features/core-hour/db-tauri.ts`.
@@ -48,7 +48,8 @@ The desktop app lives in `apps/desktop/` and is the recommended deployable surfa
 
 ### CoreHour Workflow
 
-- `features/core-hour/` owns the Timer, History, Tags, and Settings routes.
+- `features/core-hour/` owns the Today, History, Tags, and Settings routes.
+- Today stores lightweight activity context on each session and derives recent/favorite activity combinations from local session history.
 - An active session persists elapsed and categorized seconds in local storage; after a restart it restores paused.
 - Check-ins record one optional tag, an optional note, and an explicit duration.
 - The native notification plugin reminds users only when a due check-in occurs in the background.

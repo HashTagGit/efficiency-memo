@@ -32,6 +32,12 @@ pub fn run() {
             sql: include_str!("../migrations/0004_ch_session_durations.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 5,
+            description: "store core hour activity context",
+            sql: include_str!("../migrations/0005_ch_session_activity.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()

@@ -12,6 +12,8 @@ All notable changes to this project will be documented in this file.
 - The desktop workspace now supports persisted light and dark themes with reorganized navigation and consistent action styling.
 
 ### Added
+- CoreHour Today workspace with activity descriptions, default tags, recent/favorite quick starts, daily sessions, and a session-end summary.
+- A fifth SQLite migration for CoreHour session activity context.
 - CoreHour timer, history, tags, and settings routes for local sessions and daily review.
 - Persisted session duration and check-in duration through a fourth SQLite migration.
 - One native background notification per due CoreHour check-in.

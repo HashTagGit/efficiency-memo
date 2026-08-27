@@ -43,14 +43,14 @@ Output:
 - Windows: `apps/desktop/src-tauri/target/release/bundle/msi/EfficiencyMemo_0.0.2_x64_en-US.msi`
 - Standalone `.exe`: `apps/desktop/src-tauri/target/release/EfficiencyMemo.exe`
 
-On first launch the app creates its database in `%APPDATA%/com.efficiency-memo.app/efficiency-memo.db` (Windows) or `~/Library/Application Support/com.efficiency-memo.app/efficiency-memo.db` (macOS). All 4 migrations run automatically.
+On first launch the app creates its database in `%APPDATA%/com.efficiency-memo.app/efficiency-memo.db` (Windows) or `~/Library/Application Support/com.efficiency-memo.app/efficiency-memo.db` (macOS). All 5 migrations run automatically.
 
 ### Using the app
 
 1. **Launch the app** — A local profile is selected or created automatically; there is no sign-in step.
 2. **Create tags** — Open **CoreHour → Tags** and add the categories you want to use.
 3. **Set the interval** — Open **CoreHour → Settings**, choose 15, 30, or 60 minutes, then save. It applies to the next session.
-4. **Track time** — Open **CoreHour → Timer** and start a session. At each due check-in, choose one tag and an optional note, or skip. Allow the operating-system notification permission for background reminders.
+4. **Track time** — Open **CoreHour → Today**, describe the activity or continue a recent favorite, then start a session. At each due check-in, choose one tag and an optional note, or skip. Allow the operating-system notification permission for background reminders.
 5. **Review the day** — Open **CoreHour → History** to select a date, inspect totals, and edit check-ins.
 
 Use the native Tauri window opened by `tauri:dev`; `http://localhost:1420` is only the Vite development server and does not provide the Tauri SQLite bridge.
@@ -83,13 +83,13 @@ apps/desktop/
 │   └── main.tsx           # React entry
 └── src-tauri/             # Rust native shell
     ├── src/               # Plugin registration and Tauri command handlers
-    ├── migrations/        # 4 SQLite migration files
+    ├── migrations/        # 5 SQLite migration files
     └── tauri.conf.json    # Bundle config (msi + nsis targets)
 ```
 
 Key design choices:
 - **No SSR** — Tauri uses a webview, not a browser, so server-side rendering is unnecessary. Vite + React Router handles all routing.
-- **Local SQLite** — Tauri plugin-sql opens `sqlite:efficiency-memo.db` from the OS app-data directory. All 4 migrations run on first launch.
+- **Local SQLite** — Tauri plugin-sql opens `sqlite:efficiency-memo.db` from the OS app-data directory. All 5 migrations run on first launch.
 - **CoreHour session state** — Active-session progress is kept locally and restored as paused after an app restart, so closed-app time is never counted.
 - **Bilingual workspace** — The desktop shell and CoreHour workflow support English and Simplified Chinese, with the selected language persisted locally.
 - **Theme preferences** — Switch between light and dark themes from the workspace shell; the preference is persisted locally.

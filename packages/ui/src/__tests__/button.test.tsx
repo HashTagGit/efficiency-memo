@@ -59,6 +59,11 @@ describe('Button', () => {
     expect(btn.className).toMatch(/text-lg|px-6/);
   });
 
+  it('renders a stable icon size', () => {
+    render(<Button size="icon" aria-label="Favorite">*</Button>);
+    expect(screen.getByRole('button')).toHaveClass('h-9', 'w-9', 'p-0');
+  });
+
   it('shows loading spinner and disables button when isLoading', () => {
     const handleClick = vi.fn();
     render(

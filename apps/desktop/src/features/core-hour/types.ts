@@ -9,7 +9,18 @@ export interface Session {
   interval_minutes: number;
   elapsed_seconds: number;
   recorded_seconds: number;
+  activity: string;
+  default_tag_id: Uuid | null;
+  is_favorite: boolean;
   synced: boolean;
+}
+
+export interface StartSessionInput {
+  userId: Uuid;
+  intervalMinutes: number;
+  activity: string;
+  defaultTagId: Uuid | null;
+  favorite: boolean;
 }
 
 export interface Tag {
