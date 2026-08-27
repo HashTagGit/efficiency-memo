@@ -35,6 +35,7 @@ import type {
 interface PauseHydrateContextValue {
   state: PauseHydrateState | null;
   loading: boolean;
+  loadError: boolean;
   notificationPermission: ReminderNotificationPermission;
   naturalBreakAvailable: boolean | null;
   systemInterruption: SystemInterruptionState | null | undefined;
@@ -51,6 +52,7 @@ export function PauseHydrateProvider({ children }: { children: React.ReactNode }
   const { t } = useI18n();
   const [state, setState] = useState<PauseHydrateState | null>(null);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [notificationPermission, setNotificationPermission] = useState<ReminderNotificationPermission>("unknown");
   const [naturalBreakAvailable, setNaturalBreakAvailable] = useState<boolean | null>(null);
   const [systemInterruption, setSystemInterruption] = useState<SystemInterruptionState | null>();
@@ -59,9 +61,19 @@ export function PauseHydrateProvider({ children }: { children: React.ReactNode }
   const lastPollAt = useRef(Date.now());
 
   const refresh = useCallback(async () => {
-    if (!userId) return;
-    setState(await loadPauseHydrateState(userId));
-    setLoading(false);
+    if (!userId) {
+      setLoadError(true);
+      setLoading(false);
+      return;
+    }
+    try {
+      setState(await loadPauseHydrateState(userId));
+      setLoadError(false);
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
   }, [userId]);
 
   useEffect(() => { void refresh(); }, [refresh]);
@@ -155,6 +167,7 @@ export function PauseHydrateProvider({ children }: { children: React.ReactNode }
     <PauseHydrateContext.Provider value={{
       state,
       loading,
+      loadError,
       notificationPermission,
       naturalBreakAvailable,
       systemInterruption,

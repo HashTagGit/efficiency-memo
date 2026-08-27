@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Alert, Button, PageHeader } from "@memo/ui";
+import { Alert, Button, EmptyState, PageHeader } from "@memo/ui";
 import { useI18n } from "../../../lib/i18n";
 import { usePauseHydrate } from "../context";
 import { DEFAULT_SCHEDULE_POLICY } from "../data";
@@ -57,9 +57,11 @@ export default function PauseHydratePage() {
   const {
     state,
     loading,
+    loadError,
     notificationPermission,
     naturalBreakAvailable,
     systemInterruption,
+    refresh,
     savePreferences,
     act,
     requestNotificationPermission,
@@ -70,6 +72,8 @@ export default function PauseHydratePage() {
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [actingKind, setActingKind] = useState<ReminderKind | null>(null);
+  const [retrying, setRetrying] = useState(false);
+  const [operationError, setOperationError] = useState<"save" | "action" | null>(null);
   const dateTime = useMemo(
     () => new Intl.DateTimeFormat(locale, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }),
     [locale],
@@ -124,12 +128,14 @@ export default function PauseHydratePage() {
     setDraft((current) => ({ ...current, [kind]: { ...current[kind], ...value } }));
     setDirty(true);
     setSaved(false);
+    setOperationError(null);
   }
 
   function updateSchedule(value: Partial<ScheduleDraft>) {
     setSchedule((current) => ({ ...current, ...value }));
     setDirty(true);
     setSaved(false);
+    setOperationError(null);
   }
 
   function toggleWeekday(day: number) {
@@ -145,6 +151,7 @@ export default function PauseHydratePage() {
   async function handleSave() {
     if (workInvalid || quietInvalid || naturalBreakInvalid || deferralGraceInvalid) return;
     setSaving(true);
+    setOperationError(null);
     try {
       await savePreferences(
         REMINDER_KINDS.map((kind) => ({ kind, ...draft[kind] })),
@@ -163,6 +170,8 @@ export default function PauseHydratePage() {
       );
       setDirty(false);
       setSaved(true);
+    } catch {
+      setOperationError("save");
     } finally {
       setSaving(false);
     }
@@ -170,10 +179,22 @@ export default function PauseHydratePage() {
 
   async function handleAction(kind: ReminderKind, action: ReminderAction) {
     setActingKind(kind);
+    setOperationError(null);
     try {
       await act(kind, action);
+    } catch {
+      setOperationError("action");
     } finally {
       setActingKind(null);
+    }
+  }
+
+  async function handleRetry() {
+    setRetrying(true);
+    try {
+      await refresh();
+    } finally {
+      setRetrying(false);
     }
   }
 
@@ -250,23 +271,51 @@ export default function PauseHydratePage() {
   const systemGuardReason = systemGuardBlocked && systemInterruption
     ? t(`pauseHydrate.systemReason.${systemInterruption.reason}`)
     : null;
+  const pageHeader = (
+    <PageHeader
+      title={t("pauseHydrate.title")}
+      subtitle={t("pauseHydrate.subtitle")}
+      action={
+        <div className="max-w-64 border-l-2 border-privacy pl-3">
+          <p className="text-xs font-semibold text-privacy">{t("pauseHydrate.localOnly")}</p>
+          <p className="mt-1 text-xs leading-relaxed text-muted">{t("pauseHydrate.localOnlyHint")}</p>
+        </div>
+      }
+    />
+  );
 
-  if (loading || !state) {
-    return <p className="py-16 text-center text-sm text-muted">{t("app.loading")}</p>;
+  if (!state) {
+    return (
+      <div className="mx-auto max-w-5xl space-y-7" data-testid="pause-hydrate-page">
+        {pageHeader}
+        {loading ? (
+          <p className="py-16 text-center text-sm text-muted" role="status" aria-live="polite">{t("pauseHydrate.loading")}</p>
+        ) : (
+          <EmptyState
+            title={t("pauseHydrate.loadErrorTitle")}
+            description={t("pauseHydrate.loadErrorDescription")}
+            action={<Button isLoading={retrying} onClick={() => void handleRetry()}>{t("pauseHydrate.retry")}</Button>}
+          />
+        )}
+      </div>
+    );
   }
 
   return (
     <div className="mx-auto max-w-5xl space-y-7" data-testid="pause-hydrate-page">
-      <PageHeader
-        title={t("pauseHydrate.title")}
-        subtitle={t("pauseHydrate.subtitle")}
-        action={
-          <div className="max-w-64 border-l-2 border-privacy pl-3">
-            <p className="text-xs font-semibold text-privacy">{t("pauseHydrate.localOnly")}</p>
-            <p className="mt-1 text-xs leading-relaxed text-muted">{t("pauseHydrate.localOnlyHint")}</p>
-          </div>
-        }
-      />
+      {pageHeader}
+
+      {loadError && (
+        <Alert variant="error" title={t("pauseHydrate.loadErrorTitle")}>
+          <p>{t("pauseHydrate.refreshErrorDescription")}</p>
+          <Button className="mt-3" size="sm" variant="secondary" isLoading={retrying} onClick={() => void handleRetry()}>{t("pauseHydrate.retry")}</Button>
+        </Alert>
+      )}
+      {operationError && (
+        <Alert variant="error" title={t("pauseHydrate.operationErrorTitle")}>
+          {t(operationError === "save" ? "pauseHydrate.saveErrorDescription" : "pauseHydrate.actionErrorDescription")}
+        </Alert>
+      )}
 
       <section aria-labelledby="schedule-heading" className="space-y-5">
         <div>
