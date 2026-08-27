@@ -1,24 +1,18 @@
 import React from "react";
 import { PageHeader } from "@memo/ui";
-import { PALETTES, useAppearance, type Palette, type ThemeMode } from "../../lib/appearance";
+import { PALETTES, useAppearance, type ThemeMode } from "../../lib/appearance";
 import { useI18n, type Locale } from "../../lib/i18n";
 import { SettingsNavigation } from "./settings-navigation";
 
 const themeModes: ThemeMode[] = ["light", "dark", "system"];
 const locales: Locale[] = ["en-US", "zh-CN"];
-const paletteColors: Record<Palette, string[]> = {
-  ember: ["#d6a24a", "#7ec8e3", "#8ad49f"],
-  grove: ["#d6ace8", "#84d3a7", "#f0c56c"],
-  tide: ["#61abc2", "#8aaee8", "#e2ba70"],
-  clarity: ["#b9d3ff", "#94e4b0", "#f5d58b"],
-};
 const companionShortcuts = [
   { keys: ["Ctrl", "Shift", "M"], descriptionKey: "appSettings.companionShortcutToggle" },
   { keys: ["Ctrl", "Shift", "Space"], descriptionKey: "appSettings.companionShortcutStartStop" },
 ];
 
 export function AppSettingsPage() {
-  const { mode, palette, setMode, setPalette } = useAppearance();
+  const { mode, theme, palette, setMode, setPalette } = useAppearance();
   const { locale, setLocale, t } = useI18n();
 
   return (
@@ -48,11 +42,15 @@ export function AppSettingsPage() {
             {PALETTES.map((value) => (
               <label
                 key={value}
+                data-theme={theme}
+                data-palette={value}
                 className={`min-h-24 cursor-pointer rounded-md border p-4 text-left transition-[border-color,background-color,box-shadow] focus-within:ring-2 focus-within:ring-accent ${palette === value ? "border-accent bg-active shadow-sm" : "border-border bg-surface hover:bg-surface-strong"}`}
               >
                 <input className="sr-only" type="radio" name="appearance-palette" value={value} checked={palette === value} onChange={() => setPalette(value)} />
                 <span className="flex gap-1.5" aria-hidden="true">
-                  {paletteColors[value].map((color) => <span key={color} className="h-4 flex-1 rounded-sm" style={{ backgroundColor: color }} />)}
+                  <span className="h-4 flex-1 rounded-sm bg-accent" />
+                  <span className="h-4 flex-1 rounded-sm bg-info" />
+                  <span className="h-4 flex-1 rounded-sm bg-success" />
                 </span>
                 <span className="mt-3 block text-sm font-semibold text-foreground">{t(`appSettings.palette${value[0].toUpperCase()}${value.slice(1)}`)}</span>
                 <span className="mt-1 block text-xs leading-relaxed text-muted">{t(`appSettings.palette${value[0].toUpperCase()}${value.slice(1)}Hint`)}</span>
