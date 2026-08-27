@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Button, PageHeader } from "@memo/ui";
+import { Alert, Button, EmptyState, PageHeader } from "@memo/ui";
 import { dbExecute, dbSelect } from "../../../lib/db";
 import type { CheckInWithTag, Tag } from "../types";
 import { type ExportRange, rangeToFromDate, recordsToCsv, exportFilename } from "../export";
@@ -67,37 +67,54 @@ export default function HistoryPage({ userId }: { userId: string }) {
   const [editingPlan, setEditingPlan] = useState<PlannedBlock | null>(null);
   const [planStart, setPlanStart] = useState<Date | null>(null);
   const [view, setView] = useState<"day" | "week">("day");
+  const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [loadedRangeKey, setLoadedRangeKey] = useState<string | null>(null);
   const loadRequestRef = useRef(0);
   const visibleDays = useMemo(
     () => view === "day" ? [date] : weekDays(new Date(date + "T12:00:00")),
     [date, view],
   );
-  const visibleRangeRef = useRef(visibleDays.join(","));
-  visibleRangeRef.current = visibleDays.join(",");
+  const visibleRangeKey = visibleDays.join(",");
+  const visibleRangeRef = useRef(visibleRangeKey);
+  visibleRangeRef.current = visibleRangeKey;
 
   const load = useCallback(async () => {
     const request = ++loadRequestRef.current;
+    const sourceRange = visibleRangeKey;
+    setLoading(true);
+    setLoadFailed(false);
     const rangeStart = new Date(visibleDays[0] + "T00:00:00");
     const rangeEnd = new Date(visibleDays[visibleDays.length - 1] + "T00:00:00");
     rangeEnd.setDate(rangeEnd.getDate() + 1);
-    const [checkIns, availableTags, visibleSessions, visiblePlans] = await Promise.all([
-      view === "day" ? dbSelect<CheckInWithTag>(
-        "SELECT ci.id, ci.session_id, ci.checked_at, ci.skipped, ci.note, ci.duration_seconds, ci.synced, e.tag_id, t.name AS tag_name, t.color AS tag_color FROM ch_check_ins ci JOIN ch_sessions s ON s.id = ci.session_id LEFT JOIN ch_check_in_entries e ON e.check_in_id = ci.id LEFT JOIN ch_tags t ON t.id = e.tag_id WHERE s.user_id = $1 AND date(ci.checked_at, 'localtime') = $2 ORDER BY ci.checked_at DESC",
-        [userId, date],
-      ) : Promise.resolve([]),
-      dbSelect<Tag>("SELECT * FROM ch_tags WHERE user_id = $1 AND is_archived = 0 ORDER BY created_at", [userId]),
-      loadSessionsForDays(userId, visibleDays),
-      loadPlansForRange(userId, rangeStart, rangeEnd),
-    ]);
-    if (request !== loadRequestRef.current) return;
-    setEntries(checkIns.map((e) => ({ ...e, skipped: Boolean(e.skipped), duration_seconds: Number(e.duration_seconds) })));
-    setTags(availableTags);
-    setSessions(Array.from(new Map(visibleSessions.flat().map((session) => [session.id, session])).values()));
-    setActualSeconds(totalSessionSeconds(visibleSessions));
-    setPlans(visiblePlans);
-  }, [date, userId, view, visibleDays]);
+    try {
+      const [checkIns, availableTags, visibleSessions, visiblePlans] = await Promise.all([
+        view === "day" ? dbSelect<CheckInWithTag>(
+          "SELECT ci.id, ci.session_id, ci.checked_at, ci.skipped, ci.note, ci.duration_seconds, ci.synced, e.tag_id, t.name AS tag_name, t.color AS tag_color FROM ch_check_ins ci JOIN ch_sessions s ON s.id = ci.session_id LEFT JOIN ch_check_in_entries e ON e.check_in_id = ci.id LEFT JOIN ch_tags t ON t.id = e.tag_id WHERE s.user_id = $1 AND date(ci.checked_at, 'localtime') = $2 ORDER BY ci.checked_at DESC",
+          [userId, date],
+        ) : Promise.resolve([]),
+        dbSelect<Tag>("SELECT * FROM ch_tags WHERE user_id = $1 AND is_archived = 0 ORDER BY created_at", [userId]),
+        loadSessionsForDays(userId, visibleDays),
+        loadPlansForRange(userId, rangeStart, rangeEnd),
+      ]);
+      if (request !== loadRequestRef.current || sourceRange !== visibleRangeRef.current) return false;
+      setEntries(checkIns.map((e) => ({ ...e, skipped: Boolean(e.skipped), duration_seconds: Number(e.duration_seconds) })));
+      setTags(availableTags);
+      setSessions(Array.from(new Map(visibleSessions.flat().map((session) => [session.id, session])).values()));
+      setActualSeconds(totalSessionSeconds(visibleSessions));
+      setPlans(visiblePlans);
+      setLoadedRangeKey(sourceRange);
+      return true;
+    } catch {
+      if (request === loadRequestRef.current && sourceRange === visibleRangeRef.current) setLoadFailed(true);
+      return false;
+    } finally {
+      if (request === loadRequestRef.current) setLoading(false);
+    }
+  }, [date, userId, view, visibleDays, visibleRangeKey]);
 
   useEffect(() => { void load(); }, [load]);
+  useEffect(() => { setPlanActionError(null); }, [visibleRangeKey]);
 
   async function saveEntry(entry: CheckInWithTag) {
     await dbExecute("UPDATE ch_check_ins SET skipped = $1, note = $2, synced = 0 WHERE id = $3", [tagId ? 0 : 1, note.trim(), entry.id]);
@@ -128,6 +145,7 @@ export default function HistoryPage({ userId }: { userId: string }) {
   }
 
   const totalSeconds = entries.reduce((sum, e) => sum + e.duration_seconds, 0);
+  const hasCurrentRange = loadedRangeKey === visibleRangeKey;
   const planActualSummary = useMemo(
     () => buildPlanActualSummary(plans, actualSeconds),
     [actualSeconds, plans],
@@ -157,11 +175,7 @@ export default function HistoryPage({ userId }: { userId: string }) {
     } catch {
       if (visibleRangeRef.current !== sourceRange) return;
       setPlanActionError(t("coreHour.planMoveFailed"));
-      try {
-        await load();
-      } catch {
-        // Keep the error visible; a later navigation reloads authoritative data.
-      }
+      await load();
       return;
     }
     if (visibleRangeRef.current !== sourceRange) return;
@@ -174,9 +188,7 @@ export default function HistoryPage({ userId }: { userId: string }) {
           }
         : item
     )));
-    try {
-      await load();
-    } catch {
+    if (!await load()) {
       setPlanActionError(t("coreHour.planRefreshFailed"));
     }
   };
@@ -185,7 +197,9 @@ export default function HistoryPage({ userId }: { userId: string }) {
       <PageHeader
         title={t("coreHour.history")}
         subtitle={view === "day"
-          ? t("coreHour.historySubtitle", { minutes: Math.round(totalSeconds / 60), date })
+          ? hasCurrentRange
+            ? t("coreHour.historySubtitle", { minutes: Math.round(totalSeconds / 60), date })
+            : t("coreHour.historyDateSubtitle", { date })
           : t("coreHour.historyWeekSubtitle", { start: visibleDays[0], end: visibleDays[6] })}
         action={
           <div className="flex flex-wrap items-center gap-2">
@@ -193,6 +207,7 @@ export default function HistoryPage({ userId }: { userId: string }) {
               variant="secondary"
               size="sm"
               className="gap-1.5"
+              disabled={!hasCurrentRange}
               onClick={() => openNewPlan(new Date(date + "T09:00:00"))}
             >
               <span aria-hidden="true">+</span>
@@ -201,6 +216,7 @@ export default function HistoryPage({ userId }: { userId: string }) {
             <Button
               size="sm"
               className="gap-1.5"
+              disabled={!hasCurrentRange}
               onClick={() => openNewSession()}
             >
               <span aria-hidden="true">+</span>
@@ -271,6 +287,26 @@ export default function HistoryPage({ userId }: { userId: string }) {
         />
       </div>
 
+      {loading && (
+        <p className="text-sm text-muted" role="status" aria-live="polite">
+          {t(hasCurrentRange ? "coreHour.timelineUpdating" : "coreHour.timelineLoading")}
+        </p>
+      )}
+      {hasCurrentRange && loadFailed && (
+        <Alert variant="error" title={t("coreHour.timelineLoadErrorTitle")}>
+          <p>{t("coreHour.timelineRefreshErrorDescription")}</p>
+          <Button className="mt-3" size="sm" variant="secondary" onClick={() => void load()}>{t("coreHour.retry")}</Button>
+        </Alert>
+      )}
+      {!hasCurrentRange && !loading && loadFailed && (
+        <EmptyState
+          title={t("coreHour.timelineLoadErrorTitle")}
+          description={t("coreHour.timelineLoadErrorDescription")}
+          action={<Button onClick={() => void load()}>{t("coreHour.retry")}</Button>}
+        />
+      )}
+
+      {hasCurrentRange && <>
       {planActionError && <Alert variant="error">{planActionError}</Alert>}
 
       <div aria-label={t("coreHour.timelineLegend")} className="flex flex-wrap gap-4 text-xs text-muted">
@@ -359,7 +395,7 @@ export default function HistoryPage({ userId }: { userId: string }) {
           initialEndedAt={planStart ? new Date(planStart.getTime() + 30 * 60_000) : undefined}
           tags={tags}
           onClose={() => setPlanEditorOpen(false)}
-          onSaved={load}
+          onSaved={async () => { await load(); }}
           onConvert={(plan) => openNewSession(new Date(plan.started_at), plan)}
         />
       )}
@@ -382,6 +418,7 @@ export default function HistoryPage({ userId }: { userId: string }) {
           }}
         />
       )}
+      </>}
     </div>
   );
 }
