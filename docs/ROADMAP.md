@@ -16,13 +16,14 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 - Desktop Companion with bilingual system-tray focus/reminder state, authoritative CoreHour commands, and global show/hide plus latest-activity start/stop shortcuts.
 - Pause & Hydrate reliable schedules with active weekdays, work/quiet hours, and visible notification-permission state.
 - Opt-in Natural Rest on Windows, using native system idle to complete one movement break without inferring hydration.
+- Native macOS Natural Rest idle detection through the current login session's CoreGraphics event state.
 - Windows system-interruption deferral with persisted blocked state, recovery grace, staggered reminders, and suspend-gap protection.
 
 ## Next releases
 
 ### 1. Respectful reminder policy
 
-- Add reliable native idle adapters beyond Windows before enabling natural-break completion there.
+- Add a reliable Linux idle adapter across Wayland/X11 desktop environments before enabling Natural Rest there.
 
 ### 2. Local Activity Assist experiment
 
