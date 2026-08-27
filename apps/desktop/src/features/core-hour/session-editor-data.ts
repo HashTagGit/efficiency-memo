@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 
-export type SessionBlockErrorCode = "invalid-range" | "overlap" | "cross-day";
+export type SessionBlockErrorCode = "invalid-range" | "overlap" | "cross-day" | "invalid-plan";
 
 export class SessionBlockError extends Error {
   constructor(public readonly code: SessionBlockErrorCode) {
@@ -17,6 +17,7 @@ export interface SessionBlockInput {
   endedAt: string;
   adjustDuration?: boolean;
   adjustTag?: boolean;
+  sourcePlanId?: string;
 }
 
 export async function saveSessionBlock(input: SessionBlockInput): Promise<string> {
@@ -48,10 +49,11 @@ export async function saveSessionBlock(input: SessionBlockInput): Promise<string
         new_session_id: crypto.randomUUID(),
         new_check_in_id: crypto.randomUUID(),
         new_entry_id: crypto.randomUUID(),
+        source_plan_id: input.sourcePlanId ?? null,
       },
     });
   } catch (error) {
-    if (error === "overlap" || error === "invalid-range" || error === "cross-day") {
+    if (error === "overlap" || error === "invalid-range" || error === "cross-day" || error === "invalid-plan") {
       throw new SessionBlockError(error);
     }
     throw error;

@@ -12,6 +12,9 @@ interface SessionEditorProps {
   defaultDate?: string;
   initialStartedAt?: Date;
   initialEndedAt?: Date;
+  initialActivity?: string;
+  initialTagId?: string | null;
+  sourcePlanId?: string;
   tags: Tag[];
   onClose: () => void;
   onSaved: () => void | Promise<void>;
@@ -22,7 +25,7 @@ function toLocalInput(value: Date | string): string {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
 }
 
-export function SessionEditor({ isOpen, userId, session, defaultDate, initialStartedAt, initialEndedAt, tags, onClose, onSaved }: SessionEditorProps) {
+export function SessionEditor({ isOpen, userId, session, defaultDate, initialStartedAt, initialEndedAt, initialActivity, initialTagId, sourcePlanId, tags, onClose, onSaved }: SessionEditorProps) {
   const { t } = useI18n();
   const now = new Date();
   let defaultEnd = initialEndedAt
@@ -36,9 +39,9 @@ export function SessionEditor({ isOpen, userId, session, defaultDate, initialSta
   }
   const initialStartedValue = toLocalInput(session?.started_at ?? defaultStart);
   const initialEndedValue = toLocalInput(session?.ended_at ?? defaultEnd);
-  const initialTagId = session?.default_tag_id ?? "";
-  const [activity, setActivity] = useState(session?.activity ?? "");
-  const [tagId, setTagId] = useState(initialTagId);
+  const initialTagValue = session?.default_tag_id ?? initialTagId ?? "";
+  const [activity, setActivity] = useState(session?.activity ?? initialActivity ?? "");
+  const [tagId, setTagId] = useState(initialTagValue);
   const [startedAt, setStartedAt] = useState(initialStartedValue);
   const [endedAt, setEndedAt] = useState(initialEndedValue);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +60,8 @@ export function SessionEditor({ isOpen, userId, session, defaultDate, initialSta
         startedAt,
         endedAt,
         adjustDuration: startedAt !== initialStartedValue || endedAt !== initialEndedValue,
-        adjustTag: tagId !== initialTagId,
+        adjustTag: tagId !== initialTagValue,
+        sourcePlanId,
       });
     } catch (caught) {
       if (caught instanceof SessionBlockError) {
@@ -65,7 +69,9 @@ export function SessionEditor({ isOpen, userId, session, defaultDate, initialSta
           ? "today.overlap"
           : caught.code === "cross-day"
             ? "today.crossDay"
-            : "today.invalidRange";
+            : caught.code === "invalid-plan"
+              ? "coreHour.planNotAvailable"
+              : "today.invalidRange";
         setError(t(errorKey));
       } else {
         setError(t("today.saveFailed"));

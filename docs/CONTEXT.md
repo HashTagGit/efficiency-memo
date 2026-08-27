@@ -30,3 +30,21 @@ _Avoid_: Health score, counter
 **Focus Deferral**:
 The rule that a due reminder waits while CoreHour has an active session, without changing that session.
 _Avoid_: Focus timer, automatic pause
+
+## CoreHour planning
+
+**Planned Block**:
+A user-declared intention to focus during a specific local time range; it is not tracked time.
+_Avoid_: Session, calendar event
+
+**Actual Session**:
+A confirmed record of focused time that contributes to CoreHour history and Insights.
+_Avoid_: Plan, estimate
+
+**Plan Conversion**:
+An explicit action that creates an Actual Session from a Planned Block and links the two records.
+_Avoid_: Auto-complete, scheduled timer
+
+**Skipped Plan**:
+A Planned Block the user intentionally did not execute; it remains part of plan-versus-actual review.
+_Avoid_: Deleted plan, failed session

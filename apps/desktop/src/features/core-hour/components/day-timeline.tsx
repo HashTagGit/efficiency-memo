@@ -7,20 +7,24 @@ import {
 import type { TodaySession } from "../today-data";
 import { useI18n } from "../../../lib/i18n";
 import { isoDay } from "../analytics";
+import { layoutPlannedBlocks, type PlannedBlock } from "../planned-blocks";
 
 const HOUR_HEIGHT = 64;
 
 interface DayTimelineProps {
   date: string;
   sessions: TodaySession[];
-  onAdd: (startedAt: Date) => void;
-  onEdit: (session: TodaySession) => void;
+  plans: PlannedBlock[];
+  onAddPlan: (startedAt: Date) => void;
+  onEditPlan: (plan: PlannedBlock) => void;
+  onEditSession: (session: TodaySession) => void;
 }
 
-export function DayTimeline({ date, sessions, onAdd, onEdit }: DayTimelineProps) {
+export function DayTimeline({ date, sessions, plans, onAddPlan, onEditPlan, onEditSession }: DayTimelineProps) {
   const { locale, t } = useI18n();
   const bounds = TIMELINE_BOUNDS;
   const layout = layoutTimelineSessions(sessions, date, HOUR_HEIGHT);
+  const planLayout = layoutPlannedBlocks(plans, date, HOUR_HEIGHT);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [now, setNow] = useState(() => new Date());
   const hours = Array.from(
@@ -53,7 +57,7 @@ export function DayTimeline({ date, sessions, onAdd, onEdit }: DayTimelineProps)
   function addAtMinute(minute: number) {
     const startedAt = new Date(date + "T00:00:00");
     startedAt.setMinutes(minute);
-    onAdd(startedAt);
+    onAddPlan(startedAt);
   }
 
   function handleCanvasClick(event: React.MouseEvent<HTMLDivElement>) {
@@ -71,12 +75,11 @@ export function DayTimeline({ date, sessions, onAdd, onEdit }: DayTimelineProps)
 
   return (
     <section aria-labelledby="timeline-heading">
-      <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
+      <div className="mb-3">
         <div>
           <h2 id="timeline-heading" className="text-base font-semibold text-foreground">{t("timeline.title")}</h2>
-          <p className="mt-1 text-sm text-muted">{t("timeline.hint")}</p>
+          <p className="mt-1 text-sm text-muted">{t("coreHour.planTimelineHint")}</p>
         </div>
-        <span className="text-sm text-muted">{sessions.length}</span>
       </div>
       <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
         <div ref={scrollRef} className="max-h-[34rem] overflow-y-auto">
@@ -98,8 +101,41 @@ export function DayTimeline({ date, sessions, onAdd, onEdit }: DayTimelineProps)
               onKeyDown={handleCanvasKeyDown}
               role="button"
               tabIndex={0}
-              aria-label={t("timeline.addAtTime")}
+              aria-label={t("coreHour.addPlan")}
             />
+            {planLayout.map((item) => {
+              const title = item.plan.title.trim() || t("coreHour.untitledPlan");
+              const statusClass = item.plan.status === "planned"
+                ? "border-dashed border-info bg-info/10 text-foreground"
+                : item.plan.status === "completed"
+                  ? "border-info/60 bg-info/5 text-foreground opacity-60"
+                  : "border-dotted border-border bg-surface text-muted opacity-70";
+              return (
+                <button
+                  key={item.plan.id}
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onEditPlan(item.plan);
+                  }}
+                  className={"absolute z-10 overflow-hidden rounded-md border px-2 py-1 text-left transition-[filter] hover:brightness-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent " + statusClass}
+                  style={{
+                    top: item.top,
+                    height: item.height,
+                    left: `calc(4.75rem + ${(item.lane / item.laneCount) * 43}%)`,
+                    width: `calc(${43 / item.laneCount}% - 2px)`,
+                  }}
+                  aria-label={t("coreHour.editPlanNamed", { title })}
+                >
+                  <span className="block truncate text-sm font-medium">{title}</span>
+                  {item.height >= 38 && (
+                    <span className="mt-0.5 block truncate text-xs opacity-75">
+                      {formatter.format(new Date(item.plan.started_at))}{" – "}{formatter.format(new Date(item.plan.ended_at))}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
             {layout.map((item) => {
               const color = item.session.tag_color ?? "var(--success)";
               return (
@@ -108,12 +144,13 @@ export function DayTimeline({ date, sessions, onAdd, onEdit }: DayTimelineProps)
                   type="button"
                   onClick={(event) => {
                     event.stopPropagation();
-                    onEdit(item.session);
+                    onEditSession(item.session);
                   }}
-                  className="absolute left-20 right-4 z-10 overflow-hidden rounded-md border border-border border-l-4 px-3 py-1.5 text-left shadow-sm transition-[filter,transform] hover:-translate-y-px hover:brightness-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  className="absolute right-4 z-10 overflow-hidden rounded-md border border-border border-l-4 px-3 py-1.5 text-left shadow-sm transition-[filter,transform] hover:-translate-y-px hover:brightness-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                   style={{
                     top: item.top,
                     height: item.height,
+                    left: "calc(4.75rem + 45%)",
                     borderLeftColor: color,
                     backgroundColor: "color-mix(in srgb, " + color + " 14%, var(--surface))",
                   }}

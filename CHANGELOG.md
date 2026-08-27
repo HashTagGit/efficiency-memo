@@ -13,6 +13,8 @@ All notable changes to this project will be documented in this file.
 - The desktop workspace now supports persisted light and dark themes with reorganized navigation and consistent action styling.
 
 ### Added
+- CoreHour Plan vs Actual with separate planned blocks, bilingual day/week timelines, skip/edit actions, and atomic conversion into confirmed sessions.
+- A seventh SQLite migration for CoreHour planned blocks and their optional links to actual sessions.
 - System/light/dark appearance modes and three persisted semantic color palettes: Ember, Grove, and Tide.
 - Pause & Hydrate standalone tool with break and hydration schedules, native notifications, focus deferral, completion/postpone/mute actions, and timestamped local history.
 - A sixth SQLite migration for Pause & Hydrate reminder state and events.

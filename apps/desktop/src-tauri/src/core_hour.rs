@@ -20,6 +20,7 @@ pub(crate) struct SessionBlockInput {
     new_session_id: String,
     new_check_in_id: String,
     new_entry_id: String,
+    source_plan_id: Option<String>,
 }
 
 fn redistribute_durations(durations: &[i64], target: i64) -> Vec<i64> {
@@ -270,6 +271,21 @@ fn save_session_block(
         }
     }
 
+    if input.id.is_none() {
+        if let Some(plan_id) = input.source_plan_id.as_deref() {
+            let updated_at = Utc::now().to_rfc3339();
+            let changed = transaction
+                .execute(
+                    "UPDATE ch_plans SET status = 'completed', session_id = ?1, updated_at = ?2, synced = 0 WHERE id = ?3 AND user_id = ?4 AND status = 'planned' AND session_id IS NULL",
+                    params![session_id, updated_at, plan_id, input.user_id],
+                )
+                .map_err(|error| error.to_string())?;
+            if changed != 1 {
+                return Err("invalid-plan".to_string());
+            }
+        }
+    }
+
     transaction.commit().map_err(|error| error.to_string())?;
     Ok(session_id)
 }
@@ -314,6 +330,12 @@ mod tests {
                 CREATE TABLE ch_tags (
                     id TEXT PRIMARY KEY, user_id TEXT NOT NULL, is_archived INTEGER NOT NULL
                 );
+                CREATE TABLE ch_plans (
+                    id TEXT PRIMARY KEY, user_id TEXT NOT NULL, title TEXT NOT NULL,
+                    tag_id TEXT, started_at TEXT NOT NULL, ended_at TEXT NOT NULL,
+                    status TEXT NOT NULL, session_id TEXT, created_at TEXT NOT NULL,
+                    updated_at TEXT NOT NULL, synced INTEGER NOT NULL
+                );
                 INSERT INTO ch_tags VALUES ('tag-1', 'local-user', 0);
                 ",
             )
@@ -336,6 +358,7 @@ mod tests {
             new_session_id: "new-session".to_string(),
             new_check_in_id: "new-check-in".to_string(),
             new_entry_id: "new-entry".to_string(),
+            source_plan_id: None,
         }
     }
 
@@ -467,5 +490,52 @@ mod tests {
             .query_row("SELECT COUNT(*) FROM ch_sessions", [], |row| row.get(0))
             .unwrap();
         assert_eq!(session_count, 0);
+    }
+
+    #[test]
+    fn plan_conversion_links_session_in_same_transaction() {
+        let mut connection = test_connection();
+        connection
+            .execute(
+                "INSERT INTO ch_plans VALUES ('plan-1', 'local-user', 'Planning', 'tag-1', ?1, ?2, 'planned', NULL, ?1, ?1, 0)",
+                params![
+                    "2026-08-27T10:00:00.000Z",
+                    "2026-08-27T11:00:00.000Z",
+                ],
+            )
+            .unwrap();
+        let mut conversion = input(None, true);
+        conversion.source_plan_id = Some("plan-1".to_string());
+
+        let session_id = save_session_block(conversion, &mut connection).unwrap();
+        let plan: (String, String) = connection
+            .query_row(
+                "SELECT status, session_id FROM ch_plans WHERE id = 'plan-1'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(session_id, "new-session");
+        assert_eq!(plan, ("completed".to_string(), "new-session".to_string()));
+
+        let mut stale_conversion = input(None, true);
+        stale_conversion.started_at = "2026-08-27T12:00:00.000Z".to_string();
+        stale_conversion.ended_at = "2026-08-27T13:00:00.000Z".to_string();
+        stale_conversion.new_session_id = "rolled-back-session".to_string();
+        stale_conversion.new_check_in_id = "rolled-back-check-in".to_string();
+        stale_conversion.new_entry_id = "rolled-back-entry".to_string();
+        stale_conversion.source_plan_id = Some("missing-plan".to_string());
+        assert_eq!(
+            save_session_block(stale_conversion, &mut connection),
+            Err("invalid-plan".to_string())
+        );
+        let rolled_back: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM ch_sessions WHERE id = 'rolled-back-session'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(rolled_back, 0);
     }
 }

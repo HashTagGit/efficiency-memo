@@ -40,7 +40,7 @@ Produces:
 | macOS | `apps/desktop/src-tauri/target/release/bundle/dmg/EfficiencyMemo_0.0.2_x64.dmg` |
 | Linux | `apps/desktop/src-tauri/target/release/bundle/{deb,appimage,rpm}/EfficiencyMemo_*.{deb,AppImage,rpm}` |
 
-Install the `.msi` (or platform equivalent) and launch from the Start menu. On first launch, the app creates its database in the OS app-data directory and runs all 3 migrations.
+Install the `.msi` (or platform equivalent) and launch from the Start menu. On first launch, the app creates its database in the OS app-data directory and runs all 7 migrations.
 
 ### Frontend-only build (no Rust)
 
@@ -136,7 +136,7 @@ The MSI installer includes a WebView2 bootstrapper that downloads WebView2 on fi
 
 ### "no such table: users" (fresh install)
 
-Migrations didn't run. Delete `efficiency-memo.db*` files from the OS app-data directory and restart the app. The plugin will re-run all 3 migrations.
+Migrations didn't run. Delete `efficiency-memo.db*` files from the OS app-data directory and restart the app. The plugin will re-run all 7 migrations.
 
 ### Sync fails with "Failed to get password from keychain"
 

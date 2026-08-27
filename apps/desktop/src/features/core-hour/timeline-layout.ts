@@ -13,19 +13,32 @@ export interface TimelineSessionLayout {
   height: number;
 }
 
+export interface TimelineInterval {
+  started_at: string;
+  ended_at: string;
+}
+
+export interface TimelineIntervalLayout {
+  startMinute: number;
+  endMinute: number;
+  top: number;
+  height: number;
+}
+
 export const TIMELINE_BOUNDS: TimelineBounds = {
   startMinute: 0,
   endMinute: 1440,
 };
 
 function dayRange(date: string): { start: number; end: number } {
-  const start = new Date(date + "T00:00:00").getTime();
-  const end = new Date(date + "T24:00:00").getTime();
-  return { start, end };
+  const startDate = new Date(date + "T00:00:00");
+  const endDate = new Date(startDate);
+  endDate.setDate(endDate.getDate() + 1);
+  return { start: startDate.getTime(), end: endDate.getTime() };
 }
 
 function sessionMinutes(
-  session: TodaySession,
+  session: TimelineInterval,
   date: string,
 ): { startMinute: number; endMinute: number } {
   const day = dayRange(date);
@@ -41,18 +54,29 @@ function sessionMinutes(
   };
 }
 
+export function layoutTimelineInterval(
+  interval: TimelineInterval,
+  date: string,
+  hourHeight: number,
+): TimelineIntervalLayout {
+  const minutes = sessionMinutes(interval, date);
+  return {
+    ...minutes,
+    top: minutes.startMinute / 60 * hourHeight,
+    height: Math.max(24, (minutes.endMinute - minutes.startMinute) / 60 * hourHeight - 2),
+  };
+}
+
 export function layoutTimelineSessions(
   sessions: TodaySession[],
   date: string,
   hourHeight: number,
 ): TimelineSessionLayout[] {
   return sessions.map((session) => {
-    const minutes = sessionMinutes(session, date);
+    const layout = layoutTimelineInterval(session, date, hourHeight);
     return {
       session,
-      ...minutes,
-      top: minutes.startMinute / 60 * hourHeight,
-      height: Math.max(24, (minutes.endMinute - minutes.startMinute) / 60 * hourHeight - 2),
+      ...layout,
     };
   });
 }

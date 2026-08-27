@@ -35,7 +35,7 @@ The desktop app lives in `apps/desktop/` and is the recommended deployable surfa
 ### SQLite Storage
 
 - Tauri plugin-sql opens `sqlite:efficiency-memo.db` in the OS app-data directory.
-- 6 SQLite DDL migrations in `src-tauri/migrations/`.
+- 7 SQLite DDL migrations in `src-tauri/migrations/`.
 - `lib/db.ts` wraps `Database.load()` with `dbSelect()`/`dbExecute()` helpers.
 - `DevicePersistenceContract` in `features/charger-reminder/db-tauri.ts` (8 CRUD methods).
 - `DbResult` interface in `features/core-hour/db-tauri.ts`.
@@ -50,7 +50,8 @@ The desktop app lives in `apps/desktop/` and is the recommended deployable surfa
 
 - `features/core-hour/` owns the Today, Timeline, Insights, Tags, and Settings routes.
 - Today stores lightweight activity context on each session and derives recent/favorite activity combinations from local session history.
-- Timeline lays completed sessions onto a selected local day, with native date navigation and 15-minute click snapping for manual entry.
+- Timeline keeps planned blocks in `ch_plans` separate from actual `ch_sessions`, with day/week views and 15-minute click snapping for new plans.
+- Explicit plan conversion creates the actual session and links the plan in the same Rust transaction; rejected session validation leaves the plan unchanged.
 - Insights owns aggregate analytics: local Monday-to-Sunday goal review, previous-week comparison, range trends, and activity/tag breakdowns.
 - Daily focus goals reuse the existing `ch_settings` key-value table; no schema migration is required.
 - Manual session changes validate overlaps and update the session and its check-in durations in one SQLite transaction.

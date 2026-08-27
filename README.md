@@ -12,7 +12,8 @@ EfficiencyMemo is a pnpm monorepo with independent tools behind one desktop work
 - Choose a 15, 30, or 60 minute interval for the next session
 - Start, pause, continue, and end sessions; an interrupted session restores paused
 - Add missed time manually and edit completed session activity, tag, start, or end time
-- Review each day on a visual timeline and add a 30-minute session from an empty time slot
+- Plan focus blocks separately from recorded time, compare plan and actual in day/week timelines, and explicitly convert a plan into a session
+- Add missed time manually from the Timeline toolbar without inflating actual time from unconfirmed plans
 - Set a daily focus target and review weekly progress, activity, and tag trends in Insights
 - Categorize a due check-in with one tag and an optional note, or skip it as uncategorized
 - Review daily totals, tag totals, sessions, and check-ins
@@ -57,7 +58,7 @@ Output:
 - Windows: `apps/desktop/src-tauri/target/release/bundle/msi/EfficiencyMemo_0.0.2_x64_en-US.msi`
 - Standalone `.exe`: `apps/desktop/src-tauri/target/release/EfficiencyMemo.exe`
 
-On first launch the app creates its database in `%APPDATA%/com.efficiency-memo.app/efficiency-memo.db` (Windows) or `~/Library/Application Support/com.efficiency-memo.app/efficiency-memo.db` (macOS). All 6 migrations run automatically.
+On first launch the app creates its database in `%APPDATA%/com.efficiency-memo.app/efficiency-memo.db` (Windows) or `~/Library/Application Support/com.efficiency-memo.app/efficiency-memo.db` (macOS). All 7 migrations run automatically.
 
 ### Using the app
 
@@ -65,8 +66,8 @@ On first launch the app creates its database in `%APPDATA%/com.efficiency-memo.a
 2. **Create tags** — Open **CoreHour → Tags** and add the categories you want to use.
 3. **Set your cadence** — Open **CoreHour → Settings**, choose a check-in interval and a daily focus goal, then save.
 4. **Track time** — Open **CoreHour → Today**, describe the activity or continue a recent favorite, then start a session. At each due check-in, choose one tag and an optional note, or skip. Allow the operating-system notification permission for background reminders.
-5. **Review the day** — Open **CoreHour → Timeline** to select a date, inspect or edit session blocks, add missed time from an empty slot, and review totals and check-ins.
-6. **Review the week** — Open **CoreHour → Insights** to compare this week with last week, inspect goal consistency, and review activity and tag trends.
+5. **Plan and review time** — Open **CoreHour → Timeline** to add planned focus from empty slots, switch between day and week views, convert plans into actual records, or use **Add time** for missed sessions.
+6. **Review the week** — Open **CoreHour → Insights** to compare confirmed focus with last week, inspect goal consistency, and review activity and tag trends. Plans never enter these totals.
 7. **Set healthy reminders** — Open **Pause & Hydrate**, enable either reminder, choose its interval, and save. Due reminders wait while CoreHour is active.
 8. **Adjust appearance** — Open **Settings** to choose a mode, color palette, and language. Changes preview and persist immediately.
 
@@ -100,13 +101,13 @@ apps/desktop/
 │   └── main.tsx           # React entry
 └── src-tauri/             # Rust native shell
     ├── src/               # Plugin registration and Tauri command handlers
-    ├── migrations/        # 6 SQLite migration files
+    ├── migrations/        # 7 SQLite migration files
     └── tauri.conf.json    # Bundle config (msi + nsis targets)
 ```
 
 Key design choices:
 - **No SSR** — Tauri uses a webview, not a browser, so server-side rendering is unnecessary. Vite + React Router handles all routing.
-- **Local SQLite** — Tauri plugin-sql opens `sqlite:efficiency-memo.db` from the OS app-data directory. All 6 migrations run on first launch.
+- **Local SQLite** — Tauri plugin-sql opens `sqlite:efficiency-memo.db` from the OS app-data directory. All 7 migrations run on first launch.
 - **CoreHour session state** — Active-session progress is kept locally and restored as paused after an app restart, so closed-app time is never counted.
 - **Bilingual workspace** — The desktop shell and active tools support English and Simplified Chinese, with the selected language persisted locally.
 - **Appearance preferences** — System/light/dark mode and Ember/Grove/Tide palettes are persisted locally; the workspace shell retains a quick mode toggle.

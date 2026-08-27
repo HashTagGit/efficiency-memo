@@ -1,13 +1,16 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Button, PageHeader } from "@memo/ui";
 import { dbExecute, dbSelect } from "../../../lib/db";
 import type { CheckInWithTag, Tag } from "../types";
 import { type ExportRange, rangeToFromDate, recordsToCsv, exportFilename } from "../export";
-import { isoDay } from "../analytics";
+import { isoDay, weekDays } from "../analytics";
 import { useI18n } from "../../../lib/i18n";
 import { SessionEditor } from "../components/session-editor";
 import { loadSessionsForDay, type TodaySession } from "../today-data";
 import { DayTimeline } from "../components/day-timeline";
+import { WeekTimeline } from "../components/week-timeline";
+import { PlanEditor } from "../components/plan-editor";
+import { loadPlansForRange, type PlannedBlock } from "../planned-blocks";
 
 const today = () => isoDay(new Date());
 
@@ -46,20 +49,35 @@ export default function HistoryPage({ userId }: { userId: string }) {
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingSession, setEditingSession] = useState<TodaySession | null>(null);
   const [editorStart, setEditorStart] = useState<Date | null>(null);
+  const [sourcePlan, setSourcePlan] = useState<PlannedBlock | null>(null);
+  const [plans, setPlans] = useState<PlannedBlock[]>([]);
+  const [planEditorOpen, setPlanEditorOpen] = useState(false);
+  const [editingPlan, setEditingPlan] = useState<PlannedBlock | null>(null);
+  const [planStart, setPlanStart] = useState<Date | null>(null);
+  const [view, setView] = useState<"day" | "week">("day");
+  const visibleDays = useMemo(
+    () => view === "day" ? [date] : weekDays(new Date(date + "T12:00:00")),
+    [date, view],
+  );
 
   const load = useCallback(async () => {
-    const [checkIns, availableTags, daySessions] = await Promise.all([
-      dbSelect<CheckInWithTag>(
+    const rangeStart = new Date(visibleDays[0] + "T00:00:00");
+    const rangeEnd = new Date(visibleDays[visibleDays.length - 1] + "T00:00:00");
+    rangeEnd.setDate(rangeEnd.getDate() + 1);
+    const [checkIns, availableTags, visibleSessions, visiblePlans] = await Promise.all([
+      view === "day" ? dbSelect<CheckInWithTag>(
         "SELECT ci.id, ci.session_id, ci.checked_at, ci.skipped, ci.note, ci.duration_seconds, ci.synced, e.tag_id, t.name AS tag_name, t.color AS tag_color FROM ch_check_ins ci JOIN ch_sessions s ON s.id = ci.session_id LEFT JOIN ch_check_in_entries e ON e.check_in_id = ci.id LEFT JOIN ch_tags t ON t.id = e.tag_id WHERE s.user_id = $1 AND date(ci.checked_at, 'localtime') = $2 ORDER BY ci.checked_at DESC",
         [userId, date],
-      ),
+      ) : Promise.resolve([]),
       dbSelect<Tag>("SELECT * FROM ch_tags WHERE user_id = $1 AND is_archived = 0 ORDER BY created_at", [userId]),
-      loadSessionsForDay(userId, new Date(date + "T12:00:00")),
+      Promise.all(visibleDays.map((day) => loadSessionsForDay(userId, new Date(day + "T12:00:00")))),
+      loadPlansForRange(userId, rangeStart, rangeEnd),
     ]);
     setEntries(checkIns.map((e) => ({ ...e, skipped: Boolean(e.skipped), duration_seconds: Number(e.duration_seconds) })));
     setTags(availableTags);
-    setSessions(daySessions);
-  }, [date, userId]);
+    setSessions(Array.from(new Map(visibleSessions.flat().map((session) => [session.id, session])).values()));
+    setPlans(visiblePlans);
+  }, [date, userId, view, visibleDays]);
 
   useEffect(() => { void load(); }, [load]);
 
@@ -92,17 +110,40 @@ export default function HistoryPage({ userId }: { userId: string }) {
   }
 
   const totalSeconds = entries.reduce((sum, e) => sum + e.duration_seconds, 0);
+  const navigationStep = view === "day" ? 1 : 7;
+  const openNewPlan = (startedAt: Date) => {
+    setEditingPlan(null);
+    setPlanStart(startedAt);
+    setPlanEditorOpen(true);
+  };
+  const openNewSession = (startedAt: Date | null = null, plan: PlannedBlock | null = null) => {
+    setEditingSession(null);
+    setEditorStart(startedAt);
+    setSourcePlan(plan);
+    setEditorOpen(true);
+  };
   return (
     <div className="mx-auto max-w-5xl space-y-6" data-testid="ch-history-page">
       <PageHeader
         title={t("coreHour.history")}
-        subtitle={t("coreHour.historySubtitle", { minutes: Math.round(totalSeconds / 60), date })}
+        subtitle={view === "day"
+          ? t("coreHour.historySubtitle", { minutes: Math.round(totalSeconds / 60), date })
+          : t("coreHour.historyWeekSubtitle", { start: visibleDays[0], end: visibleDays[6] })}
         action={
           <div className="flex flex-wrap items-center gap-2">
             <Button
+              variant="secondary"
               size="sm"
               className="gap-1.5"
-              onClick={() => { setEditingSession(null); setEditorStart(null); setEditorOpen(true); }}
+              onClick={() => openNewPlan(new Date(date + "T09:00:00"))}
+            >
+              <span aria-hidden="true">+</span>
+              {t("coreHour.addPlan")}
+            </Button>
+            <Button
+              size="sm"
+              className="gap-1.5"
+              onClick={() => openNewSession()}
             >
               <span aria-hidden="true">+</span>
               {t("today.addTime")}
@@ -125,13 +166,27 @@ export default function HistoryPage({ userId }: { userId: string }) {
       />
 
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface p-2">
-        <div className="flex items-center gap-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex rounded-md border border-border p-0.5" role="group" aria-label={t("coreHour.timelineView")}>
+            {(["day", "week"] as const).map((mode) => (
+              <Button
+                key={mode}
+                variant={view === mode ? "primary" : "ghost"}
+                size="sm"
+                aria-pressed={view === mode}
+                onClick={() => setView(mode)}
+              >
+                {t(mode === "day" ? "coreHour.dayView" : "coreHour.weekView")}
+              </Button>
+            ))}
+          </div>
+          <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            onClick={() => setDate((current) => shiftDate(current, -1))}
-            aria-label={t("timeline.previousDay")}
+            onClick={() => setDate((current) => shiftDate(current, -navigationStep))}
+            aria-label={t(view === "day" ? "timeline.previousDay" : "coreHour.previousWeek")}
           >
             <ArrowIcon direction="left" />
           </Button>
@@ -142,11 +197,12 @@ export default function HistoryPage({ userId }: { userId: string }) {
             variant="ghost"
             size="icon"
             className="h-8 w-8"
-            onClick={() => setDate((current) => shiftDate(current, 1))}
-            aria-label={t("timeline.nextDay")}
+            onClick={() => setDate((current) => shiftDate(current, navigationStep))}
+            aria-label={t(view === "day" ? "timeline.nextDay" : "coreHour.nextWeek")}
           >
             <ArrowIcon direction="right" />
           </Button>
+          </div>
         </div>
         <input
           type="date"
@@ -157,22 +213,33 @@ export default function HistoryPage({ userId }: { userId: string }) {
         />
       </div>
 
-      <DayTimeline
-        date={date}
-        sessions={sessions}
-        onAdd={(startedAt) => {
-          setEditingSession(null);
-          setEditorStart(startedAt);
-          setEditorOpen(true);
-        }}
-        onEdit={(session) => {
-          setEditingSession(session);
-          setEditorStart(null);
-          setEditorOpen(true);
-        }}
-      />
+      <div aria-label={t("coreHour.timelineLegend")} className="flex flex-wrap gap-4 text-xs text-muted">
+        <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-5 rounded-sm border border-dashed border-info bg-info/10" />{t("coreHour.planned")}</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-5 rounded-sm border-l-4 border-success bg-success/10" />{t("coreHour.actual")}</span>
+        <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-5 rounded-sm border border-dotted border-border" />{t("coreHour.skippedPlan")}</span>
+      </div>
 
-      <section className="space-y-2" data-testid="ch-history-entries">
+      {view === "day" ? (
+        <DayTimeline
+          date={date}
+          sessions={sessions}
+          plans={plans}
+          onAddPlan={openNewPlan}
+          onEditPlan={(plan) => { setEditingPlan(plan); setPlanStart(null); setPlanEditorOpen(true); }}
+          onEditSession={(session) => { setEditingSession(session); setEditorStart(null); setSourcePlan(null); setEditorOpen(true); }}
+        />
+      ) : (
+        <WeekTimeline
+          days={visibleDays}
+          sessions={sessions}
+          plans={plans}
+          onAddPlan={openNewPlan}
+          onEditPlan={(plan) => { setEditingPlan(plan); setPlanStart(null); setPlanEditorOpen(true); }}
+          onEditSession={(session) => { setEditingSession(session); setEditorStart(null); setSourcePlan(null); setEditorOpen(true); }}
+        />
+      )}
+
+      {view === "day" && <section className="space-y-2" data-testid="ch-history-entries">
         <h2 className="border-b border-border pb-2 text-sm font-semibold text-foreground">{t("coreHour.checkIns")}</h2>
         {entries.map((entry) => (
           <article key={entry.id} className="rounded-lg border border-border bg-surface px-4 py-3">
@@ -216,16 +283,33 @@ export default function HistoryPage({ userId }: { userId: string }) {
         {entries.length === 0 && (
           <p className="py-8 text-center text-sm text-muted">{t("coreHour.noCheckIns")}</p>
         )}
-      </section>
+      </section>}
+      {planEditorOpen && (
+        <PlanEditor
+          key={editingPlan?.id ?? planStart?.toISOString() ?? "new-plan"}
+          isOpen
+          userId={userId}
+          plan={editingPlan}
+          initialStartedAt={planStart ?? undefined}
+          initialEndedAt={planStart ? new Date(planStart.getTime() + 30 * 60_000) : undefined}
+          tags={tags}
+          onClose={() => setPlanEditorOpen(false)}
+          onSaved={load}
+          onConvert={(plan) => openNewSession(new Date(plan.started_at), plan)}
+        />
+      )}
       {editorOpen && (
         <SessionEditor
-          key={editingSession?.id ?? editorStart?.toISOString() ?? "new"}
+          key={editingSession?.id ?? sourcePlan?.id ?? editorStart?.toISOString() ?? "new"}
           isOpen
           userId={userId}
           session={editingSession}
           defaultDate={date}
           initialStartedAt={editorStart ?? undefined}
-          initialEndedAt={editorStart ? new Date(editorStart.getTime() + 30 * 60_000) : undefined}
+          initialEndedAt={sourcePlan ? new Date(sourcePlan.ended_at) : editorStart ? new Date(editorStart.getTime() + 30 * 60_000) : undefined}
+          initialActivity={sourcePlan?.title}
+          initialTagId={sourcePlan?.tag_id}
+          sourcePlanId={sourcePlan?.id}
           tags={tags}
           onClose={() => setEditorOpen(false)}
           onSaved={async () => {

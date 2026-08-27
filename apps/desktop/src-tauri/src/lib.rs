@@ -46,6 +46,12 @@ pub fn run() {
             sql: include_str!("../migrations/0006_pause_hydrate.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 7,
+            description: "create core hour planned blocks",
+            sql: include_str!("../migrations/0007_ch_planned_blocks.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
