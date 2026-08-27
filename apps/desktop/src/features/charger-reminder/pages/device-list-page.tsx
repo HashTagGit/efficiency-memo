@@ -2,95 +2,74 @@
 
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { Button, EmptyState, PageHeader } from "@memo/ui";
 import { chargerReminderDb } from "../db-tauri";
 import { getCurrentUser } from "../../../lib/auth";
 import { DeviceList } from "../components/device-list";
 import type { DeviceWithChargeHistory } from "../contracts";
+import { useI18n } from "../../../lib/i18n";
 
 export default function DeviceListPage() {
   const [devices, setDevices] = useState<DeviceWithChargeHistory[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  const { t } = useI18n();
 
   async function loadDevices() {
     try {
       setLoading(true);
-      setError(null);
-      const user = getCurrentUser()!;
+      setFailed(false);
+      const user = getCurrentUser();
       if (!user) {
-        throw new Error("Not signed in");
+        setFailed(true);
+        return;
       }
       const result = await chargerReminderDb.listDevicesByUser(user.id);
       setDevices(result);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load devices");
+    } catch {
+      setFailed(true);
     } finally {
       setLoading(false);
     }
   }
 
   useEffect(() => {
-    loadDevices();
+    void loadDevices();
   }, []);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <p className="text-muted">Loading devices...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16">
-        <p className="text-danger">{error}</p>
-        <button
-          onClick={loadDevices}
-          className="mt-4 text-sm font-medium text-accent hover:underline"
-        >
-          Try again
-        </button>
-      </div>
-    );
-  }
 
   return (
     <div className="p-6">
-      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Charger Reminder</h1>
-          <p className="text-muted mt-1">
-            Manage your battery-powered devices and charging reminders
-          </p>
-        </div>
-        <Link
+      <PageHeader
+        title={t("chargerReminder.title")}
+        subtitle={t("chargerReminder.subtitle")}
+        action={<Link
           to="/tools/charger-reminder/new"
           data-testid="add-device-link"
-          className="inline-flex items-center justify-center rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-background transition-colors hover:bg-accent-strong"
+          className="inline-flex items-center justify-center rounded-md bg-accent px-4 py-2.5 text-sm font-semibold text-on-accent transition-colors hover:bg-accent-strong"
         >
-          Add Device
-        </Link>
-      </div>
+          {t("chargerReminder.addDevice")}
+        </Link>}
+      />
 
-      {devices.length === 0 ? (
-        <div
-          data-testid="empty-state"
-          className="flex flex-col items-center justify-center py-16 text-center"
-        >
-          <h2 className="text-lg font-semibold text-foreground">
-            No devices yet
-          </h2>
-          <p className="text-muted mt-1">
-            Add your first device to start tracking battery levels
-          </p>
-          <Link
+      {loading ? (
+        <p className="py-16 text-center text-sm text-muted" role="status" aria-live="polite">{t("chargerReminder.loadingDevices")}</p>
+      ) : failed ? (
+        <EmptyState
+          title={t("chargerReminder.loadDevicesErrorTitle")}
+          description={t("chargerReminder.loadDevicesErrorDescription")}
+          action={<Button onClick={() => void loadDevices()}>{t("chargerReminder.retry")}</Button>}
+        />
+      ) : devices.length === 0 ? (
+        <EmptyState
+          title={t("chargerReminder.emptyTitle")}
+          description={t("chargerReminder.emptyDescription")}
+          action={<Link
             to="/tools/charger-reminder/new"
-            className="mt-4 text-sm font-medium text-accent hover:underline"
+            className="text-sm font-semibold text-accent hover:underline"
           >
-            Add your first device
-          </Link>
-        </div>
+            {t("chargerReminder.emptyAction")}
+          </Link>}
+        />
       ) : (
         <DeviceList devices={devices} />
       )}

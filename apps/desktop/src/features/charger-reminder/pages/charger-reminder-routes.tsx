@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Routes, Route, useParams, useNavigate } from "react-router-dom";
+import { Button, EmptyState } from "@memo/ui";
 import DeviceListPage from "./device-list-page";
 import { DeviceForm } from "../components/device-form";
 import type { DeviceFormData } from "../components/device-form";
@@ -10,12 +11,70 @@ import { chargerReminderDb } from "../db-tauri";
 import { getCurrentUser } from "../../../lib/auth";
 import { devicePresetSeeds } from "../device-presets";
 import type { DeviceWithChargeHistory } from "../contracts";
+import { useI18n } from "../../../lib/i18n";
 
 const presets = devicePresetSeeds.map((p) => ({
   type: p.type,
   label: p.label,
   default_threshold: p.default_threshold,
 }));
+
+function useDevice(id: string | undefined) {
+  const [device, setDevice] = useState<DeviceWithChargeHistory | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+
+  const load = useCallback(async () => {
+    if (!id) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setFailed(false);
+    try {
+      setDevice(await chargerReminderDb.getDeviceById(id));
+    } catch {
+      setFailed(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  return { device, loading, failed, retry: load };
+}
+
+function DevicePageState({
+  state,
+  onRetry,
+  onBack,
+}: {
+  state: "loading" | "failed" | "not-found";
+  onRetry: () => void;
+  onBack: () => void;
+}) {
+  const { t } = useI18n();
+  if (state === "loading") {
+    return <p className="py-16 text-center text-sm text-muted" role="status" aria-live="polite">{t("chargerReminder.loadingDevice")}</p>;
+  }
+
+  const failed = state === "failed";
+  return (
+    <EmptyState
+      title={t(failed ? "chargerReminder.loadDeviceErrorTitle" : "chargerReminder.deviceNotFoundTitle")}
+      description={t(failed ? "chargerReminder.loadDeviceErrorDescription" : "chargerReminder.deviceNotFoundDescription")}
+      action={(
+        <div className="flex flex-wrap justify-center gap-2">
+          {failed && <Button onClick={onRetry}>{t("chargerReminder.retry")}</Button>}
+          <Button variant="secondary" onClick={onBack}>{t("chargerReminder.backToDevices")}</Button>
+        </div>
+      )}
+    />
+  );
+}
 
 function NewDevicePage() {
   const navigate = useNavigate();
@@ -43,49 +102,13 @@ function NewDevicePage() {
 
 function DeviceDetailPage() {
   const { id } = useParams<{ id: string }>();
-  const [device, setDevice] = useState<DeviceWithChargeHistory | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const { device, loading, failed, retry } = useDevice(id);
+  const back = () => navigate("/tools/charger-reminder");
 
-  useEffect(() => {
-    async function load() {
-      if (!id) return;
-      try {
-        setLoading(true);
-        const result = await chargerReminderDb.getDeviceById(id);
-        setDevice(result);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load device");
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, [id]);
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <p className="text-muted">Loading device...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16">
-        <p className="text-danger">{error}</p>
-      </div>
-    );
-  }
-
-  if (!device) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <p className="text-muted">Device not found</p>
-      </div>
-    );
-  }
+  if (loading) return <DevicePageState state="loading" onRetry={() => void retry()} onBack={back} />;
+  if (failed) return <DevicePageState state="failed" onRetry={() => void retry()} onBack={back} />;
+  if (!device) return <DevicePageState state="not-found" onRetry={() => void retry()} onBack={back} />;
 
   return (
     <div className="p-6">
@@ -97,25 +120,8 @@ function DeviceDetailPage() {
 function EditDevicePage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [device, setDevice] = useState<DeviceWithChargeHistory | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function load() {
-      if (!id) return;
-      try {
-        setLoading(true);
-        const result = await chargerReminderDb.getDeviceById(id);
-        setDevice(result);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load device");
-      } finally {
-        setLoading(false);
-      }
-    }
-    load();
-  }, [id]);
+  const { device, loading, failed, retry } = useDevice(id);
+  const back = () => navigate("/tools/charger-reminder");
 
   async function handleSubmit(data: DeviceFormData) {
     if (!id) return;
@@ -130,29 +136,9 @@ function EditDevicePage() {
     navigate(`/tools/charger-reminder/${id}`);
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <p className="text-muted">Loading device...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="flex flex-col items-center justify-center py-16">
-        <p className="text-danger">{error}</p>
-      </div>
-    );
-  }
-
-  if (!device) {
-    return (
-      <div className="flex items-center justify-center py-16">
-        <p className="text-muted">Device not found</p>
-      </div>
-    );
-  }
+  if (loading) return <DevicePageState state="loading" onRetry={() => void retry()} onBack={back} />;
+  if (failed) return <DevicePageState state="failed" onRetry={() => void retry()} onBack={back} />;
+  if (!device) return <DevicePageState state="not-found" onRetry={() => void retry()} onBack={back} />;
 
   return (
     <div className="p-6">
