@@ -18,6 +18,12 @@ const CoreHourPage = lazy(() =>
   }))
 );
 
+const PauseHydratePage = lazy(() =>
+  import("./features/pause-hydrate/pages/pause-hydrate-page").then((module) => ({
+    default: module.default ?? (() => null),
+  }))
+);
+
 function ToolFallback() {
   const { t } = useI18n();
   return (
@@ -53,6 +59,14 @@ function App() {
                   element={
                     <Suspense fallback={<ToolFallback />}>
                       <CoreHourPage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path="/tools/pause-hydrate"
+                  element={
+                    <Suspense fallback={<ToolFallback />}>
+                      <PauseHydratePage />
                     </Suspense>
                   }
                 />

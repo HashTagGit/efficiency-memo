@@ -3,6 +3,7 @@
 use tauri_plugin_sql::{Migration, MigrationKind};
 
 mod core_hour;
+mod pause_hydrate;
 mod sidecar;
 mod sync;
 
@@ -39,6 +40,12 @@ pub fn run() {
             sql: include_str!("../migrations/0005_ch_session_activity.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 6,
+            description: "create pause and hydrate reminders",
+            sql: include_str!("../migrations/0006_pause_hydrate.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
@@ -65,6 +72,9 @@ pub fn run() {
             sync::sync_list,
             sync::store_webdav_credentials,
             core_hour::save_core_hour_session_block,
+            pause_hydrate::save_pause_hydrate_preferences,
+            pause_hydrate::claim_pause_hydrate_reminders,
+            pause_hydrate::act_on_pause_hydrate_reminder,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

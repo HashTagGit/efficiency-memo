@@ -35,7 +35,7 @@ The desktop app lives in `apps/desktop/` and is the recommended deployable surfa
 ### SQLite Storage
 
 - Tauri plugin-sql opens `sqlite:efficiency-memo.db` in the OS app-data directory.
-- 5 SQLite DDL migrations in `src-tauri/migrations/`.
+- 6 SQLite DDL migrations in `src-tauri/migrations/`.
 - `lib/db.ts` wraps `Database.load()` with `dbSelect()`/`dbExecute()` helpers.
 - `DevicePersistenceContract` in `features/charger-reminder/db-tauri.ts` (8 CRUD methods).
 - `DbResult` interface in `features/core-hour/db-tauri.ts`.
@@ -58,10 +58,17 @@ The desktop app lives in `apps/desktop/` and is the recommended deployable surfa
 - Check-ins record one optional tag, an optional note, and an explicit duration.
 - The native notification plugin reminds users only when a due check-in occurs in the background.
 
+### Pause & Hydrate Workflow
+
+- `features/pause-hydrate/` owns reminder scheduling, local events, notifications, and the standalone tool page.
+- Break and hydration reminders have independent enabled state, interval, next-due, pending, and local mute state.
+- The app-level provider polls while the desktop app is running so reminders do not depend on the tool page being open.
+- A due reminder reads whether CoreHour is active and waits without modifying either tool's state.
+
 ### Tool Sharing
 
 - Desktop consumes `packages/shared/` and `packages/ui/` via `workspace:*`.
-- The CoreHour manifest is enabled. Charger Reminder is retained but disabled; WebDAV sync code is outside the current product focus.
+- CoreHour and Pause & Hydrate manifests are enabled. Charger Reminder is retained but disabled; WebDAV sync code is outside the current product focus.
 - React Router handles SPA routing (`BrowserRouter` with `<Routes>`).
 
 ### Data Locations

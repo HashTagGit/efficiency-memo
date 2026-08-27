@@ -6,6 +6,7 @@ import { Shell } from "@memo/ui";
 import type { ToolManifest } from "@memo/shared";
 import { getRegisteredTools } from "../lib/tool-registry/registry";
 import { currentLocaleLabel, useI18n } from "../lib/i18n";
+import { localizedToolCopy } from "../lib/tool-registry/presentation";
 
 function getActiveToolId(pathname: string): string {
   const toolMatch = pathname.match(/^\/tools\/([^/]+)/);
@@ -36,12 +37,8 @@ export function ShellLayout({ children }: { children: React.ReactNode }) {
 
   // Convert RegisteredTool[] to ToolManifest[] for Shell
   const toolManifests: ToolManifest[] = tools.map((tool) => ({
-    id: tool.id,
-    name: tool.id === "core-hour" ? t("nav.coreHour") : tool.name,
-    icon: tool.icon,
-    description: tool.id === "core-hour" ? t("nav.coreHourDescription") : tool.description,
-    routes: tool.routes,
-    enabled: tool.enabled,
+    ...tool,
+    ...localizedToolCopy(tool, t),
   }));
 
   // Append Settings as a synthetic tool in the sidebar

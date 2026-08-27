@@ -5,13 +5,15 @@ All notable changes to this project will be documented in this file.
 ## Unreleased
 
 ### Changed
-- The desktop shell and CoreHour workflow now support persisted English and Simplified Chinese translations.
-- CoreHour is the active product workflow. Charger Reminder is disabled; WebDAV sync is out of scope.
+- The desktop shell, CoreHour, and Pause & Hydrate now support persisted English and Simplified Chinese translations.
+- CoreHour and Pause & Hydrate are active product workflows. Charger Reminder is disabled; WebDAV sync is out of scope.
 - Documentation now describes the native Tauri window as the supported entry point; the Vite server is not a standalone application.
 - The desktop app now opens with an automatic local profile instead of showing sign-in and sign-out controls.
 - The desktop workspace now supports persisted light and dark themes with reorganized navigation and consistent action styling.
 
 ### Added
+- Pause & Hydrate standalone tool with break and hydration schedules, native notifications, focus deferral, completion/postpone/mute actions, and timestamped local history.
+- A sixth SQLite migration for Pause & Hydrate reminder state and events.
 - CoreHour daily focus goals with live Today progress and a bilingual Insights workspace for weekly comparison, goal consistency, trends, activities, and tags.
 - CoreHour day timeline with colored session blocks, previous/today/next navigation, current-time marker, and click-to-add manual time.
 - Manual CoreHour session entry and completed-session editing with overlap validation.

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Card, EmptyState, PageHeader } from "@memo/ui";
 import { getRegisteredTools } from "../../lib/tool-registry/registry";
 import { useI18n } from "../../lib/i18n";
+import { localizedToolCopy } from "../../lib/tool-registry/presentation";
 
 function ToolIcon({ name }: { name: string }) {
   const iconMap: Record<string, React.ReactNode> = {
@@ -18,6 +19,12 @@ function ToolIcon({ name }: { name: string }) {
       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="10" />
         <polyline points="12 6 12 12 16 14" />
+      </svg>
+    ),
+    "Pause & Hydrate": (
+      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M12 3.5S6.5 9.2 6.5 14a5.5 5.5 0 0 0 11 0C17.5 9.2 12 3.5 12 3.5Z" />
+        <path d="M9.5 15.2a2.8 2.8 0 0 0 2.5 1.6" />
       </svg>
     ),
   };
@@ -70,20 +77,23 @@ export function DashboardPage() {
           data-testid="dashboard-tool-grid"
           className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
         >
-          {tools.map((tool) => (
-            <Card
-              key={tool.id}
-              title={tool.id === "core-hour" ? t("nav.coreHour") : tool.name}
-              description={tool.id === "core-hour" ? t("nav.coreHourDescription") : tool.description}
-              openLabel={t("dashboard.open")}
-              icon={<ToolIcon name={tool.name} />}
-              onClick={() => {
-                const route = tool.routes[0];
-                if (route) navigate(route);
-              }}
-              data-testid={`dashboard-tool-card-${tool.id}`}
-            />
-          ))}
+          {tools.map((tool) => {
+            const copy = localizedToolCopy(tool, t);
+            return (
+              <Card
+                key={tool.id}
+                title={copy.name}
+                description={copy.description}
+                openLabel={t("dashboard.open")}
+                icon={<ToolIcon name={tool.name} />}
+                onClick={() => {
+                  const route = tool.routes[0];
+                  if (route) navigate(route);
+                }}
+                data-testid={`dashboard-tool-card-${tool.id}`}
+              />
+            );
+          })}
         </div>
       )}
     </div>

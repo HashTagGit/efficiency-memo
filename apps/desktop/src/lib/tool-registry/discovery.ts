@@ -5,4 +5,5 @@
 export async function discoverTools(): Promise<void> {
   await import("../../features/charger-reminder/index");
   await import("../../features/core-hour/index");
+  await import("../../features/pause-hydrate/index");
 }

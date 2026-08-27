@@ -1,10 +1,10 @@
 # EfficiencyMemo
 
-A local-first **CoreHour** desktop app for deliberate time tracking. It ships as a Tauri v2 application with local SQLite storage.
+A local-first desktop toolkit for deliberate focus and healthier work rhythms. It ships as a Tauri v2 application with local SQLite storage.
 
 ## About
 
-EfficiencyMemo is a pnpm monorepo centered on CoreHour. Launch the app, start a session, record periodic check-ins, and review each day locally. Charger Reminder is disabled; WebDAV sync code is retained but outside the current product scope.
+EfficiencyMemo is a pnpm monorepo with independent tools behind one desktop workspace. CoreHour records and reviews focus time; Pause & Hydrate provides local break and hydration reminders. Charger Reminder is disabled; WebDAV sync code is retained but outside the current product scope.
 
 ## Features
 
@@ -17,6 +17,12 @@ EfficiencyMemo is a pnpm monorepo centered on CoreHour. Launch the app, start a 
 - Categorize a due check-in with one tag and an optional note, or skip it as uncategorized
 - Review daily totals, tag totals, sessions, and check-ins
 - Receive one native notification when a check-in becomes due while the app is backgrounded
+
+### Pause & Hydrate — break and hydration reminders
+- Configure independent movement-break and hydration intervals
+- Complete, postpone for 10 minutes, or mute a reminder for the day
+- Defer due reminders while a CoreHour session is active
+- Review today's completed actions from timestamped local events
 
 ## Quick Start — Desktop App (recommended)
 
@@ -46,7 +52,7 @@ Output:
 - Windows: `apps/desktop/src-tauri/target/release/bundle/msi/EfficiencyMemo_0.0.2_x64_en-US.msi`
 - Standalone `.exe`: `apps/desktop/src-tauri/target/release/EfficiencyMemo.exe`
 
-On first launch the app creates its database in `%APPDATA%/com.efficiency-memo.app/efficiency-memo.db` (Windows) or `~/Library/Application Support/com.efficiency-memo.app/efficiency-memo.db` (macOS). All 5 migrations run automatically.
+On first launch the app creates its database in `%APPDATA%/com.efficiency-memo.app/efficiency-memo.db` (Windows) or `~/Library/Application Support/com.efficiency-memo.app/efficiency-memo.db` (macOS). All 6 migrations run automatically.
 
 ### Using the app
 
@@ -56,6 +62,7 @@ On first launch the app creates its database in `%APPDATA%/com.efficiency-memo.a
 4. **Track time** — Open **CoreHour → Today**, describe the activity or continue a recent favorite, then start a session. At each due check-in, choose one tag and an optional note, or skip. Allow the operating-system notification permission for background reminders.
 5. **Review the day** — Open **CoreHour → Timeline** to select a date, inspect or edit session blocks, add missed time from an empty slot, and review totals and check-ins.
 6. **Review the week** — Open **CoreHour → Insights** to compare this week with last week, inspect goal consistency, and review activity and tag trends.
+7. **Set healthy reminders** — Open **Pause & Hydrate**, enable either reminder, choose its interval, and save. Due reminders wait while CoreHour is active.
 
 Use the native Tauri window opened by `tauri:dev`; `http://localhost:1420` is only the Vite development server and does not provide the Tauri SQLite bridge.
 
@@ -80,24 +87,24 @@ EfficiencyMemo is organized as a pnpm monorepo. The design system lives in `pack
 ```
 apps/desktop/
 ├── src/                   # React + Vite frontend (SPA, no SSR)
-│   ├── features/          # CoreHour and retained legacy feature code
+│   ├── features/          # CoreHour, Pause & Hydrate, and retained legacy code
 │   ├── pages/             # Route pages (dashboard, tools/*, settings/sync)
 │   ├── components/        # Shell layout
 │   ├── lib/               # db/profile wrapper, sync wrapper, tool registry
 │   └── main.tsx           # React entry
 └── src-tauri/             # Rust native shell
     ├── src/               # Plugin registration and Tauri command handlers
-    ├── migrations/        # 5 SQLite migration files
+    ├── migrations/        # 6 SQLite migration files
     └── tauri.conf.json    # Bundle config (msi + nsis targets)
 ```
 
 Key design choices:
 - **No SSR** — Tauri uses a webview, not a browser, so server-side rendering is unnecessary. Vite + React Router handles all routing.
-- **Local SQLite** — Tauri plugin-sql opens `sqlite:efficiency-memo.db` from the OS app-data directory. All 5 migrations run on first launch.
+- **Local SQLite** — Tauri plugin-sql opens `sqlite:efficiency-memo.db` from the OS app-data directory. All 6 migrations run on first launch.
 - **CoreHour session state** — Active-session progress is kept locally and restored as paused after an app restart, so closed-app time is never counted.
-- **Bilingual workspace** — The desktop shell and CoreHour workflow support English and Simplified Chinese, with the selected language persisted locally.
+- **Bilingual workspace** — The desktop shell and active tools support English and Simplified Chinese, with the selected language persisted locally.
 - **Theme preferences** — Switch between light and dark themes from the workspace shell; the preference is persisted locally.
-- **Native notifications** — `tauri-plugin-notification` sends one system notification only when a check-in becomes due in the background.
+- **Native notifications** — `tauri-plugin-notification` handles due CoreHour check-ins and Pause & Hydrate reminders.
 - **Deferred code** — Charger Reminder is retained but disabled. WebDAV sync is not part of the current product scope.
 
 ### Shared packages

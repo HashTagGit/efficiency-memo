@@ -12,3 +12,21 @@ A domain glossary for EfficiencyMemo. Use it as a shared vocabulary when discuss
 - **Local Profile** — The single SQLite user selected or created automatically at startup; there is no sign-in step.
 - **SQLite Storage** — Local database accessed via `tauri-plugin-sql`; migrations live in `src-tauri/migrations/`.
 - **Archived Surface** — The original `apps/web/` Next.js + Supabase web app, removed in v0.1.0-desktop; available in git history if needed.
+
+## Pause & Hydrate
+
+**Pause & Hydrate**:
+The independent local tool for periodic break and hydration reminders.
+_Avoid_: Wellbeing, health tracker
+
+**Reminder**:
+A configured break or hydration prompt with its own interval and next due time.
+_Avoid_: Alarm, timer
+
+**Reminder Event**:
+A timestamped record that a reminder was completed, postponed, or muted for the day.
+_Avoid_: Health score, counter
+
+**Focus Deferral**:
+The rule that a due reminder waits while CoreHour has an active session, without changing that session.
+_Avoid_: Focus timer, automatic pause
