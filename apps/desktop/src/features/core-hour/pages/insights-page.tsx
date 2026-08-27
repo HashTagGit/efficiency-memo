@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { PageHeader } from "@memo/ui";
+import { Link } from "react-router-dom";
+import { Alert, Button, EmptyState, PageHeader } from "@memo/ui";
 import {
   Bar,
   BarChart,
@@ -43,49 +44,62 @@ export default function InsightsPage({ userId }: { userId: string }) {
   const [activityRows, setActivityRows] = useState<ActivityRow[]>([]);
   const [plans, setPlans] = useState<PlannedBlock[]>([]);
   const [planActualSeconds, setPlanActualSeconds] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [loaded, setLoaded] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     async function load() {
-      const now = new Date();
-      const currentWeek = weekDays(now);
-      const previousWeek = weekDays(now, -1);
-      const planRangeStart = new Date(currentWeek[0] + "T00:00:00");
-      const planRangeEnd = new Date(currentWeek[6] + "T00:00:00");
-      planRangeEnd.setDate(planRangeEnd.getDate() + 1);
-      const tomorrow = new Date(now);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      const rangeEnd = isoDay(tomorrow);
-      const rangeStart = rangeDays(range, now)[0];
-      const dailyStart = rangeStart < previousWeek[0] ? rangeStart : previousWeek[0];
-      const [goal, daily, byTag, byActivity, weekPlans, weekSessions] = await Promise.all([
-        loadDailyFocusGoal(),
-        dbSelect<DailyRow>(
-          "SELECT date(ci.checked_at, 'localtime') AS day, SUM(ci.duration_seconds) AS duration_seconds FROM ch_check_ins ci JOIN ch_sessions s ON s.id = ci.session_id WHERE s.user_id = $1 AND date(ci.checked_at, 'localtime') >= $2 AND date(ci.checked_at, 'localtime') < $3 GROUP BY day ORDER BY day",
-          [userId, dailyStart, rangeEnd],
-        ),
-        dbSelect<TagRow>(
-          "SELECT t.id, t.name, t.color, SUM(ci.duration_seconds) AS duration_seconds FROM ch_check_ins ci JOIN ch_sessions s ON s.id = ci.session_id JOIN ch_check_in_entries e ON e.check_in_id = ci.id JOIN ch_tags t ON t.id = e.tag_id WHERE s.user_id = $1 AND date(ci.checked_at, 'localtime') >= $2 AND date(ci.checked_at, 'localtime') < $3 GROUP BY t.id, t.name, t.color ORDER BY duration_seconds DESC",
-          [userId, rangeStart, rangeEnd],
-        ),
-        dbSelect<ActivityRow>(
-          "SELECT COALESCE(NULLIF(trim(s.activity), ''), '') AS name, SUM(ci.duration_seconds) AS duration_seconds FROM ch_check_ins ci JOIN ch_sessions s ON s.id = ci.session_id WHERE s.user_id = $1 AND date(ci.checked_at, 'localtime') >= $2 AND date(ci.checked_at, 'localtime') < $3 GROUP BY name ORDER BY duration_seconds DESC",
-          [userId, currentWeek[0], rangeEnd],
-        ),
-        loadPlansForRange(userId, planRangeStart, planRangeEnd),
-        loadSessionsForDays(userId, currentWeek),
-      ]);
-      if (cancelled) return;
-      setGoalMinutes(goal);
-      setDailyRows(daily);
-      setTagRows(byTag);
-      setActivityRows(byActivity);
-      setPlans(weekPlans);
-      setPlanActualSeconds(totalSessionSeconds(weekSessions));
+      setLoading(true);
+      setLoadFailed(false);
+      try {
+        const now = new Date();
+        const currentWeek = weekDays(now);
+        const previousWeek = weekDays(now, -1);
+        const planRangeStart = new Date(currentWeek[0] + "T00:00:00");
+        const planRangeEnd = new Date(currentWeek[6] + "T00:00:00");
+        planRangeEnd.setDate(planRangeEnd.getDate() + 1);
+        const tomorrow = new Date(now);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        const rangeEnd = isoDay(tomorrow);
+        const rangeStart = rangeDays(range, now)[0];
+        const dailyStart = rangeStart < previousWeek[0] ? rangeStart : previousWeek[0];
+        const [goal, daily, byTag, byActivity, weekPlans, weekSessions] = await Promise.all([
+          loadDailyFocusGoal(),
+          dbSelect<DailyRow>(
+            "SELECT date(ci.checked_at, 'localtime') AS day, SUM(ci.duration_seconds) AS duration_seconds FROM ch_check_ins ci JOIN ch_sessions s ON s.id = ci.session_id WHERE s.user_id = $1 AND date(ci.checked_at, 'localtime') >= $2 AND date(ci.checked_at, 'localtime') < $3 GROUP BY day ORDER BY day",
+            [userId, dailyStart, rangeEnd],
+          ),
+          dbSelect<TagRow>(
+            "SELECT t.id, t.name, t.color, SUM(ci.duration_seconds) AS duration_seconds FROM ch_check_ins ci JOIN ch_sessions s ON s.id = ci.session_id JOIN ch_check_in_entries e ON e.check_in_id = ci.id JOIN ch_tags t ON t.id = e.tag_id WHERE s.user_id = $1 AND date(ci.checked_at, 'localtime') >= $2 AND date(ci.checked_at, 'localtime') < $3 GROUP BY t.id, t.name, t.color ORDER BY duration_seconds DESC",
+            [userId, rangeStart, rangeEnd],
+          ),
+          dbSelect<ActivityRow>(
+            "SELECT COALESCE(NULLIF(trim(s.activity), ''), '') AS name, SUM(ci.duration_seconds) AS duration_seconds FROM ch_check_ins ci JOIN ch_sessions s ON s.id = ci.session_id WHERE s.user_id = $1 AND date(ci.checked_at, 'localtime') >= $2 AND date(ci.checked_at, 'localtime') < $3 GROUP BY name ORDER BY duration_seconds DESC",
+            [userId, currentWeek[0], rangeEnd],
+          ),
+          loadPlansForRange(userId, planRangeStart, planRangeEnd),
+          loadSessionsForDays(userId, currentWeek),
+        ]);
+        if (cancelled) return;
+        setGoalMinutes(goal);
+        setDailyRows(daily);
+        setTagRows(byTag);
+        setActivityRows(byActivity);
+        setPlans(weekPlans);
+        setPlanActualSeconds(totalSessionSeconds(weekSessions));
+        setLoaded(true);
+      } catch {
+        if (!cancelled) setLoadFailed(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     }
     void load();
     return () => { cancelled = true; };
-  }, [range, userId]);
+  }, [range, reloadKey, userId]);
 
   const trend = buildTrend(dailyRows, range);
   const trendSummary = summarize(trend);
@@ -93,6 +107,11 @@ export default function InsightsPage({ userId }: { userId: string }) {
   const planActual = buildPlanActualSummary(plans, planActualSeconds);
   const activities = buildActivityRanking(activityRows);
   const tags = buildTagSlices(tagRows);
+  const hasInsightsData = dailyRows.length > 0
+    || activityRows.length > 0
+    || tagRows.length > 0
+    || plans.length > 0
+    || planActualSeconds > 0;
   const dayFormatter = useMemo(
     () => new Intl.DateTimeFormat(locale, { weekday: "short" }),
     [locale],
@@ -119,6 +138,35 @@ export default function InsightsPage({ userId }: { userId: string }) {
   return (
     <div className="mx-auto max-w-6xl space-y-8" data-testid="ch-insights-page">
       <PageHeader title={t("insights.title")} subtitle={t("insights.subtitle", { range: weekRange })} />
+
+      {loaded && loading && (
+        <p className="text-sm text-muted" role="status" aria-live="polite">{t("insights.updating")}</p>
+      )}
+      {loaded && loadFailed && (
+        <Alert variant="error" title={t("insights.loadErrorTitle")}>
+          <p>{t("insights.refreshErrorDescription")}</p>
+          <Button className="mt-3" size="sm" variant="secondary" onClick={() => setReloadKey((value) => value + 1)}>{t("insights.retry")}</Button>
+        </Alert>
+      )}
+
+      {!loaded ? (
+        loading ? (
+          <p className="py-16 text-center text-sm text-muted" role="status" aria-live="polite">{t("insights.loading")}</p>
+        ) : (
+          <EmptyState
+            title={t("insights.loadErrorTitle")}
+            description={t("insights.loadErrorDescription")}
+            action={<Button onClick={() => setReloadKey((value) => value + 1)}>{t("insights.retry")}</Button>}
+          />
+        )
+      ) : !hasInsightsData ? (
+        <EmptyState
+          title={t("insights.emptyTitle")}
+          description={t("insights.emptyDescription")}
+          action={<Link className="text-sm font-semibold text-accent hover:underline" to="/tools/core-hour">{t("insights.openToday")}</Link>}
+        />
+      ) : (
+      <>
 
       <section aria-labelledby="weekly-review-heading">
         <div className="flex flex-wrap items-end justify-between gap-2">
@@ -252,6 +300,8 @@ export default function InsightsPage({ userId }: { userId: string }) {
           ) : <p className="mt-4 text-sm text-muted">{t("coreHour.noTaggedCheckIns")}</p>}
         </div>
       </section>
+      </>
+      )}
     </div>
   );
 }
