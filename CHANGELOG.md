@@ -15,6 +15,8 @@ All notable changes to this project will be documented in this file.
 - The desktop workspace now supports persisted light and dark themes with reorganized navigation and consistent action styling.
 
 ### Added
+- CoreHour direct planning with pointer/keyboard movement, cross-day Week moves, start/end resize handles, 15-minute snapping, and bilingual failure feedback.
+- Reusable selected-week and current-week plan-versus-actual review metrics for planned time, actual time, completion rate, and variance.
 - Data & Privacy Center with local record inventory, single-file portable backup, validated restore preview, readable module JSON exports, and scoped/full reset confirmation.
 - Startup restore replacement with WAL/SHM rollback protection and preference application only after the database swap succeeds.
 - CoreHour Plan vs Actual with separate planned blocks, bilingual day/week timelines, skip/edit actions, and atomic conversion into confirmed sessions.

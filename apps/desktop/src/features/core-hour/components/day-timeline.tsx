@@ -8,6 +8,11 @@ import type { TodaySession } from "../today-data";
 import { useI18n } from "../../../lib/i18n";
 import { isoDay } from "../analytics";
 import { layoutPlannedBlocks, type PlannedBlock } from "../planned-blocks";
+import type { PlanRange } from "../plan-interaction";
+import {
+  InteractivePlanBlock,
+  type PlanPointerPosition,
+} from "./interactive-plan-block";
 
 const HOUR_HEIGHT = 64;
 
@@ -17,15 +22,17 @@ interface DayTimelineProps {
   plans: PlannedBlock[];
   onAddPlan: (startedAt: Date) => void;
   onEditPlan: (plan: PlannedBlock) => void;
+  onUpdatePlan: (plan: PlannedBlock, range: PlanRange) => Promise<void>;
   onEditSession: (session: TodaySession) => void;
 }
 
-export function DayTimeline({ date, sessions, plans, onAddPlan, onEditPlan, onEditSession }: DayTimelineProps) {
+export function DayTimeline({ date, sessions, plans, onAddPlan, onEditPlan, onUpdatePlan, onEditSession }: DayTimelineProps) {
   const { locale, t } = useI18n();
   const bounds = TIMELINE_BOUNDS;
   const layout = layoutTimelineSessions(sessions, date, HOUR_HEIGHT);
   const planLayout = layoutPlannedBlocks(plans, date, HOUR_HEIGHT);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const canvasRef = useRef<HTMLDivElement>(null);
   const [now, setNow] = useState(() => new Date());
   const hours = Array.from(
     { length: (bounds.endMinute - bounds.startMinute) / 60 + 1 },
@@ -73,6 +80,14 @@ export function DayTimeline({ date, sessions, plans, onAddPlan, onEditPlan, onEd
     addAtMinute(snapTimelineMinute(targetMinute / 60 * HOUR_HEIGHT, bounds.startMinute, HOUR_HEIGHT));
   }
 
+  function resolvePointer(_clientX: number, clientY: number): PlanPointerPosition {
+    const rect = canvasRef.current?.getBoundingClientRect();
+    return {
+      date,
+      minute: rect ? (clientY - rect.top) / HOUR_HEIGHT * 60 : 0,
+    };
+  }
+
   return (
     <section aria-labelledby="timeline-heading">
       <div className="mb-3">
@@ -82,8 +97,8 @@ export function DayTimeline({ date, sessions, plans, onAddPlan, onEditPlan, onEd
         </div>
       </div>
       <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
-        <div ref={scrollRef} className="max-h-[34rem] overflow-y-auto">
-          <div className="relative min-w-[28rem]" style={{ height: canvasHeight }}>
+        <div ref={scrollRef} className="max-h-[34rem] overflow-auto">
+          <div ref={canvasRef} className="relative min-w-[28rem]" style={{ height: canvasHeight }}>
             {hours.map((hour, index) => (
               <div
                 key={hour}
@@ -104,36 +119,23 @@ export function DayTimeline({ date, sessions, plans, onAddPlan, onEditPlan, onEd
               aria-label={t("coreHour.addPlan")}
             />
             {planLayout.map((item) => {
-              const title = item.plan.title.trim() || t("coreHour.untitledPlan");
-              const statusClass = item.plan.status === "planned"
-                ? "border-dashed border-planned bg-planned/10 text-foreground"
-                : item.plan.status === "completed"
-                  ? "border-planned/60 bg-planned/5 text-foreground opacity-60"
-                  : "border-dotted border-border bg-surface text-muted opacity-70";
               return (
-                <button
+                <InteractivePlanBlock
                   key={item.plan.id}
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onEditPlan(item.plan);
-                  }}
-                  className={"absolute z-10 overflow-hidden rounded-md border px-2 py-1 text-left transition-[filter] hover:brightness-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent " + statusClass}
+                  plan={item.plan}
+                  date={date}
+                  hourHeight={HOUR_HEIGHT}
+                  availableDates={[date]}
+                  resolvePointer={resolvePointer}
+                  onEdit={onEditPlan}
+                  onUpdate={onUpdatePlan}
                   style={{
                     top: item.top,
                     height: item.height,
                     left: `calc(4.75rem + ${(item.lane / item.laneCount) * 43}%)`,
                     width: `calc(${43 / item.laneCount}% - 2px)`,
                   }}
-                  aria-label={t("coreHour.editPlanNamed", { title })}
-                >
-                  <span className="block truncate text-sm font-medium">{title}</span>
-                  {item.height >= 38 && (
-                    <span className="mt-0.5 block truncate text-xs opacity-75">
-                      {formatter.format(new Date(item.plan.started_at))}{" – "}{formatter.format(new Date(item.plan.ended_at))}
-                    </span>
-                  )}
-                </button>
+                />
               );
             })}
             {layout.map((item) => {

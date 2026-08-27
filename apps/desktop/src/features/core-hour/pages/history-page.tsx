@@ -1,16 +1,26 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { Button, PageHeader } from "@memo/ui";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Alert, Button, PageHeader } from "@memo/ui";
 import { dbExecute, dbSelect } from "../../../lib/db";
 import type { CheckInWithTag, Tag } from "../types";
 import { type ExportRange, rangeToFromDate, recordsToCsv, exportFilename } from "../export";
-import { isoDay, weekDays } from "../analytics";
+import { buildPlanActualSummary, isoDay, weekDays } from "../analytics";
 import { useI18n } from "../../../lib/i18n";
 import { SessionEditor } from "../components/session-editor";
-import { loadSessionsForDay, type TodaySession } from "../today-data";
+import {
+  loadSessionsForDays,
+  totalSessionSeconds,
+  type TodaySession,
+} from "../today-data";
 import { DayTimeline } from "../components/day-timeline";
 import { WeekTimeline } from "../components/week-timeline";
 import { PlanEditor } from "../components/plan-editor";
-import { loadPlansForRange, type PlannedBlock } from "../planned-blocks";
+import { PlanActualSummary } from "../components/plan-actual-summary";
+import {
+  loadPlansForRange,
+  updatePlannedBlockRange,
+  type PlannedBlock,
+} from "../planned-blocks";
+import { formatLocalPlanTime, type PlanRange } from "../plan-interaction";
 
 const today = () => isoDay(new Date());
 
@@ -51,16 +61,22 @@ export default function HistoryPage({ userId }: { userId: string }) {
   const [editorStart, setEditorStart] = useState<Date | null>(null);
   const [sourcePlan, setSourcePlan] = useState<PlannedBlock | null>(null);
   const [plans, setPlans] = useState<PlannedBlock[]>([]);
+  const [actualSeconds, setActualSeconds] = useState(0);
+  const [planActionError, setPlanActionError] = useState<string | null>(null);
   const [planEditorOpen, setPlanEditorOpen] = useState(false);
   const [editingPlan, setEditingPlan] = useState<PlannedBlock | null>(null);
   const [planStart, setPlanStart] = useState<Date | null>(null);
   const [view, setView] = useState<"day" | "week">("day");
+  const loadRequestRef = useRef(0);
   const visibleDays = useMemo(
     () => view === "day" ? [date] : weekDays(new Date(date + "T12:00:00")),
     [date, view],
   );
+  const visibleRangeRef = useRef(visibleDays.join(","));
+  visibleRangeRef.current = visibleDays.join(",");
 
   const load = useCallback(async () => {
+    const request = ++loadRequestRef.current;
     const rangeStart = new Date(visibleDays[0] + "T00:00:00");
     const rangeEnd = new Date(visibleDays[visibleDays.length - 1] + "T00:00:00");
     rangeEnd.setDate(rangeEnd.getDate() + 1);
@@ -70,12 +86,14 @@ export default function HistoryPage({ userId }: { userId: string }) {
         [userId, date],
       ) : Promise.resolve([]),
       dbSelect<Tag>("SELECT * FROM ch_tags WHERE user_id = $1 AND is_archived = 0 ORDER BY created_at", [userId]),
-      Promise.all(visibleDays.map((day) => loadSessionsForDay(userId, new Date(day + "T12:00:00")))),
+      loadSessionsForDays(userId, visibleDays),
       loadPlansForRange(userId, rangeStart, rangeEnd),
     ]);
+    if (request !== loadRequestRef.current) return;
     setEntries(checkIns.map((e) => ({ ...e, skipped: Boolean(e.skipped), duration_seconds: Number(e.duration_seconds) })));
     setTags(availableTags);
     setSessions(Array.from(new Map(visibleSessions.flat().map((session) => [session.id, session])).values()));
+    setActualSeconds(totalSessionSeconds(visibleSessions));
     setPlans(visiblePlans);
   }, [date, userId, view, visibleDays]);
 
@@ -110,6 +128,10 @@ export default function HistoryPage({ userId }: { userId: string }) {
   }
 
   const totalSeconds = entries.reduce((sum, e) => sum + e.duration_seconds, 0);
+  const planActualSummary = useMemo(
+    () => buildPlanActualSummary(plans, actualSeconds),
+    [actualSeconds, plans],
+  );
   const navigationStep = view === "day" ? 1 : 7;
   const openNewPlan = (startedAt: Date) => {
     setEditingPlan(null);
@@ -121,6 +143,42 @@ export default function HistoryPage({ userId }: { userId: string }) {
     setEditorStart(startedAt);
     setSourcePlan(plan);
     setEditorOpen(true);
+  };
+  const updatePlanRange = async (plan: PlannedBlock, range: PlanRange) => {
+    const sourceRange = visibleRangeRef.current;
+    setPlanActionError(null);
+    try {
+      await updatePlannedBlockRange({
+        id: plan.id,
+        userId,
+        startedAt: formatLocalPlanTime(range.startedAt),
+        endedAt: formatLocalPlanTime(range.endedAt),
+      });
+    } catch {
+      if (visibleRangeRef.current !== sourceRange) return;
+      setPlanActionError(t("coreHour.planMoveFailed"));
+      try {
+        await load();
+      } catch {
+        // Keep the error visible; a later navigation reloads authoritative data.
+      }
+      return;
+    }
+    if (visibleRangeRef.current !== sourceRange) return;
+    setPlans((current) => current.map((item) => (
+      item.id === plan.id
+        ? {
+            ...item,
+            started_at: range.startedAt.toISOString(),
+            ended_at: range.endedAt.toISOString(),
+          }
+        : item
+    )));
+    try {
+      await load();
+    } catch {
+      setPlanActionError(t("coreHour.planRefreshFailed"));
+    }
   };
   return (
     <div className="mx-auto max-w-5xl space-y-6" data-testid="ch-history-page">
@@ -213,6 +271,8 @@ export default function HistoryPage({ userId }: { userId: string }) {
         />
       </div>
 
+      {planActionError && <Alert variant="error">{planActionError}</Alert>}
+
       <div aria-label={t("coreHour.timelineLegend")} className="flex flex-wrap gap-4 text-xs text-muted">
         <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-5 rounded-sm border border-dashed border-planned bg-planned/10" />{t("coreHour.planned")}</span>
         <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-5 rounded-sm border-l-4 border-actual bg-actual/10" />{t("coreHour.actual")}</span>
@@ -226,17 +286,22 @@ export default function HistoryPage({ userId }: { userId: string }) {
           plans={plans}
           onAddPlan={openNewPlan}
           onEditPlan={(plan) => { setEditingPlan(plan); setPlanStart(null); setPlanEditorOpen(true); }}
+          onUpdatePlan={updatePlanRange}
           onEditSession={(session) => { setEditingSession(session); setEditorStart(null); setSourcePlan(null); setEditorOpen(true); }}
         />
       ) : (
-        <WeekTimeline
-          days={visibleDays}
-          sessions={sessions}
-          plans={plans}
-          onAddPlan={openNewPlan}
-          onEditPlan={(plan) => { setEditingPlan(plan); setPlanStart(null); setPlanEditorOpen(true); }}
-          onEditSession={(session) => { setEditingSession(session); setEditorStart(null); setSourcePlan(null); setEditorOpen(true); }}
-        />
+        <>
+          <PlanActualSummary summary={planActualSummary} />
+          <WeekTimeline
+            days={visibleDays}
+            sessions={sessions}
+            plans={plans}
+            onAddPlan={openNewPlan}
+            onEditPlan={(plan) => { setEditingPlan(plan); setPlanStart(null); setPlanEditorOpen(true); }}
+            onUpdatePlan={updatePlanRange}
+            onEditSession={(session) => { setEditingSession(session); setEditorStart(null); setSourcePlan(null); setEditorOpen(true); }}
+          />
+        </>
       )}
 
       {view === "day" && <section className="space-y-2" data-testid="ch-history-entries">

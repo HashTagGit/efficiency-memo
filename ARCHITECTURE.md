@@ -51,6 +51,8 @@ The desktop app lives in `apps/desktop/` and is the recommended deployable surfa
 - `features/core-hour/` owns the Today, Timeline, Insights, Tags, and Settings routes.
 - Today stores lightweight activity context on each session and derives recent/favorite activity combinations from local session history.
 - Timeline keeps planned blocks in `ch_plans` separate from actual `ch_sessions`, with day/week views and 15-minute click snapping for new plans.
+- `plan-interaction.ts` owns local-day move/resize snapping and `interactive-plan-block.tsx` presents the same pointer and keyboard interface in Day and Week.
+- Selected-week Timeline and current-week Insights reuse one plan-versus-actual summary: planned minutes, confirmed minutes, completion rate, and variance.
 - Explicit plan conversion creates the actual session and links the plan in the same Rust transaction; rejected session validation leaves the plan unchanged.
 - Insights owns aggregate analytics: local Monday-to-Sunday goal review, previous-week comparison, range trends, and activity/tag breakdowns.
 - Daily focus goals reuse the existing `ch_settings` key-value table; no schema migration is required.

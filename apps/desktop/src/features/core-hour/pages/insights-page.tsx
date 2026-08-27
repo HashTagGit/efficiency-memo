@@ -16,6 +16,7 @@ import { dbSelect } from "../../../lib/db";
 import { useI18n } from "../../../lib/i18n";
 import {
   buildActivityRanking,
+  buildPlanActualSummary,
   buildTagSlices,
   buildTrend,
   buildWeekSummary,
@@ -29,6 +30,9 @@ import {
   type TrendRange,
 } from "../analytics";
 import { DEFAULT_DAILY_FOCUS_GOAL, loadDailyFocusGoal } from "../settings";
+import { loadPlansForRange, type PlannedBlock } from "../planned-blocks";
+import { PlanActualSummary } from "../components/plan-actual-summary";
+import { loadSessionsForDays, totalSessionSeconds } from "../today-data";
 
 export default function InsightsPage({ userId }: { userId: string }) {
   const { locale, t } = useI18n();
@@ -37,6 +41,8 @@ export default function InsightsPage({ userId }: { userId: string }) {
   const [dailyRows, setDailyRows] = useState<DailyRow[]>([]);
   const [tagRows, setTagRows] = useState<TagRow[]>([]);
   const [activityRows, setActivityRows] = useState<ActivityRow[]>([]);
+  const [plans, setPlans] = useState<PlannedBlock[]>([]);
+  const [planActualSeconds, setPlanActualSeconds] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -44,12 +50,15 @@ export default function InsightsPage({ userId }: { userId: string }) {
       const now = new Date();
       const currentWeek = weekDays(now);
       const previousWeek = weekDays(now, -1);
+      const planRangeStart = new Date(currentWeek[0] + "T00:00:00");
+      const planRangeEnd = new Date(currentWeek[6] + "T00:00:00");
+      planRangeEnd.setDate(planRangeEnd.getDate() + 1);
       const tomorrow = new Date(now);
       tomorrow.setDate(tomorrow.getDate() + 1);
       const rangeEnd = isoDay(tomorrow);
       const rangeStart = rangeDays(range, now)[0];
       const dailyStart = rangeStart < previousWeek[0] ? rangeStart : previousWeek[0];
-      const [goal, daily, byTag, byActivity] = await Promise.all([
+      const [goal, daily, byTag, byActivity, weekPlans, weekSessions] = await Promise.all([
         loadDailyFocusGoal(),
         dbSelect<DailyRow>(
           "SELECT date(ci.checked_at, 'localtime') AS day, SUM(ci.duration_seconds) AS duration_seconds FROM ch_check_ins ci JOIN ch_sessions s ON s.id = ci.session_id WHERE s.user_id = $1 AND date(ci.checked_at, 'localtime') >= $2 AND date(ci.checked_at, 'localtime') < $3 GROUP BY day ORDER BY day",
@@ -63,12 +72,16 @@ export default function InsightsPage({ userId }: { userId: string }) {
           "SELECT COALESCE(NULLIF(trim(s.activity), ''), '') AS name, SUM(ci.duration_seconds) AS duration_seconds FROM ch_check_ins ci JOIN ch_sessions s ON s.id = ci.session_id WHERE s.user_id = $1 AND date(ci.checked_at, 'localtime') >= $2 AND date(ci.checked_at, 'localtime') < $3 GROUP BY name ORDER BY duration_seconds DESC",
           [userId, currentWeek[0], rangeEnd],
         ),
+        loadPlansForRange(userId, planRangeStart, planRangeEnd),
+        loadSessionsForDays(userId, currentWeek),
       ]);
       if (cancelled) return;
       setGoalMinutes(goal);
       setDailyRows(daily);
       setTagRows(byTag);
       setActivityRows(byActivity);
+      setPlans(weekPlans);
+      setPlanActualSeconds(totalSessionSeconds(weekSessions));
     }
     void load();
     return () => { cancelled = true; };
@@ -77,6 +90,7 @@ export default function InsightsPage({ userId }: { userId: string }) {
   const trend = buildTrend(dailyRows, range);
   const trendSummary = summarize(trend);
   const week = buildWeekSummary(dailyRows, goalMinutes);
+  const planActual = buildPlanActualSummary(plans, planActualSeconds);
   const activities = buildActivityRanking(activityRows);
   const tags = buildTagSlices(tagRows);
   const dayFormatter = useMemo(
@@ -129,6 +143,10 @@ export default function InsightsPage({ userId }: { userId: string }) {
             <p className="text-xs text-muted">{t("insights.goalDays")}</p>
             <p className="mt-1 text-2xl font-semibold tabular-nums text-success">{week.goalDays} / {week.elapsedDays}</p>
           </div>
+        </div>
+
+        <div className="mt-5">
+          <PlanActualSummary summary={planActual} />
         </div>
 
         <div className="mt-5 h-64 rounded-lg border border-border bg-surface px-3 py-4" role="img" aria-label={t("insights.weeklyChart")}>

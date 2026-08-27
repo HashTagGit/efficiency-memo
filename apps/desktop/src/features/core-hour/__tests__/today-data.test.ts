@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { dbExecute, dbSelect } from "../../../lib/db";
-import { elapsedSecondsForDay, loadRecentActivities, loadTodaySessions, setActivityFavorite } from "../today-data";
+import {
+  elapsedSecondsForDay,
+  loadRecentActivities,
+  loadTodaySessions,
+  setActivityFavorite,
+  totalSessionSeconds,
+} from "../today-data";
 
 vi.mock("../../../lib/db", () => ({
   dbExecute: vi.fn().mockResolvedValue(undefined),
@@ -78,5 +84,23 @@ describe("CoreHour Today data", () => {
       1800,
       now,
     )).toBe(900);
+  });
+
+  it("sums apportioned daily session slices", () => {
+    const session = {
+      id: "session-3",
+      activity: "Across midnight",
+      started_at: "2026-08-27T23:30:00+08:00",
+      ended_at: "2026-08-28T00:30:00+08:00",
+      elapsed_seconds: 900,
+      default_tag_id: null,
+      tag_name: null,
+      tag_color: null,
+      is_favorite: false,
+    };
+    expect(totalSessionSeconds([
+      [session],
+      [{ ...session, elapsed_seconds: 900 }],
+    ])).toBe(1800);
   });
 });

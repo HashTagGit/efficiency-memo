@@ -8,17 +8,18 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 - Ember, Grove, and Tide palettes using shared semantic tokens.
 - CoreHour sessions, check-ins, tags, daily goals, Today, Timeline, and Insights.
 - CoreHour planned blocks with separate day/week plan-versus-actual timelines and explicit conversion.
+- CoreHour direct plan move/resize plus selected-week and current-week plan-versus-actual review.
 - Pause & Hydrate with independent schedules, focus deferral, actions, notifications, and local history.
 - Data & Privacy Center with portable backup/restore preview, readable module exports, and scoped reset.
 - Domain color roles for focus, planned, actual, recovery, hydration, privacy, and suggestions across every palette and mode.
 
 ## Next releases
 
-### 1. CoreHour direct planning and weekly review
+### 1. CoreHour idle and suspend resolution
 
-- Move and resize plan blocks after the current click/edit semantics are proven.
-- Show planned minutes, actual minutes, completion rate, and variance in a compact weekly review.
-- Resolve idle or suspend gaps explicitly instead of silently counting them.
+- Detect sleep, suspend, and long idle gaps without silently counting them as focus.
+- Ask the user to keep, trim, or discard the uncertain interval before it enters confirmed history.
+- Reuse the same resolution path for later optional local activity suggestions.
 
 ### 2. Desktop Companion
 

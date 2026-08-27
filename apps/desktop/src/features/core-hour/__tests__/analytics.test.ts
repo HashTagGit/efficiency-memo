@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildActivityRanking,
+  buildPlanActualSummary,
   buildTagSlices,
   buildTrend,
   buildWeekSummary,
@@ -152,6 +153,45 @@ describe("weekly review", () => {
 
   it("uses no percentage when the previous week is empty", () => {
     expect(buildWeekSummary([], 120, THURSDAY).changePercent).toBeNull();
+  });
+
+  it("compares all planned minutes with actual time and resolved plans", () => {
+    const summary = buildPlanActualSummary([
+      {
+        started_at: "2026-08-17T09:00:00+08:00",
+        ended_at: "2026-08-17T10:00:00+08:00",
+        status: "completed",
+      },
+      {
+        started_at: "2026-08-18T09:00:00+08:00",
+        ended_at: "2026-08-18T09:30:00+08:00",
+        status: "skipped",
+      },
+      {
+        started_at: "2026-08-21T09:00:00+08:00",
+        ended_at: "2026-08-21T10:00:00+08:00",
+        status: "planned",
+      },
+    ], 120 * 60, new Date("2026-08-20T12:00:00+08:00"));
+
+    expect(summary).toEqual({
+      plannedMinutes: 150,
+      actualMinutes: 120,
+      completionRate: 50,
+      varianceMinutes: -30,
+      completedPlans: 1,
+      reviewedPlans: 2,
+    });
+  });
+
+  it("does not score a week with only future plans", () => {
+    expect(buildPlanActualSummary([
+      {
+        started_at: "2026-08-21T09:00:00+08:00",
+        ended_at: "2026-08-21T10:00:00+08:00",
+        status: "planned",
+      },
+    ], 0, new Date("2026-08-20T12:00:00+08:00")).completionRate).toBeNull();
   });
 });
 

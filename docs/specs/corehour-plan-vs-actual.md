@@ -33,3 +33,5 @@ Let users plan focused time, compare intention with actual sessions, and explici
 - Automatic plan completion or automatic timer start.
 - Drag/resize in this first data-semantics slice; it follows after week/day behavior is verified.
 - Plans in Insights totals or productivity scoring.
+
+Direct move/resize and weekly comparison are implemented as the follow-on described in [CoreHour Direct Planning and Weekly Review](corehour-direct-planning.md).

@@ -8,6 +8,11 @@ import { layoutPlannedBlocks, type PlannedBlock } from "../planned-blocks";
 import type { TodaySession } from "../today-data";
 import { useI18n } from "../../../lib/i18n";
 import { isoDay } from "../analytics";
+import type { PlanRange } from "../plan-interaction";
+import {
+  InteractivePlanBlock,
+  type PlanPointerPosition,
+} from "./interactive-plan-block";
 
 const HOUR_HEIGHT = 48;
 
@@ -17,6 +22,7 @@ interface WeekTimelineProps {
   plans: PlannedBlock[];
   onAddPlan: (startedAt: Date) => void;
   onEditPlan: (plan: PlannedBlock) => void;
+  onUpdatePlan: (plan: PlannedBlock, range: PlanRange) => Promise<void>;
   onEditSession: (session: TodaySession) => void;
 }
 
@@ -27,10 +33,11 @@ function overlapsDay(startedAt: string, endedAt: string, day: string): boolean {
   return new Date(startedAt).getTime() < dayEnd.getTime() && new Date(endedAt).getTime() > dayStart.getTime();
 }
 
-export function WeekTimeline({ days, sessions, plans, onAddPlan, onEditPlan, onEditSession }: WeekTimelineProps) {
+export function WeekTimeline({ days, sessions, plans, onAddPlan, onEditPlan, onUpdatePlan, onEditSession }: WeekTimelineProps) {
   const { locale, t } = useI18n();
   const bounds = TIMELINE_BOUNDS;
   const scrollRef = useRef<HTMLDivElement>(null);
+  const dayColumnsRef = useRef<Record<string, HTMLDivElement | null>>({});
   const [now, setNow] = useState(() => new Date());
   const hours = Array.from(
     { length: (bounds.endMinute - bounds.startMinute) / 60 + 1 },
@@ -77,6 +84,23 @@ export function WeekTimeline({ days, sessions, plans, onAddPlan, onEditPlan, onE
     event.preventDefault();
     const targetMinute = isoDay(now) === day ? now.getHours() * 60 + now.getMinutes() : 8 * 60;
     addAtMinute(day, snapTimelineMinute(targetMinute / 60 * HOUR_HEIGHT, bounds.startMinute, HOUR_HEIGHT));
+  }
+
+  function resolvePointer(clientX: number, clientY: number): PlanPointerPosition {
+    const available = days
+      .map((day) => ({ day, element: dayColumnsRef.current[day] }))
+      .filter((entry): entry is { day: string; element: HTMLDivElement } => Boolean(entry.element));
+    const selected = available.find(({ element }) => {
+      const rect = element.getBoundingClientRect();
+      return clientX >= rect.left && clientX <= rect.right;
+    }) ?? (clientX < (available[0]?.element.getBoundingClientRect().left ?? 0)
+      ? available[0]
+      : available[available.length - 1]);
+    const rect = selected?.element.getBoundingClientRect();
+    return {
+      date: selected?.day ?? days[0],
+      minute: rect ? (clientY - rect.top) / HOUR_HEIGHT * 60 : 0,
+    };
   }
 
   return (
@@ -126,7 +150,12 @@ export function WeekTimeline({ days, sessions, plans, onAddPlan, onEditPlan, onE
                 );
                 const isToday = day === todayKey;
                 return (
-                  <div key={day} className="relative border-l border-border" style={{ height: canvasHeight }}>
+                  <div
+                    key={day}
+                    ref={(element) => { dayColumnsRef.current[day] = element; }}
+                    className="relative border-l border-border"
+                    style={{ height: canvasHeight }}
+                  >
                     {hours.map((hour, index) => (
                       <div
                         key={hour}
@@ -145,34 +174,24 @@ export function WeekTimeline({ days, sessions, plans, onAddPlan, onEditPlan, onE
                     />
                     {dayPlans.map((item) => {
                       const plan = item.plan;
-                      const title = plan.title.trim() ? plan.title : t("coreHour.untitledPlan");
-                      const statusClass = plan.status === "planned"
-                        ? "border-dashed border-planned bg-planned/10 text-foreground"
-                        : plan.status === "completed"
-                          ? "border-planned/60 bg-planned/5 text-foreground opacity-60"
-                          : "border-dotted border-border bg-surface text-muted opacity-70";
                       return (
-                        <button
+                        <InteractivePlanBlock
                           key={plan.id}
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation();
-                            onEditPlan(plan);
-                          }}
-                          className={"absolute overflow-hidden rounded-md border px-1.5 py-1 text-left transition-[filter] hover:brightness-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent " + statusClass}
+                          plan={plan}
+                          date={day}
+                          hourHeight={HOUR_HEIGHT}
+                          compact
+                          availableDates={days}
+                          resolvePointer={resolvePointer}
+                          onEdit={onEditPlan}
+                          onUpdate={onUpdatePlan}
                           style={{
                             top: item.top,
                             height: item.height,
-                            left: `calc(${(item.lane / item.laneCount) * 100}% + 1px)`,
-                            width: `calc(${100 / item.laneCount}% - 2px)`,
+                            left: `calc(${(item.lane / item.laneCount) * 48}% + 1px)`,
+                            width: `calc(${48 / item.laneCount}% - 2px)`,
                           }}
-                          aria-label={t("coreHour.editPlanNamed", { title })}
-                        >
-                          <span className="block truncate text-xs font-medium">{title}</span>
-                          {item.height >= 34 && plan.tag_name && (
-                            <span className="mt-0.5 block truncate text-[11px] opacity-80">{plan.tag_name}</span>
-                          )}
-                        </button>
+                        />
                       );
                     })}
                     {daySessions.map((item) => {
@@ -190,7 +209,7 @@ export function WeekTimeline({ days, sessions, plans, onAddPlan, onEditPlan, onE
                           style={{
                             top: item.top,
                             height: item.height,
-                            left: "1rem",
+                            left: "50%",
                             right: "0.25rem",
                             borderLeftColor: color,
                             backgroundColor: "color-mix(in srgb, " + color + " 16%, var(--surface))",

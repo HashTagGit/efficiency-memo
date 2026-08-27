@@ -53,6 +53,21 @@ export interface WeekSummary {
   elapsedDays: number;
 }
 
+export interface PlanReviewRow {
+  started_at: string;
+  ended_at: string;
+  status: "planned" | "completed" | "skipped";
+}
+
+export interface PlanActualSummary {
+  plannedMinutes: number;
+  actualMinutes: number;
+  completionRate: number | null;
+  varianceMinutes: number;
+  completedPlans: number;
+  reviewedPlans: number;
+}
+
 export const RANGE_DAYS: Record<TrendRange, number> = { "7d": 7, "30d": 30 };
 
 /** Local-time ISO date (YYYY-MM-DD) — avoids the UTC shift of toISOString(). */
@@ -149,6 +164,35 @@ export function buildWeekSummary(
       : Math.round((totalMinutes - previousTotalMinutes) / previousTotalMinutes * 100),
     goalDays: days.slice(0, elapsedDays).filter((point) => point.minutes >= goalMinutes).length,
     elapsedDays,
+  };
+}
+
+export function buildPlanActualSummary(
+  plans: PlanReviewRow[],
+  actualSeconds: number,
+  now = new Date(),
+): PlanActualSummary {
+  const plannedMinutes = plans.reduce((total, plan) => {
+    const start = new Date(plan.started_at);
+    const end = new Date(plan.ended_at);
+    const startMinute = start.getHours() * 60 + start.getMinutes();
+    const endMinute = end.getHours() * 60 + end.getMinutes();
+    return total + Math.max(0, endMinute - startMinute);
+  }, 0);
+  const reviewed = plans.filter((plan) => (
+    plan.status !== "planned" || new Date(plan.ended_at) <= now
+  ));
+  const completedPlans = reviewed.filter((plan) => plan.status === "completed").length;
+  const actualMinutes = Math.round(Number(actualSeconds) / 60);
+  return {
+    plannedMinutes,
+    actualMinutes,
+    completionRate: reviewed.length === 0
+      ? null
+      : Math.round(completedPlans / reviewed.length * 100),
+    varianceMinutes: actualMinutes - plannedMinutes,
+    completedPlans,
+    reviewedPlans: reviewed.length,
   };
 }
 

@@ -23,6 +23,13 @@ export interface PlannedBlockInput {
   endedAt: string;
 }
 
+export interface PlannedBlockRangeInput {
+  id: string;
+  userId: string;
+  startedAt: string;
+  endedAt: string;
+}
+
 export function validatePlanRange(startedAt: string, endedAt: string): PlanRangeError | null {
   const start = new Date(startedAt);
   const end = new Date(endedAt);
@@ -93,11 +100,41 @@ export async function savePlannedBlock(input: PlannedBlockInput): Promise<string
   if (error) throw new Error(error);
   const id = input.id ?? crypto.randomUUID();
   const now = new Date().toISOString();
+  const startedAt = new Date(input.startedAt).toISOString();
+  const endedAt = new Date(input.endedAt).toISOString();
   await dbExecute(
     "INSERT INTO ch_plans (id, user_id, title, tag_id, started_at, ended_at, status, session_id, created_at, updated_at, synced) VALUES ($1, $2, $3, $4, $5, $6, 'planned', NULL, $7, $7, 0) ON CONFLICT(id) DO UPDATE SET title = excluded.title, tag_id = excluded.tag_id, started_at = excluded.started_at, ended_at = excluded.ended_at, updated_at = excluded.updated_at, synced = 0 WHERE ch_plans.user_id = excluded.user_id AND ch_plans.status = 'planned'",
-    [id, input.userId, input.title.trim(), input.tagId, new Date(input.startedAt).toISOString(), new Date(input.endedAt).toISOString(), now],
+    [id, input.userId, input.title.trim(), input.tagId, startedAt, endedAt, now],
   );
+  if (!input.id) return id;
+  const [saved] = await dbSelect<Pick<PlannedBlock, "started_at" | "ended_at" | "status">>(
+    "SELECT started_at, ended_at, status FROM ch_plans WHERE id = $1 AND user_id = $2",
+    [id, input.userId],
+  );
+  if (!saved || saved.status !== "planned"
+    || saved.started_at !== startedAt || saved.ended_at !== endedAt) {
+    throw new Error("plan-not-available");
+  }
   return id;
+}
+
+export async function updatePlannedBlockRange(input: PlannedBlockRangeInput): Promise<void> {
+  const error = validatePlanRange(input.startedAt, input.endedAt);
+  if (error) throw new Error(error);
+  const startedAt = new Date(input.startedAt).toISOString();
+  const endedAt = new Date(input.endedAt).toISOString();
+  await dbExecute(
+    "UPDATE ch_plans SET started_at = $1, ended_at = $2, updated_at = $3, synced = 0 WHERE id = $4 AND user_id = $5 AND status = 'planned'",
+    [startedAt, endedAt, new Date().toISOString(), input.id, input.userId],
+  );
+  const [saved] = await dbSelect<Pick<PlannedBlock, "started_at" | "ended_at" | "status">>(
+    "SELECT started_at, ended_at, status FROM ch_plans WHERE id = $1 AND user_id = $2",
+    [input.id, input.userId],
+  );
+  if (!saved || saved.status !== "planned"
+    || saved.started_at !== startedAt || saved.ended_at !== endedAt) {
+    throw new Error("plan-not-available");
+  }
 }
 
 export async function skipPlannedBlock(userId: string, planId: string): Promise<void> {

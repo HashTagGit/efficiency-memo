@@ -55,6 +55,8 @@ export function PlanEditor({ isOpen, userId, plan, initialStartedAt, initialEnde
           ? t("coreHour.planInvalidRange")
           : message === "cross-day"
             ? t("coreHour.planCrossDay")
+            : message === "plan-not-available"
+              ? t("coreHour.planNotAvailable")
             : t("coreHour.planSaveFailed"),
       );
       setBusy(null);

@@ -63,6 +63,22 @@ export async function loadSessionsForDay(userId: string, now: Date): Promise<Tod
   }));
 }
 
+export function loadSessionsForDays(
+  userId: string,
+  days: string[],
+): Promise<TodaySession[][]> {
+  return Promise.all(days.map((day) => (
+    loadSessionsForDay(userId, new Date(day + "T12:00:00"))
+  )));
+}
+
+export function totalSessionSeconds(days: TodaySession[][]): number {
+  return days.flat().reduce(
+    (total, session) => total + session.elapsed_seconds,
+    0,
+  );
+}
+
 export function loadTodaySessions(userId: string, now = new Date()): Promise<TodaySession[]> {
   return loadSessionsForDay(userId, now);
 }
