@@ -6,11 +6,12 @@ export interface ModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
+  closeLabel?: string;
   children: React.ReactNode;
   className?: string;
 }
 
-export function Modal({ isOpen, onClose, title, children, className, ...rest }: ModalProps) {
+export function Modal({ isOpen, onClose, title, closeLabel = "Close modal", children, className, ...rest }: ModalProps) {
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -65,7 +66,7 @@ export function Modal({ isOpen, onClose, title, children, className, ...rest }: 
             type="button"
             onClick={onClose}
             className="p-1 rounded-lg text-muted hover:text-foreground hover:bg-surface transition-colors"
-            aria-label="Close modal"
+            aria-label={closeLabel}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"

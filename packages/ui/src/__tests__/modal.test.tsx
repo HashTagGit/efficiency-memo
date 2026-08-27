@@ -94,4 +94,13 @@ describe('Modal', () => {
     expect(closeButton.className).toMatch(/hover:text-foreground/);
     expect(closeButton.className).toMatch(/hover:bg-surface/);
   });
+
+  it('supports a localized close label', () => {
+    render(
+      <Modal isOpen onClose={vi.fn()} title="编辑" closeLabel="关闭编辑器">
+        <p>Content</p>
+      </Modal>
+    );
+    expect(screen.getByLabelText('关闭编辑器')).toBeInTheDocument();
+  });
 });

@@ -29,7 +29,7 @@ export async function loadRecentActivities(userId: string): Promise<RecentActivi
   return rows.map((row) => ({ ...row, is_favorite: Boolean(row.is_favorite) }));
 }
 
-export async function loadTodaySessions(userId: string, now = new Date()): Promise<TodaySession[]> {
+export async function loadSessionsForDay(userId: string, now: Date): Promise<TodaySession[]> {
   const dayStart = new Date(now);
   dayStart.setHours(0, 0, 0, 0);
   const dayEnd = new Date(dayStart);
@@ -51,6 +51,10 @@ export async function loadTodaySessions(userId: string, now = new Date()): Promi
     })(),
     is_favorite: Boolean(row.is_favorite),
   }));
+}
+
+export function loadTodaySessions(userId: string, now = new Date()): Promise<TodaySession[]> {
+  return loadSessionsForDay(userId, now);
 }
 
 export async function setActivityFavorite(

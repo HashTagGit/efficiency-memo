@@ -2,6 +2,7 @@
 
 use tauri_plugin_sql::{Migration, MigrationKind};
 
+mod core_hour;
 mod sidecar;
 mod sync;
 
@@ -63,6 +64,7 @@ pub fn run() {
             sync::sync_import,
             sync::sync_list,
             sync::store_webdav_credentials,
+            core_hour::save_core_hour_session_block,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

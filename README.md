@@ -11,8 +11,9 @@ EfficiencyMemo is a pnpm monorepo centered on CoreHour. Launch the app, start a 
 ### CoreHour — time tracking with periodic check-ins
 - Choose a 15, 30, or 60 minute interval for the next session
 - Start, pause, continue, and end sessions; an interrupted session restores paused
+- Add missed time manually and edit completed session activity, tag, start, or end time
 - Categorize a due check-in with one tag and an optional note, or skip it as uncategorized
-- Review and edit daily totals, tag totals, and check-ins
+- Review daily totals, tag totals, sessions, and check-ins
 - Receive one native notification when a check-in becomes due while the app is backgrounded
 
 ## Quick Start — Desktop App (recommended)

@@ -13,6 +13,7 @@ import {
 } from "../today-data";
 import type { Session } from "../types";
 import { useI18n } from "../../../lib/i18n";
+import { SessionEditor } from "./session-editor";
 
 interface DashboardProps {
   userId: string;
@@ -43,6 +44,23 @@ function PlayIcon() {
   );
 }
 
+function PlusIcon() {
+  return (
+    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
+function PencilIcon() {
+  return (
+    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="m4 16-.8 4 4-.8L18.4 8 16 5.6 4 16Z" />
+      <path d="m14.5 7.1 2.4 2.4" />
+    </svg>
+  );
+}
+
 export function Dashboard({ userId, intervalMinutes, timer }: DashboardProps) {
   const { locale, t } = useI18n();
   const { activeSession, pendingCheckIn, startSession, completeCheckIn, endSession } = useSession();
@@ -57,6 +75,8 @@ export function Dashboard({ userId, intervalMinutes, timer }: DashboardProps) {
   const [completedSession, setCompletedSession] = useState<Session | null>(null);
   const [confirmingEnd, setConfirmingEnd] = useState(false);
   const [resumeAfterCancel, setResumeAfterCancel] = useState(false);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingSession, setEditingSession] = useState<TodaySession | null>(null);
 
   const refreshToday = useCallback(async () => {
     const [recent, sessions] = await Promise.all([
@@ -171,7 +191,19 @@ export function Dashboard({ userId, intervalMinutes, timer }: DashboardProps) {
           <h1 className="text-2xl font-semibold text-foreground">{t("today.title")}</h1>
           <p className="mt-1 text-sm text-muted">{dateLabel}</p>
         </div>
-        <p className="text-sm font-medium text-muted">{t("today.total", { minutes: totalTodayMinutes })}</p>
+        <div className="flex flex-wrap items-center gap-3">
+          <p className="text-sm font-medium text-muted">{t("today.total", { minutes: totalTodayMinutes })}</p>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="gap-2"
+            disabled={Boolean(activeSession)}
+            onClick={() => { setEditingSession(null); setEditorOpen(true); }}
+          >
+            <PlusIcon />
+            {t("today.addTime")}
+          </Button>
+        </div>
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
@@ -394,22 +426,45 @@ export function Dashboard({ userId, intervalMinutes, timer }: DashboardProps) {
                   )}
                 </div>
                 <span className="col-start-2 row-start-1 text-sm tabular-nums text-muted sm:col-auto sm:row-auto">{Math.round(session.elapsed_seconds / 60)} {t("coreHour.minutes")}</span>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => void handleFavorite(session.activity, session.default_tag_id, !session.is_favorite)}
-                  disabled={!session.activity || Boolean(activeSession)}
-                  className={"col-start-2 row-start-2 h-8 w-8 justify-self-end p-0 sm:col-auto sm:row-auto " + (session.is_favorite ? "text-accent" : "text-muted hover:bg-surface-strong hover:text-foreground")}
-                  aria-label={session.is_favorite ? t("today.unfavorite") : t("today.favorite")}
-                  aria-pressed={session.is_favorite}
-                >
-                  <StarIcon filled={session.is_favorite} />
-                </Button>
+                <div className="col-start-2 row-start-2 flex justify-self-end sm:col-auto sm:row-auto">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    disabled={Boolean(activeSession)}
+                    className="h-8 w-8 p-0 text-muted"
+                    onClick={() => { setEditingSession(session); setEditorOpen(true); }}
+                    aria-label={t("today.edit", { activity: session.activity || t("today.unnamed") })}
+                  >
+                    <PencilIcon />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => void handleFavorite(session.activity, session.default_tag_id, !session.is_favorite)}
+                    disabled={!session.activity || Boolean(activeSession)}
+                    className={"h-8 w-8 p-0 " + (session.is_favorite ? "text-accent" : "text-muted hover:bg-surface-strong hover:text-foreground")}
+                    aria-label={session.is_favorite ? t("today.unfavorite") : t("today.favorite")}
+                    aria-pressed={session.is_favorite}
+                  >
+                    <StarIcon filled={session.is_favorite} />
+                  </Button>
+                </div>
               </li>
             ))}
           </ul>
         )}
       </section>
+      {editorOpen && (
+        <SessionEditor
+          key={editingSession?.id ?? "new"}
+          isOpen
+          userId={userId}
+          session={editingSession}
+          tags={tags}
+          onClose={() => setEditorOpen(false)}
+          onSaved={refreshToday}
+        />
+      )}
     </div>
   );
 }

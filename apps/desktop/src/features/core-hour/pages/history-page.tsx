@@ -14,8 +14,14 @@ import type { CheckInWithTag, Tag } from "../types";
 import { type ExportRange, rangeToFromDate, recordsToCsv, exportFilename } from "../export";
 import { buildTagSlices, buildTrend, rangeDays, summarize, type DailyRow, type TagRow, type TrendRange } from "../analytics";
 import { useI18n } from "../../../lib/i18n";
+import { SessionEditor } from "../components/session-editor";
+import { loadSessionsForDay, type TodaySession } from "../today-data";
+import { useSession } from "../hooks/use-session";
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => {
+  const now = new Date();
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
+};
 
 async function saveExport(csv: string, filename: string): Promise<void> {
   const { save } = await import("@tauri-apps/plugin-dialog");
@@ -25,7 +31,8 @@ async function saveExport(csv: string, filename: string): Promise<void> {
 }
 
 export default function HistoryPage({ userId }: { userId: string }) {
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
+  const { activeSession } = useSession();
   const [date, setDate] = useState(today);
   const [entries, setEntries] = useState<CheckInWithTag[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
@@ -37,17 +44,22 @@ export default function HistoryPage({ userId }: { userId: string }) {
   const [note, setNote] = useState("");
   const [exportRange, setExportRange] = useState<ExportRange>("30d");
   const [exporting, setExporting] = useState(false);
+  const [sessions, setSessions] = useState<TodaySession[]>([]);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingSession, setEditingSession] = useState<TodaySession | null>(null);
 
   const load = useCallback(async () => {
-    const [checkIns, availableTags] = await Promise.all([
+    const [checkIns, availableTags, daySessions] = await Promise.all([
       dbSelect<CheckInWithTag>(
         "SELECT ci.id, ci.session_id, ci.checked_at, ci.skipped, ci.note, ci.duration_seconds, ci.synced, e.tag_id, t.name AS tag_name, t.color AS tag_color FROM ch_check_ins ci JOIN ch_sessions s ON s.id = ci.session_id LEFT JOIN ch_check_in_entries e ON e.check_in_id = ci.id LEFT JOIN ch_tags t ON t.id = e.tag_id WHERE s.user_id = $1 AND date(ci.checked_at, 'localtime') = $2 ORDER BY ci.checked_at DESC",
         [userId, date],
       ),
       dbSelect<Tag>("SELECT * FROM ch_tags WHERE user_id = $1 AND is_archived = 0 ORDER BY created_at", [userId]),
+      loadSessionsForDay(userId, new Date(date + "T12:00:00")),
     ]);
     setEntries(checkIns.map((e) => ({ ...e, skipped: Boolean(e.skipped), duration_seconds: Number(e.duration_seconds) })));
     setTags(availableTags);
+    setSessions(daySessions);
   }, [date, userId]);
 
   useEffect(() => { void load(); }, [load]);
@@ -109,7 +121,16 @@ export default function HistoryPage({ userId }: { userId: string }) {
         title={t("coreHour.history")}
         subtitle={t("coreHour.historySubtitle", { minutes: Math.round(totalSeconds / 60), date })}
         action={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              className="gap-1.5"
+              disabled={Boolean(activeSession)}
+              onClick={() => { setEditingSession(null); setEditorOpen(true); }}
+            >
+              <span aria-hidden="true">+</span>
+              {t("today.addTime")}
+            </Button>
             <select
               value={exportRange}
               onChange={(ev) => setExportRange(ev.target.value as ExportRange)}
@@ -205,6 +226,32 @@ export default function HistoryPage({ userId }: { userId: string }) {
       </section>
 
       <section className="space-y-2" data-testid="ch-history-entries">
+        <div className="flex items-center justify-between border-b border-border pb-2">
+          <h2 className="text-sm font-semibold text-foreground">{t("today.sessions")}</h2>
+          <span className="text-xs text-muted">{sessions.length}</span>
+        </div>
+        {sessions.map((session) => (
+          <article key={session.id} className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface px-4 py-3">
+            <div className="min-w-0">
+              <p className="truncate text-sm font-medium text-foreground">{session.activity || t("today.unnamed")}</p>
+              <p className="mt-1 text-xs text-muted">
+                {new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }).format(new Date(session.started_at))}
+                {" · "}
+                {Math.round(session.elapsed_seconds / 60)} {t("coreHour.minutes")}
+                {session.tag_name ? " · " + session.tag_name : ""}
+              </p>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={Boolean(activeSession)}
+              onClick={() => { setEditingSession(session); setEditorOpen(true); }}
+            >
+              {t("coreHour.edit")}
+            </Button>
+          </article>
+        ))}
+
         <h2 className="text-sm font-semibold text-foreground">{t("coreHour.checkIns")}</h2>
         {entries.map((entry) => (
           <article key={entry.id} className="rounded-lg border border-border bg-surface px-4 py-3">
@@ -249,6 +296,20 @@ export default function HistoryPage({ userId }: { userId: string }) {
           <p className="py-8 text-center text-sm text-muted">{t("coreHour.noCheckIns")}</p>
         )}
       </section>
+      {editorOpen && (
+        <SessionEditor
+          key={editingSession?.id ?? "new"}
+          isOpen
+          userId={userId}
+          session={editingSession}
+          defaultDate={date}
+          tags={tags}
+          onClose={() => setEditorOpen(false)}
+          onSaved={async () => {
+            await Promise.all([load(), loadAnalytics()]);
+          }}
+        />
+      )}
     </div>
   );
 }
