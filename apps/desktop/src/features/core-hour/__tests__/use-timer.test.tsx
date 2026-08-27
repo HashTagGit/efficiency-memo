@@ -3,9 +3,9 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useTimer } from "../hooks/use-timer";
-import { readSystemIdleSeconds } from "../system-idle";
+import { readSystemIdleSeconds } from "../../../lib/system-idle";
 
-vi.mock("../system-idle", () => ({
+vi.mock("../../../lib/system-idle", () => ({
   readSystemIdleSeconds: vi.fn().mockResolvedValue(null),
 }));
 

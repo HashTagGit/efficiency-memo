@@ -61,6 +61,12 @@ pub fn run() {
             sql: include_str!("../migrations/0008_pause_hydrate_schedule_policy.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 9,
+            description: "add pause and hydrate natural rest",
+            sql: include_str!("../migrations/0009_pause_hydrate_natural_rest.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
@@ -101,6 +107,7 @@ pub fn run() {
             pause_hydrate::save_pause_hydrate_preferences,
             pause_hydrate::claim_pause_hydrate_reminders,
             pause_hydrate::act_on_pause_hydrate_reminder,
+            pause_hydrate::complete_natural_break,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

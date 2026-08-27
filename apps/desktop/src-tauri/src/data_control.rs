@@ -5,7 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
 
-pub(crate) const SCHEMA_VERSION: i64 = 8;
+pub(crate) const SCHEMA_VERSION: i64 = 9;
 const MIN_SUPPORTED_SCHEMA_VERSION: i64 = 7;
 pub(crate) const DB_FILENAME: &str = "efficiency-memo.db";
 pub(crate) const SIDECAR_FILENAME: &str = "efficiency-memo.db.next";
@@ -183,28 +183,45 @@ fn table_exists(connection: &Connection, table: &str) -> Result<bool, String> {
         .map_err(|error| error.to_string())
 }
 
+fn validate_table_columns(
+    connection: &Connection,
+    table: &str,
+    required_columns: &[&str],
+) -> Result<(), String> {
+    if !table_exists(connection, table)? {
+        return Err("invalid-backup".to_string());
+    }
+    let mut statement = connection
+        .prepare("SELECT name FROM pragma_table_info(?1)")
+        .map_err(|error| error.to_string())?;
+    let columns = statement
+        .query_map([table], |row| row.get::<_, String>(0))
+        .map_err(|error| error.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())?;
+    if required_columns
+        .iter()
+        .any(|required| !columns.iter().any(|column| column == required))
+    {
+        return Err("invalid-backup".to_string());
+    }
+    Ok(())
+}
+
 fn validate_required_schema(connection: &Connection, schema_version: i64) -> Result<(), String> {
     for (table, required_columns) in REQUIRED_SCHEMA {
         if schema_version < 8 && *table == "ph_schedule_policies" {
             continue;
         }
-        if !table_exists(connection, table)? {
-            return Err("invalid-backup".to_string());
-        }
-        let mut statement = connection
-            .prepare("SELECT name FROM pragma_table_info(?1)")
-            .map_err(|error| error.to_string())?;
-        let columns = statement
-            .query_map([table], |row| row.get::<_, String>(0))
-            .map_err(|error| error.to_string())?
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(|error| error.to_string())?;
-        if required_columns
-            .iter()
-            .any(|required| !columns.iter().any(|column| column == required))
-        {
-            return Err("invalid-backup".to_string());
-        }
+        validate_table_columns(connection, table, required_columns)?;
+    }
+    if schema_version >= 9 {
+        validate_table_columns(
+            connection,
+            "ph_schedule_policies",
+            &["natural_break_enabled", "natural_break_minutes"],
+        )?;
+        validate_table_columns(connection, "ph_reminder_events", &["source"])?;
     }
     for version in 1..=schema_version {
         let applied: i64 = connection
@@ -509,6 +526,7 @@ mod tests {
             include_str!("../migrations/0006_pause_hydrate.sql"),
             include_str!("../migrations/0007_ch_planned_blocks.sql"),
             include_str!("../migrations/0008_pause_hydrate_schedule_policy.sql"),
+            include_str!("../migrations/0009_pause_hydrate_natural_rest.sql"),
         ] {
             connection.execute_batch(migration).unwrap();
         }
@@ -528,7 +546,8 @@ mod tests {
                     (5, 'migration', 'installed', 1, X'', 0),
                     (6, 'migration', 'installed', 1, X'', 0),
                     (7, 'migration', 'installed', 1, X'', 0),
-                    (8, 'migration', 'installed', 1, X'', 0);
+                    (8, 'migration', 'installed', 1, X'', 0),
+                    (9, 'migration', 'installed', 1, X'', 0);
                 INSERT INTO users VALUES ('local-user', 'local@example.test', 'created', 'updated');
                 INSERT INTO ch_tags VALUES ('tag-1', 'local-user', 'Focus', '#000000', 0, 'created', 0);
                 INSERT INTO ch_sessions (
@@ -544,8 +563,8 @@ mod tests {
                 );
                 UPDATE ch_settings SET value = '60' WHERE key = 'interval_minutes';
                 INSERT INTO ph_reminders VALUES ('local-user', 'break', 1, 60, NULL, NULL, NULL, 'updated');
-                INSERT INTO ph_schedule_policies VALUES ('local-user', 31, 540, 1080, 0, 1320, 420, 'updated');
-                INSERT INTO ph_reminder_events VALUES ('event-1', 'local-user', 'break', 'completed', 'occurred');",
+                INSERT INTO ph_schedule_policies VALUES ('local-user', 31, 540, 1080, 0, 1320, 420, 'updated', 0, 5);
+                INSERT INTO ph_reminder_events VALUES ('event-1', 'local-user', 'break', 'completed', 'occurred', 'manual');",
             )
             .unwrap();
         connection
@@ -566,15 +585,36 @@ mod tests {
         drop(database(&source));
 
         let preview = create_backup_at(&source, &destination, preferences()).unwrap();
-        assert_eq!(preview.schema_version, 8);
+        assert_eq!(preview.schema_version, 9);
         assert_eq!(preview.preferences, preferences());
         assert_eq!(preview.counts.core_hour_sessions, 1);
         assert_eq!(preview.counts.core_hour_plans, 1);
         assert_eq!(preview.counts.pause_hydrate_events, 1);
 
-        let legacy_destination = temp_path("backup-v7");
-        fs::copy(&destination, &legacy_destination).unwrap();
-        let legacy = Connection::open(&legacy_destination).unwrap();
+        let legacy_v8_destination = temp_path("backup-v8");
+        fs::copy(&destination, &legacy_v8_destination).unwrap();
+        let legacy_v8 = Connection::open(&legacy_v8_destination).unwrap();
+        legacy_v8
+            .execute("UPDATE em_backup_metadata SET schema_version = 8", [])
+            .unwrap();
+        legacy_v8
+            .execute("DELETE FROM _sqlx_migrations WHERE version = 9", [])
+            .unwrap();
+        legacy_v8
+            .execute("ALTER TABLE ph_schedule_policies DROP COLUMN natural_break_enabled", [])
+            .unwrap();
+        legacy_v8
+            .execute("ALTER TABLE ph_schedule_policies DROP COLUMN natural_break_minutes", [])
+            .unwrap();
+        legacy_v8
+            .execute("ALTER TABLE ph_reminder_events DROP COLUMN source", [])
+            .unwrap();
+        drop(legacy_v8);
+        assert_eq!(inspect_backup(&legacy_v8_destination).unwrap().schema_version, 8);
+
+        let legacy_v7_destination = temp_path("backup-v7");
+        fs::copy(&legacy_v8_destination, &legacy_v7_destination).unwrap();
+        let legacy = Connection::open(&legacy_v7_destination).unwrap();
         legacy
             .execute("UPDATE em_backup_metadata SET schema_version = 7", [])
             .unwrap();
@@ -583,18 +623,18 @@ mod tests {
             .unwrap();
         legacy.execute("DROP TABLE ph_schedule_policies", []).unwrap();
         drop(legacy);
-        assert_eq!(inspect_backup(&legacy_destination).unwrap().schema_version, 7);
+        assert_eq!(inspect_backup(&legacy_v7_destination).unwrap().schema_version, 7);
 
         let backup = Connection::open(&destination).unwrap();
         backup
-            .execute("UPDATE em_backup_metadata SET schema_version = 9", [])
+            .execute("UPDATE em_backup_metadata SET schema_version = 10", [])
             .unwrap();
         drop(backup);
         assert_eq!(inspect_backup(&destination).unwrap_err(), "future-schema");
 
         let backup = Connection::open(&destination).unwrap();
         backup
-            .execute("UPDATE em_backup_metadata SET schema_version = 8", [])
+            .execute("UPDATE em_backup_metadata SET schema_version = 9", [])
             .unwrap();
         backup
             .execute("DELETE FROM _sqlx_migrations WHERE version = 6", [])
@@ -617,7 +657,8 @@ mod tests {
 
         let _ = fs::remove_file(source);
         let _ = fs::remove_file(destination);
-        let _ = fs::remove_file(legacy_destination);
+        let _ = fs::remove_file(legacy_v8_destination);
+        let _ = fs::remove_file(legacy_v7_destination);
     }
 
     #[test]

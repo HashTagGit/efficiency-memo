@@ -19,6 +19,8 @@ interface ScheduleDraft {
   quietEnabled: boolean;
   quietStart: string;
   quietEnd: string;
+  naturalBreakEnabled: boolean;
+  naturalBreakMinutes: number;
 }
 
 const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6] as const;
@@ -42,11 +44,13 @@ const emptySchedule: ScheduleDraft = {
   quietEnabled: DEFAULT_SCHEDULE_POLICY.quietEnabled,
   quietStart: minutesToTime(DEFAULT_SCHEDULE_POLICY.quietStartMinute),
   quietEnd: minutesToTime(DEFAULT_SCHEDULE_POLICY.quietEndMinute),
+  naturalBreakEnabled: DEFAULT_SCHEDULE_POLICY.naturalBreakEnabled,
+  naturalBreakMinutes: DEFAULT_SCHEDULE_POLICY.naturalBreakMinutes,
 };
 
 export default function PauseHydratePage() {
   const { locale, t } = useI18n();
-  const { state, loading, notificationPermission, savePreferences, act, requestNotificationPermission } = usePauseHydrate();
+  const { state, loading, notificationPermission, naturalBreakAvailable, savePreferences, act, requestNotificationPermission } = usePauseHydrate();
   const [draft, setDraft] = useState<DraftPreferences>(emptyDraft);
   const [schedule, setSchedule] = useState<ScheduleDraft>(emptySchedule);
   const [saving, setSaving] = useState(false);
@@ -81,6 +85,8 @@ export default function PauseHydratePage() {
       quietEnabled: state.schedulePolicy.quietEnabled,
       quietStart: minutesToTime(state.schedulePolicy.quietStartMinute),
       quietEnd: minutesToTime(state.schedulePolicy.quietEndMinute),
+      naturalBreakEnabled: state.schedulePolicy.naturalBreakEnabled,
+      naturalBreakMinutes: state.schedulePolicy.naturalBreakMinutes,
     });
   }, [dirty, state]);
 
@@ -92,6 +98,9 @@ export default function PauseHydratePage() {
   const quietInvalid = !Number.isFinite(quietStartMinute)
     || !Number.isFinite(quietEndMinute)
     || quietStartMinute === quietEndMinute;
+  const naturalBreakInvalid = !Number.isInteger(schedule.naturalBreakMinutes)
+    || schedule.naturalBreakMinutes < 2
+    || schedule.naturalBreakMinutes > 30;
 
   function updateDraft(kind: ReminderKind, value: Partial<DraftPreferences[ReminderKind]>) {
     setDraft((current) => ({ ...current, [kind]: { ...current[kind], ...value } }));
@@ -116,7 +125,7 @@ export default function PauseHydratePage() {
   }
 
   async function handleSave() {
-    if (workInvalid || quietInvalid) return;
+    if (workInvalid || quietInvalid || naturalBreakInvalid) return;
     setSaving(true);
     try {
       await savePreferences(
@@ -128,6 +137,8 @@ export default function PauseHydratePage() {
           quietEnabled: schedule.quietEnabled,
           quietStartMinute,
           quietEndMinute,
+          naturalBreakEnabled: schedule.naturalBreakEnabled,
+          naturalBreakMinutes: schedule.naturalBreakMinutes,
         },
       );
       setDirty(false);
@@ -168,6 +179,14 @@ export default function PauseHydratePage() {
     : notificationPermission === "denied" ? t("pauseHydrate.permissionDenied")
     : notificationPermission === "unsupported" ? t("pauseHydrate.permissionUnsupported")
     : t("pauseHydrate.permissionDefault");
+  const naturalBreakDot =
+    naturalBreakAvailable === true ? "bg-recovery"
+    : naturalBreakAvailable === false ? "bg-warning"
+    : "bg-muted";
+  const naturalBreakStatus =
+    naturalBreakAvailable === true ? t("pauseHydrate.naturalBreakReady")
+    : naturalBreakAvailable === false ? t("pauseHydrate.naturalBreakUnsupported")
+    : t("pauseHydrate.naturalBreakChecking");
 
   if (loading || !state) {
     return <p className="py-16 text-center text-sm text-muted">{t("app.loading")}</p>;
@@ -301,6 +320,49 @@ export default function PauseHydratePage() {
             )}
           </div>
         </div>
+
+        <div className="border-t border-border pt-5">
+          <div className="flex flex-wrap items-start justify-between gap-x-8 gap-y-4">
+            <div className="min-w-0 max-w-xl">
+              <h3 className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${naturalBreakDot}`} />
+                {t("pauseHydrate.naturalBreak")}
+              </h3>
+              <p className="mt-2 text-xs leading-relaxed text-muted">{t("pauseHydrate.naturalBreakHint")}</p>
+              <p className="mt-1.5 text-xs leading-relaxed text-muted" aria-live="polite">{naturalBreakStatus}</p>
+            </div>
+            <div className="flex flex-wrap items-start gap-5">
+              <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <input
+                  type="checkbox"
+                  checked={schedule.naturalBreakEnabled}
+                  disabled={naturalBreakAvailable !== true && !schedule.naturalBreakEnabled}
+                  onChange={(event) => updateSchedule({ naturalBreakEnabled: event.target.checked })}
+                  className="h-4 w-4 accent-[var(--accent)] disabled:opacity-50"
+                />
+                {t("pauseHydrate.naturalBreakEnabled")}
+              </label>
+              <label className="text-xs text-muted">
+                {t("pauseHydrate.naturalBreakMinutes")}
+                <span className="mt-1.5 flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={2}
+                    max={30}
+                    step={1}
+                    disabled={naturalBreakAvailable !== true || !schedule.naturalBreakEnabled}
+                    value={schedule.naturalBreakMinutes}
+                    aria-invalid={naturalBreakInvalid}
+                    onChange={(event) => updateSchedule({ naturalBreakMinutes: Number(event.target.value) })}
+                    className="h-10 w-24 min-w-0 rounded-md border border-border bg-background px-3 tabular-nums text-foreground focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
+                  />
+                  <span>{t("coreHour.minutes")}</span>
+                </span>
+              </label>
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-danger" aria-live="polite">{naturalBreakInvalid ? t("pauseHydrate.naturalBreakInvalid") : ""}</p>
+        </div>
       </section>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -373,7 +435,7 @@ export default function PauseHydratePage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3 border-b border-border pb-7">
-        <Button isLoading={saving} disabled={loading || workInvalid || quietInvalid} onClick={() => void handleSave()}>{t("pauseHydrate.saveSettings")}</Button>
+        <Button isLoading={saving} disabled={loading || workInvalid || quietInvalid || naturalBreakInvalid} onClick={() => void handleSave()}>{t("pauseHydrate.saveSettings")}</Button>
         <span className="text-sm text-success" aria-live="polite">{saved ? t("pauseHydrate.saved") : ""}</span>
       </div>
 
@@ -390,7 +452,11 @@ export default function PauseHydratePage() {
               <li key={event.id} className="grid grid-cols-[5.5rem_minmax(0,1fr)_auto] items-center gap-3 py-3 text-sm">
                 <time className="tabular-nums text-muted" dateTime={event.occurredAt}>{time.format(new Date(event.occurredAt))}</time>
                 <span className="truncate font-medium text-foreground">{t(`pauseHydrate.${event.kind}`)}</span>
-                <span className="text-right text-muted">{t(`pauseHydrate.action${event.action[0].toUpperCase()}${event.action.slice(1)}`)}</span>
+                <span className="text-right text-muted">
+                  {event.source === "natural"
+                    ? t("pauseHydrate.actionCompletedNatural")
+                    : t(`pauseHydrate.action${event.action[0].toUpperCase()}${event.action.slice(1)}`)}
+                </span>
               </li>
             ))}
           </ul>

@@ -24,6 +24,8 @@ export const DEFAULT_SCHEDULE_POLICY: SchedulePolicy = {
   quietEnabled: false,
   quietStartMinute: 22 * 60,
   quietEndMinute: 7 * 60,
+  naturalBreakEnabled: false,
+  naturalBreakMinutes: 5,
 };
 
 interface ReminderRow {
@@ -42,6 +44,8 @@ interface SchedulePolicyRow {
   quiet_enabled: number;
   quiet_start_minute: number;
   quiet_end_minute: number;
+  natural_break_enabled: number;
+  natural_break_minutes: number;
 }
 
 function weekdayMask(activeWeekdays: number[]): number {
@@ -58,6 +62,8 @@ function mapSchedulePolicy(row: SchedulePolicyRow | undefined): SchedulePolicy {
     quietEnabled: Boolean(row.quiet_enabled),
     quietStartMinute: Number(row.quiet_start_minute),
     quietEndMinute: Number(row.quiet_end_minute),
+    naturalBreakEnabled: Boolean(row.natural_break_enabled),
+    naturalBreakMinutes: Number(row.natural_break_minutes),
   };
 }
 
@@ -80,7 +86,7 @@ async function ensureReminderRows(userId: string, now: Date): Promise<void> {
     );
   }
   await dbExecute(
-    "INSERT OR IGNORE INTO ph_schedule_policies (user_id, active_weekdays_mask, work_start_minute, work_end_minute, quiet_enabled, quiet_start_minute, quiet_end_minute, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+    "INSERT OR IGNORE INTO ph_schedule_policies (user_id, active_weekdays_mask, work_start_minute, work_end_minute, quiet_enabled, quiet_start_minute, quiet_end_minute, updated_at, natural_break_enabled, natural_break_minutes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
     [
       userId,
       weekdayMask(DEFAULT_SCHEDULE_POLICY.activeWeekdays),
@@ -90,6 +96,8 @@ async function ensureReminderRows(userId: string, now: Date): Promise<void> {
       DEFAULT_SCHEDULE_POLICY.quietStartMinute,
       DEFAULT_SCHEDULE_POLICY.quietEndMinute,
       now.toISOString(),
+      DEFAULT_SCHEDULE_POLICY.naturalBreakEnabled,
+      DEFAULT_SCHEDULE_POLICY.naturalBreakMinutes,
     ],
   );
 }
@@ -108,8 +116,8 @@ export async function loadPauseHydrateState(
       "SELECT kind, COUNT(*) AS total FROM ph_reminder_events WHERE user_id = $1 AND action = 'completed' AND date(occurred_at, 'localtime') = date($2, 'localtime') GROUP BY kind",
       [userId, now.toISOString()],
     ),
-    dbSelect<{ id: string; kind: ReminderKind; action: ReminderAction; occurred_at: string }>(
-      "SELECT id, kind, action, occurred_at FROM ph_reminder_events WHERE user_id = $1 AND date(occurred_at, 'localtime') = date($2, 'localtime') ORDER BY occurred_at DESC",
+    dbSelect<{ id: string; kind: ReminderKind; action: ReminderAction; source: "manual" | "natural"; occurred_at: string }>(
+      "SELECT id, kind, action, source, occurred_at FROM ph_reminder_events WHERE user_id = $1 AND date(occurred_at, 'localtime') = date($2, 'localtime') ORDER BY occurred_at DESC",
       [userId, now.toISOString()],
     ),
     dbSelect<{ active: number }>(
@@ -117,7 +125,7 @@ export async function loadPauseHydrateState(
       [userId],
     ),
     dbSelect<SchedulePolicyRow>(
-      "SELECT active_weekdays_mask, work_start_minute, work_end_minute, quiet_enabled, quiet_start_minute, quiet_end_minute FROM ph_schedule_policies WHERE user_id = $1",
+      "SELECT active_weekdays_mask, work_start_minute, work_end_minute, quiet_enabled, quiet_start_minute, quiet_end_minute, natural_break_enabled, natural_break_minutes FROM ph_schedule_policies WHERE user_id = $1",
       [userId],
     ),
   ]);
@@ -128,6 +136,7 @@ export async function loadPauseHydrateState(
     id: row.id,
     kind: row.kind,
     action: row.action,
+    source: row.source,
     occurredAt: row.occurred_at,
   }));
   return {
@@ -156,6 +165,8 @@ export async function saveReminderPreferences(
         quiet_enabled: policy.quietEnabled,
         quiet_start_minute: policy.quietStartMinute,
         quiet_end_minute: policy.quietEndMinute,
+        natural_break_enabled: policy.naturalBreakEnabled,
+        natural_break_minutes: policy.naturalBreakMinutes,
       },
       preferences: preferences.map((preference) => {
         const interval = normalizeReminderInterval(preference.kind, preference.intervalMinutes);
@@ -211,5 +222,24 @@ export async function markNewPendingReminders(
     now: now.toISOString(),
     weekday,
     minuteOfDay: now.getHours() * 60 + now.getMinutes(),
+  });
+}
+
+export async function completeNaturalBreak(
+  userId: string,
+  idleSeconds: number,
+  now = new Date(),
+): Promise<boolean> {
+  const weekday = (now.getDay() + 6) % 7;
+  return invoke<boolean>("complete_natural_break", {
+    input: {
+      user_id: userId,
+      event_id: crypto.randomUUID(),
+      occurred_at: now.toISOString(),
+      idle_started_at: new Date(now.getTime() - idleSeconds * 1000).toISOString(),
+      idle_seconds: Math.max(0, Math.floor(idleSeconds)),
+      weekday,
+      minute_of_day: now.getHours() * 60 + now.getMinutes(),
+    },
   });
 }

@@ -1,3 +1,4 @@
+use chrono::{DateTime, Duration, SecondsFormat, Utc};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::Deserialize;
 use tauri::{AppHandle, Manager};
@@ -20,6 +21,8 @@ pub(crate) struct SchedulePolicyInput {
     quiet_enabled: bool,
     quiet_start_minute: i64,
     quiet_end_minute: i64,
+    natural_break_enabled: bool,
+    natural_break_minutes: i64,
 }
 
 impl Default for SchedulePolicyInput {
@@ -31,6 +34,8 @@ impl Default for SchedulePolicyInput {
             quiet_enabled: false,
             quiet_start_minute: 1320,
             quiet_end_minute: 420,
+            natural_break_enabled: false,
+            natural_break_minutes: 5,
         }
     }
 }
@@ -54,6 +59,17 @@ pub(crate) struct ReminderActionInput {
     muted_until: Option<String>,
 }
 
+#[derive(Deserialize)]
+pub(crate) struct NaturalBreakInput {
+    user_id: String,
+    event_id: String,
+    occurred_at: String,
+    idle_started_at: String,
+    idle_seconds: u64,
+    weekday: i64,
+    minute_of_day: i64,
+}
+
 fn valid_kind(kind: &str) -> bool {
     matches!(kind, "break" | "hydration")
 }
@@ -66,6 +82,7 @@ fn valid_policy(policy: &SchedulePolicyInput) -> bool {
         && (0..=1439).contains(&policy.quiet_start_minute)
         && (0..=1439).contains(&policy.quiet_end_minute)
         && policy.quiet_start_minute != policy.quiet_end_minute
+        && (2..=30).contains(&policy.natural_break_minutes)
 }
 
 fn minute_in_window(minute: i64, start: i64, end: i64) -> bool {
@@ -93,6 +110,29 @@ fn schedule_allows(policy: &SchedulePolicyInput, weekday: i64, minute_of_day: i6
             policy.quiet_end_minute,
         );
     active_day && working && !quiet
+}
+
+fn load_policy(connection: &Connection, user_id: &str) -> Result<SchedulePolicyInput, String> {
+    connection
+        .query_row(
+            "SELECT active_weekdays_mask, work_start_minute, work_end_minute, quiet_enabled, quiet_start_minute, quiet_end_minute, natural_break_enabled, natural_break_minutes FROM ph_schedule_policies WHERE user_id = ?1",
+            [user_id],
+            |row| {
+                Ok(SchedulePolicyInput {
+                    active_weekdays_mask: row.get(0)?,
+                    work_start_minute: row.get(1)?,
+                    work_end_minute: row.get(2)?,
+                    quiet_enabled: row.get(3)?,
+                    quiet_start_minute: row.get(4)?,
+                    quiet_end_minute: row.get(5)?,
+                    natural_break_enabled: row.get(6)?,
+                    natural_break_minutes: row.get(7)?,
+                })
+            },
+        )
+        .optional()
+        .map_err(|error| error.to_string())
+        .map(|policy| policy.unwrap_or_default())
 }
 
 fn save_preferences(input: SavePreferencesInput, connection: &mut Connection) -> Result<bool, String> {
@@ -137,7 +177,7 @@ fn save_preferences(input: SavePreferencesInput, connection: &mut Connection) ->
     }
     transaction
         .execute(
-            "INSERT INTO ph_schedule_policies (user_id, active_weekdays_mask, work_start_minute, work_end_minute, quiet_enabled, quiet_start_minute, quiet_end_minute, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8) ON CONFLICT(user_id) DO UPDATE SET active_weekdays_mask = excluded.active_weekdays_mask, work_start_minute = excluded.work_start_minute, work_end_minute = excluded.work_end_minute, quiet_enabled = excluded.quiet_enabled, quiet_start_minute = excluded.quiet_start_minute, quiet_end_minute = excluded.quiet_end_minute, updated_at = excluded.updated_at",
+            "INSERT INTO ph_schedule_policies (user_id, active_weekdays_mask, work_start_minute, work_end_minute, quiet_enabled, quiet_start_minute, quiet_end_minute, updated_at, natural_break_enabled, natural_break_minutes) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10) ON CONFLICT(user_id) DO UPDATE SET active_weekdays_mask = excluded.active_weekdays_mask, work_start_minute = excluded.work_start_minute, work_end_minute = excluded.work_end_minute, quiet_enabled = excluded.quiet_enabled, quiet_start_minute = excluded.quiet_start_minute, quiet_end_minute = excluded.quiet_end_minute, updated_at = excluded.updated_at, natural_break_enabled = excluded.natural_break_enabled, natural_break_minutes = excluded.natural_break_minutes",
             params![
                 input.user_id,
                 input.policy.active_weekdays_mask,
@@ -147,6 +187,8 @@ fn save_preferences(input: SavePreferencesInput, connection: &mut Connection) ->
                 input.policy.quiet_start_minute,
                 input.policy.quiet_end_minute,
                 input.updated_at,
+                input.policy.natural_break_enabled,
+                input.policy.natural_break_minutes,
             ],
         )
         .map_err(|error| error.to_string())?;
@@ -165,24 +207,7 @@ fn claim_pending(
         return Err("invalid-local-time".to_string());
     }
     let transaction = connection.transaction().map_err(|error| error.to_string())?;
-    let policy = transaction
-        .query_row(
-            "SELECT active_weekdays_mask, work_start_minute, work_end_minute, quiet_enabled, quiet_start_minute, quiet_end_minute FROM ph_schedule_policies WHERE user_id = ?1",
-            [user_id],
-            |row| {
-                Ok(SchedulePolicyInput {
-                    active_weekdays_mask: row.get(0)?,
-                    work_start_minute: row.get(1)?,
-                    work_end_minute: row.get(2)?,
-                    quiet_enabled: row.get(3)?,
-                    quiet_start_minute: row.get(4)?,
-                    quiet_end_minute: row.get(5)?,
-                })
-            },
-        )
-        .optional()
-        .map_err(|error| error.to_string())?
-        .unwrap_or_default();
+    let policy = load_policy(&transaction, user_id)?;
     if !schedule_allows(&policy, weekday, minute_of_day) {
         transaction.commit().map_err(|error| error.to_string())?;
         return Ok(Vec::new());
@@ -241,12 +266,99 @@ fn apply_action(input: ReminderActionInput, connection: &mut Connection) -> Resu
     }
     transaction
         .execute(
-            "INSERT INTO ph_reminder_events (id, user_id, kind, action, occurred_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+            "INSERT INTO ph_reminder_events (id, user_id, kind, action, occurred_at, source) VALUES (?1, ?2, ?3, ?4, ?5, 'manual')",
             params![input.event_id, input.user_id, input.kind, input.action, input.occurred_at],
         )
         .map_err(|error| error.to_string())?;
     transaction.commit().map_err(|error| error.to_string())?;
     Ok(())
+}
+
+fn complete_natural_break_record(
+    input: NaturalBreakInput,
+    connection: &mut Connection,
+) -> Result<bool, String> {
+    if input.event_id.trim().is_empty()
+        || !(0..=6).contains(&input.weekday)
+        || !(0..=1439).contains(&input.minute_of_day)
+    {
+        return Err("invalid-natural-break".to_string());
+    }
+    let occurred = DateTime::parse_from_rfc3339(&input.occurred_at)
+        .map_err(|_| "invalid-natural-break".to_string())?;
+    let idle_started = DateTime::parse_from_rfc3339(&input.idle_started_at)
+        .map_err(|_| "invalid-natural-break".to_string())?;
+    let transaction = connection.transaction().map_err(|error| error.to_string())?;
+    let policy = load_policy(&transaction, &input.user_id)?;
+    let threshold_seconds = u64::try_from(policy.natural_break_minutes)
+        .map_err(|_| "invalid-policy".to_string())?
+        * 60;
+    if !policy.natural_break_enabled
+        || !schedule_allows(&policy, input.weekday, input.minute_of_day)
+        || input.idle_seconds < threshold_seconds
+        || occurred.signed_duration_since(idle_started).num_seconds()
+            < i64::try_from(threshold_seconds).map_err(|_| "invalid-natural-break".to_string())?
+    {
+        transaction.commit().map_err(|error| error.to_string())?;
+        return Ok(false);
+    }
+    let active: bool = transaction
+        .query_row(
+            "SELECT EXISTS(SELECT 1 FROM ch_sessions WHERE user_id = ?1 AND ended_at IS NULL)",
+            [&input.user_id],
+            |row| row.get(0),
+        )
+        .map_err(|error| error.to_string())?;
+    let reminder = transaction
+        .query_row(
+            "SELECT enabled, interval_minutes FROM ph_reminders WHERE user_id = ?1 AND kind = 'break'",
+            [&input.user_id],
+            |row| Ok((row.get::<_, bool>(0)?, row.get::<_, i64>(1)?)),
+        )
+        .optional()
+        .map_err(|error| error.to_string())?;
+    let Some((reminder_enabled, interval_minutes)) = reminder else {
+        transaction.commit().map_err(|error| error.to_string())?;
+        return Ok(false);
+    };
+    if active || !reminder_enabled {
+        transaction.commit().map_err(|error| error.to_string())?;
+        return Ok(false);
+    }
+    let duplicate: bool = transaction
+        .query_row(
+            "SELECT EXISTS(SELECT 1 FROM ph_reminder_events WHERE user_id = ?1 AND kind = 'break' AND action = 'completed' AND occurred_at >= ?2)",
+            params![input.user_id, idle_started.with_timezone(&Utc).to_rfc3339_opts(SecondsFormat::Millis, true)],
+            |row| row.get(0),
+        )
+        .map_err(|error| error.to_string())?;
+    if duplicate {
+        transaction.commit().map_err(|error| error.to_string())?;
+        return Ok(false);
+    }
+    let occurred_at = occurred
+        .with_timezone(&Utc)
+        .to_rfc3339_opts(SecondsFormat::Millis, true);
+    let next_due_at = (occurred + Duration::minutes(interval_minutes))
+        .with_timezone(&Utc)
+        .to_rfc3339_opts(SecondsFormat::Millis, true);
+    let changed = transaction
+        .execute(
+            "UPDATE ph_reminders SET next_due_at = ?1, pending_at = NULL, updated_at = ?2 WHERE user_id = ?3 AND kind = 'break' AND enabled = 1",
+            params![next_due_at, occurred_at, input.user_id],
+        )
+        .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("natural-break-not-available".to_string());
+    }
+    transaction
+        .execute(
+            "INSERT INTO ph_reminder_events (id, user_id, kind, action, occurred_at, source) VALUES (?1, ?2, 'break', 'completed', ?3, 'natural')",
+            params![input.event_id, input.user_id, occurred_at],
+        )
+        .map_err(|error| error.to_string())?;
+    transaction.commit().map_err(|error| error.to_string())?;
+    Ok(true)
 }
 
 fn connection(app: &AppHandle) -> Result<Connection, String> {
@@ -285,11 +397,17 @@ pub(crate) fn act_on_pause_hydrate_reminder(input: ReminderActionInput, app: App
     apply_action(input, &mut connection(&app)?)
 }
 
+#[tauri::command]
+pub(crate) fn complete_natural_break(input: NaturalBreakInput, app: AppHandle) -> Result<bool, String> {
+    complete_natural_break_record(input, &mut connection(&app)?)
+}
+
 #[cfg(test)]
 mod tests {
     use super::{
-        apply_action, claim_pending, save_preferences, ReminderActionInput,
-        ReminderPreferenceInput, SavePreferencesInput, SchedulePolicyInput,
+        apply_action, claim_pending, complete_natural_break_record, save_preferences,
+        NaturalBreakInput, ReminderActionInput, ReminderPreferenceInput, SavePreferencesInput,
+        SchedulePolicyInput,
     };
     use rusqlite::{params, Connection};
 
@@ -306,13 +424,16 @@ mod tests {
                 );
                 CREATE TABLE ph_reminder_events (
                     id TEXT PRIMARY KEY, user_id TEXT NOT NULL, kind TEXT NOT NULL,
-                    action TEXT NOT NULL, occurred_at TEXT NOT NULL
+                    action TEXT NOT NULL, occurred_at TEXT NOT NULL,
+                    source TEXT NOT NULL DEFAULT 'manual'
                 );
                 CREATE TABLE ph_schedule_policies (
                     user_id TEXT PRIMARY KEY, active_weekdays_mask INTEGER NOT NULL,
                     work_start_minute INTEGER NOT NULL, work_end_minute INTEGER NOT NULL,
                     quiet_enabled INTEGER NOT NULL, quiet_start_minute INTEGER NOT NULL,
-                    quiet_end_minute INTEGER NOT NULL, updated_at TEXT NOT NULL
+                    quiet_end_minute INTEGER NOT NULL, updated_at TEXT NOT NULL,
+                    natural_break_enabled INTEGER NOT NULL DEFAULT 0,
+                    natural_break_minutes INTEGER NOT NULL DEFAULT 5
                 );
                 ",
             )
@@ -391,7 +512,7 @@ mod tests {
             .unwrap();
         connection
             .execute(
-                "INSERT INTO ph_schedule_policies VALUES (?1, 8, 540, 1080, 1, 1320, 600, ?2)",
+                "INSERT INTO ph_schedule_policies (user_id, active_weekdays_mask, work_start_minute, work_end_minute, quiet_enabled, quiet_start_minute, quiet_end_minute, updated_at) VALUES (?1, 8, 540, 1080, 1, 1320, 600, ?2)",
                 params!["local-user", "2026-08-27T09:00:00Z"],
             )
             .unwrap();
@@ -413,6 +534,75 @@ mod tests {
                 .unwrap(),
             vec!["break"]
         );
+    }
+
+    #[test]
+    fn natural_idle_completes_only_one_movement_break() {
+        let mut connection = database();
+        connection
+            .execute(
+                "INSERT INTO ph_reminders VALUES (?1, 'break', 1, 60, ?2, ?2, NULL, ?2)",
+                params!["local-user", "2026-08-27T09:00:00Z"],
+            )
+            .unwrap();
+        connection
+            .execute(
+                "INSERT INTO ph_reminders VALUES (?1, 'hydration', 1, 45, ?2, ?2, NULL, ?2)",
+                params!["local-user", "2026-08-27T09:00:00Z"],
+            )
+            .unwrap();
+        connection
+            .execute(
+                "INSERT INTO ph_schedule_policies VALUES (?1, 8, 540, 1080, 0, 1320, 420, ?2, 1, 5)",
+                params!["local-user", "2026-08-27T09:00:00Z"],
+            )
+            .unwrap();
+
+        let input = |event_id: &str| NaturalBreakInput {
+            user_id: "local-user".into(),
+            event_id: event_id.into(),
+            occurred_at: "2026-08-27T10:00:00Z".into(),
+            idle_started_at: "2026-08-27T09:54:00Z".into(),
+            idle_seconds: 360,
+            weekday: 3,
+            minute_of_day: 600,
+        };
+        connection
+            .execute(
+                "INSERT INTO ch_sessions VALUES ('local-user', NULL)",
+                [],
+            )
+            .unwrap();
+        assert!(!complete_natural_break_record(input("blocked"), &mut connection).unwrap());
+        connection.execute("DELETE FROM ch_sessions", []).unwrap();
+        assert!(complete_natural_break_record(input("natural-1"), &mut connection).unwrap());
+        assert!(!complete_natural_break_record(input("natural-2"), &mut connection).unwrap());
+
+        let events: Vec<(String, String)> = connection
+            .prepare("SELECT kind, source FROM ph_reminder_events ORDER BY occurred_at")
+            .unwrap()
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
+            .unwrap()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+        let break_state: (Option<String>, String) = connection
+            .query_row(
+                "SELECT pending_at, next_due_at FROM ph_reminders WHERE kind = 'break'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        let hydration_pending: Option<String> = connection
+            .query_row(
+                "SELECT pending_at FROM ph_reminders WHERE kind = 'hydration'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(events, vec![("break".into(), "natural".into())]);
+        assert!(break_state.0.is_none());
+        assert_eq!(break_state.1, "2026-08-27T11:00:00.000Z");
+        assert_eq!(hydration_pending.as_deref(), Some("2026-08-27T09:00:00Z"));
     }
 
     #[test]

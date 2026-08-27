@@ -5,7 +5,7 @@ import {
   resolveUncertainElapsed,
   type UncertainInterval,
 } from "../timer-gaps";
-import { readSystemIdleSeconds } from "../system-idle";
+import { readSystemIdleSeconds } from "../../../lib/system-idle";
 
 /**
  * Web-native timer hook mirroring the Rust Tauri timer behavior.

@@ -2,6 +2,7 @@ export const REMINDER_KINDS = ["break", "hydration"] as const;
 
 export type ReminderKind = (typeof REMINDER_KINDS)[number];
 export type ReminderAction = "completed" | "snoozed" | "muted";
+export type ReminderEventSource = "manual" | "natural";
 export type ReminderNotificationPermission = NotificationPermission | "unknown" | "unsupported";
 
 export interface SchedulePolicy {
@@ -11,6 +12,8 @@ export interface SchedulePolicy {
   quietEnabled: boolean;
   quietStartMinute: number;
   quietEndMinute: number;
+  naturalBreakEnabled: boolean;
+  naturalBreakMinutes: number;
 }
 
 export interface ReminderState {
@@ -26,6 +29,7 @@ export interface ReminderEvent {
   id: string;
   kind: ReminderKind;
   action: ReminderAction;
+  source: ReminderEventSource;
   occurredAt: string;
 }
 
