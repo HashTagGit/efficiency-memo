@@ -10,6 +10,7 @@ const paletteColors: Record<Palette, string[]> = {
   ember: ["#d6a24a", "#7ec8e3", "#8ad49f"],
   grove: ["#d6ace8", "#84d3a7", "#f0c56c"],
   tide: ["#61abc2", "#8aaee8", "#e2ba70"],
+  clarity: ["#b9d3ff", "#94e4b0", "#f5d58b"],
 };
 const companionShortcuts = [
   { keys: ["Ctrl", "Shift", "M"], descriptionKey: "appSettings.companionShortcutToggle" },
@@ -43,7 +44,7 @@ export function AppSettingsPage() {
 
         <div className="mt-6">
           <p className="text-sm font-medium text-foreground">{t("appSettings.palette")}</p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-3" role="radiogroup" aria-label={t("appSettings.palette")}>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4" role="radiogroup" aria-label={t("appSettings.palette")}>
             {PALETTES.map((value) => (
               <label
                 key={value}
