@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { getCurrentUser } from "../../lib/auth";
 import { useI18n } from "../../lib/i18n";
 import { notifyCheckIn } from "./notifications";
@@ -8,6 +8,13 @@ import { useTimer, type TimerState } from "./hooks/use-timer";
 import { shouldPromptForCheckIn, unrecordedSeconds } from "./session-math";
 
 const CoreHourTimerContext = createContext<TimerState | null>(null);
+interface CoreHourLoadState {
+  loading: boolean;
+  loadError: boolean;
+  refresh: () => Promise<void>;
+}
+
+const CoreHourLoadContext = createContext<CoreHourLoadState | null>(null);
 
 function CoreHourRuntime({ children }: { children: React.ReactNode }) {
   const userId = getCurrentUser()?.id ?? null;
@@ -22,11 +29,29 @@ function CoreHourRuntime({ children }: { children: React.ReactNode }) {
     createCheckIn,
   } = useSession();
   const { loadTags } = useTags();
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+
+  const refresh = useCallback(async () => {
+    if (!userId) {
+      setLoadError(true);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    setLoadError(false);
+    try {
+      await Promise.all([loadSessions(userId), loadTags(userId)]);
+    } catch {
+      setLoadError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [loadSessions, loadTags, userId]);
 
   useEffect(() => {
-    if (!userId) return;
-    void Promise.all([loadSessions(userId), loadTags(userId)]);
-  }, [loadSessions, loadTags, userId]);
+    void refresh();
+  }, [refresh]);
 
   useEffect(() => {
     if (activeSession && !timer.isRunning) {
@@ -55,7 +80,13 @@ function CoreHourRuntime({ children }: { children: React.ReactNode }) {
     }
   }, [activeSession, createCheckIn, pendingCheckIn, t, timer]);
 
-  return <CoreHourTimerContext.Provider value={timer}>{children}</CoreHourTimerContext.Provider>;
+  return (
+    <CoreHourTimerContext.Provider value={timer}>
+      <CoreHourLoadContext.Provider value={{ loading, loadError, refresh }}>
+        {children}
+      </CoreHourLoadContext.Provider>
+    </CoreHourTimerContext.Provider>
+  );
 }
 
 export function CoreHourRuntimeProvider({ children }: { children: React.ReactNode }) {
@@ -72,4 +103,10 @@ export function useCoreHourTimer(): TimerState {
   const timer = useContext(CoreHourTimerContext);
   if (!timer) throw new Error("useCoreHourTimer must be used within CoreHourRuntimeProvider");
   return timer;
+}
+
+export function useCoreHourLoadState(): CoreHourLoadState {
+  const state = useContext(CoreHourLoadContext);
+  if (!state) throw new Error("useCoreHourLoadState must be used within CoreHourRuntimeProvider");
+  return state;
 }

@@ -14,9 +14,9 @@ import {
   loadDailyFocusGoal,
 } from "../settings";
 import { useI18n } from "../../../lib/i18n";
-import { Button } from "@memo/ui";
+import { Button, EmptyState } from "@memo/ui";
 import { UncertainTimeReview } from "../components/uncertain-time-review";
-import { useCoreHourTimer } from "../runtime";
+import { useCoreHourLoadState, useCoreHourTimer } from "../runtime";
 
 function CoreHourHome({ timer }: { timer: TimerState }) {
   const [intervalMinutes, setIntervalMinutes] = useState(30);
@@ -43,7 +43,18 @@ export default function CoreHourRoutes() {
 function CoreHourWorkspace({ userId }: { userId: string }) {
   const { t } = useI18n();
   const timer = useCoreHourTimer();
+  const { loading, loadError, refresh } = useCoreHourLoadState();
   const { activeSession } = useSession();
+  const [retrying, setRetrying] = useState(false);
+
+  async function handleRetry() {
+    setRetrying(true);
+    try {
+      await refresh();
+    } finally {
+      setRetrying(false);
+    }
+  }
 
   return (
     <div className="space-y-6" data-testid="ch-dashboard">
@@ -66,7 +77,7 @@ function CoreHourWorkspace({ userId }: { userId: string }) {
               </NavLink>
             ))}
         </nav>
-        {activeSession && (
+        {!loading && !loadError && activeSession && (
           <div className="flex min-w-0 items-center gap-1">
             <NavLink
               to="/tools/core-hour"
@@ -92,6 +103,15 @@ function CoreHourWorkspace({ userId }: { userId: string }) {
           </div>
         )}
       </div>
+      {loading ? (
+        <p className="py-16 text-center text-sm text-muted" role="status" aria-live="polite">{t("coreHour.runtimeLoading")}</p>
+      ) : loadError ? (
+        <EmptyState
+          title={t("coreHour.runtimeLoadErrorTitle")}
+          description={t("coreHour.runtimeLoadErrorDescription")}
+          action={<Button isLoading={retrying} onClick={() => void handleRetry()}>{t("coreHour.retry")}</Button>}
+        />
+      ) : <>
       {timer.uncertainInterval && (
         <UncertainTimeReview
           key={timer.uncertainInterval.detectedAt}
@@ -106,6 +126,7 @@ function CoreHourWorkspace({ userId }: { userId: string }) {
         <Route path="tags" element={<TagsPage userId={userId} />} />
         <Route path="settings" element={<SettingsPage />} />
       </Routes>
+      </>}
     </div>
   );
 }
