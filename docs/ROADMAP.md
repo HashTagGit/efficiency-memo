@@ -1,0 +1,70 @@
+# EfficiencyMemo Roadmap
+
+EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap deepens existing tools and shared desktop capabilities before adding another top-level module.
+
+## Shipped foundation
+
+- Local profile, SQLite persistence, bilingual shell, and System/Light/Dark appearance.
+- Ember, Grove, and Tide palettes using shared semantic tokens.
+- CoreHour sessions, check-ins, tags, daily goals, Today, Timeline, and Insights.
+- Pause & Hydrate with independent schedules, focus deferral, actions, notifications, and local history.
+
+## Current release: CoreHour Plan vs Actual
+
+- Store plans separately from confirmed sessions.
+- Create, edit, skip, and explicitly convert a plan into an actual record.
+- Compare plans and actual records in day and Monday-to-Sunday week timelines.
+- Keep plans out of check-ins, CSV actual-time exports, goals, and Insights.
+
+Exit gate: the day/week UI makes intention and actual time distinguishable without explanation, and failed session validation never changes the source plan.
+
+## Next releases
+
+### 1. Data & Privacy Center
+
+- Versioned local backup with a preview before restore.
+- Human-readable module exports and separate module/full-app reset actions.
+- Include stable preferences but exclude keychain secrets.
+
+This is the trust gate before automatic collection or hosted sync is considered.
+
+### 2. CoreHour direct planning and weekly review
+
+- Move and resize plan blocks after the current click/edit semantics are proven.
+- Show planned minutes, actual minutes, completion rate, and variance in a compact weekly review.
+- Resolve idle or suspend gaps explicitly instead of silently counting them.
+
+### 3. Desktop Companion
+
+- System-tray state and commands for current focus and next healthy-work reminders.
+- Two shortcuts first: show/hide EfficiencyMemo and start/stop the latest CoreHour activity.
+- Reuse authoritative module commands; the tray never owns a second timer.
+
+### 4. Respectful reminder policy
+
+- Active weekdays, working hours, quiet hours, and notification-permission status.
+- Natural movement-break completion from sufficient idle time; hydration always remains explicit.
+- DND-aware deferral with a grace period and no stale-reminder burst after resume.
+
+### 5. Local Activity Assist experiment
+
+- Windows-first, off by default, foreground application name only.
+- Short raw retention, pause/exclusion/delete controls, and local-only processing.
+- Show unconfirmed suggestions in CoreHour; only explicit acceptance creates actual time.
+
+Stop the experiment if useful suggestions require window titles, URLs, screenshots, content, keystrokes, or cloud inference.
+
+## Product boundaries
+
+- No team surveillance, manager dashboards, seat billing, screenshots, or keystroke capture.
+- No general task manager, AI auto-scheduling, or calendar write-back until manual planning proves a separate demand.
+- A future Day Plan tool requires evidence that users want task lifecycle independent of CoreHour plans and sessions.
+- Local timers, reminders, history, export, restore, deletion, and privacy controls remain complete without an account.
+
+## Visual vocabulary
+
+Every palette keeps the same meanings: `planned` uses informational color plus a dashed border; `actual` uses tag/success color plus a solid edge; `suggested` uses a dotted pending treatment; `recovery`, `hydration`, and `privacy` use distinct icons as well as color. Tag colors remain user data and never become status colors.
+
+## Evidence
+
+The priorities and boundaries are supported by [UI themes and commercial gap analysis](research/ui-themes-commercial-gap-analysis.md), [CoreHour competitive analysis](research/corehour-competitive-analysis.md), and [adjacent product opportunities](research/adjacent-product-opportunities-2026.md).
