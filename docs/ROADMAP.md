@@ -5,7 +5,7 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 ## Shipped foundation
 
 - Local profile, SQLite persistence, bilingual shell, and System/Light/Dark appearance.
-- Ember, Grove, and Tide palettes using shared semantic tokens.
+- Ember, Grove, Tide, and enhanced-contrast Clarity palettes using shared semantic tokens.
 - CoreHour sessions, check-ins, tags, daily goals, Today, Timeline, and Insights.
 - CoreHour planned blocks with separate day/week plan-versus-actual timelines and explicit conversion.
 - CoreHour direct plan move/resize plus selected-week and current-week plan-versus-actual review.
@@ -21,11 +21,21 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 
 ## Next releases
 
-### 1. Respectful reminder policy
+### 1. Product-wide view states
+
+- Standardize first-use, no-results, completed, loading, unavailable, not-found, and recoverable-error states.
+- Keep safe stale data visible during refresh and offer section-level retry without losing local context.
+
+### 2. Actionable Now surface
+
+- Replace the tool-card-only launch view with current focus, next planned block, upcoming reminders, and one relevant action per module.
+- Keep every module directly reachable and avoid turning Home into another analytics dashboard.
+
+### 3. Respectful reminder policy
 
 - Add a reliable Linux idle adapter across Wayland/X11 desktop environments before enabling Natural Rest there.
 
-### 2. Local Activity Assist experiment
+### 4. Local Activity Assist experiment
 
 - Windows-first, off by default, foreground application name only.
 - Short raw retention, pause/exclusion/delete controls, and local-only processing.
@@ -46,4 +56,4 @@ Every palette keeps the same meanings: `planned` uses informational color plus a
 
 ## Evidence
 
-The priorities and boundaries are supported by [UI themes and commercial gap analysis](research/ui-themes-commercial-gap-analysis.md), [CoreHour competitive analysis](research/corehour-competitive-analysis.md), and [adjacent product opportunities](research/adjacent-product-opportunities-2026.md).
+The priorities and boundaries are supported by [local-first productivity UI and product strategy](research/local-first-productivity-ui-product-research.md), [UI themes and commercial gap analysis](research/ui-themes-commercial-gap-analysis.md), [CoreHour competitive analysis](research/corehour-competitive-analysis.md), and [adjacent product opportunities](research/adjacent-product-opportunities-2026.md).
