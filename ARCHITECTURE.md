@@ -48,8 +48,9 @@ The desktop app lives in `apps/desktop/` and is the recommended deployable surfa
 
 ### CoreHour Workflow
 
-- `features/core-hour/` owns the Today, History, Tags, and Settings routes.
+- `features/core-hour/` owns the Today, Timeline, Tags, and Settings routes.
 - Today stores lightweight activity context on each session and derives recent/favorite activity combinations from local session history.
+- Timeline lays completed sessions onto a selected local day, with native date navigation and 15-minute click snapping for manual entry.
 - Manual session changes validate overlaps and update the session and its check-in durations in one SQLite transaction.
 - An active session persists elapsed and categorized seconds in local storage; after a restart it restores paused.
 - Check-ins record one optional tag, an optional note, and an explicit duration.

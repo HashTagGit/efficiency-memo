@@ -12,16 +12,27 @@ import {
 import { dbExecute, dbSelect } from "../../../lib/db";
 import type { CheckInWithTag, Tag } from "../types";
 import { type ExportRange, rangeToFromDate, recordsToCsv, exportFilename } from "../export";
-import { buildTagSlices, buildTrend, rangeDays, summarize, type DailyRow, type TagRow, type TrendRange } from "../analytics";
+import { buildTagSlices, buildTrend, isoDay, rangeDays, summarize, type DailyRow, type TagRow, type TrendRange } from "../analytics";
 import { useI18n } from "../../../lib/i18n";
 import { SessionEditor } from "../components/session-editor";
 import { loadSessionsForDay, type TodaySession } from "../today-data";
-import { useSession } from "../hooks/use-session";
+import { DayTimeline } from "../components/day-timeline";
 
-const today = () => {
-  const now = new Date();
-  return new Date(now.getTime() - now.getTimezoneOffset() * 60_000).toISOString().slice(0, 10);
-};
+const today = () => isoDay(new Date());
+
+function shiftDate(value: string, days: number): string {
+  const date = new Date(value + "T12:00:00");
+  date.setDate(date.getDate() + days);
+  return isoDay(date);
+}
+
+function ArrowIcon({ direction }: { direction: "left" | "right" }) {
+  return (
+    <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d={direction === "left" ? "m15 18-6-6 6-6" : "m9 18 6-6-6-6"} />
+    </svg>
+  );
+}
 
 async function saveExport(csv: string, filename: string): Promise<void> {
   const { save } = await import("@tauri-apps/plugin-dialog");
@@ -31,8 +42,7 @@ async function saveExport(csv: string, filename: string): Promise<void> {
 }
 
 export default function HistoryPage({ userId }: { userId: string }) {
-  const { locale, t } = useI18n();
-  const { activeSession } = useSession();
+  const { t } = useI18n();
   const [date, setDate] = useState(today);
   const [entries, setEntries] = useState<CheckInWithTag[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
@@ -47,6 +57,7 @@ export default function HistoryPage({ userId }: { userId: string }) {
   const [sessions, setSessions] = useState<TodaySession[]>([]);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingSession, setEditingSession] = useState<TodaySession | null>(null);
+  const [editorStart, setEditorStart] = useState<Date | null>(null);
 
   const load = useCallback(async () => {
     const [checkIns, availableTags, daySessions] = await Promise.all([
@@ -89,7 +100,7 @@ export default function HistoryPage({ userId }: { userId: string }) {
       await dbExecute("INSERT INTO ch_check_in_entries (id, check_in_id, tag_id, percentage, synced) VALUES ($1, $2, $3, 100, 0)", [crypto.randomUUID(), entry.id, tagId]);
     }
     setEditingId(null);
-    await load();
+    await Promise.all([load(), loadAnalytics()]);
   }
 
   async function handleExport() {
@@ -116,7 +127,7 @@ export default function HistoryPage({ userId }: { userId: string }) {
   const tagSlices = buildTagSlices(tagRows);
 
   return (
-    <div className="max-w-2xl space-y-6" data-testid="ch-history-page">
+    <div className="mx-auto max-w-5xl space-y-6" data-testid="ch-history-page">
       <PageHeader
         title={t("coreHour.history")}
         subtitle={t("coreHour.historySubtitle", { minutes: Math.round(totalSeconds / 60), date })}
@@ -125,8 +136,7 @@ export default function HistoryPage({ userId }: { userId: string }) {
             <Button
               size="sm"
               className="gap-1.5"
-              disabled={Boolean(activeSession)}
-              onClick={() => { setEditingSession(null); setEditorOpen(true); }}
+              onClick={() => { setEditingSession(null); setEditorStart(null); setEditorOpen(true); }}
             >
               <span aria-hidden="true">+</span>
               {t("today.addTime")}
@@ -148,15 +158,53 @@ export default function HistoryPage({ userId }: { userId: string }) {
         }
       />
 
-      <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-        {t("coreHour.date")}
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface p-2">
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setDate((current) => shiftDate(current, -1))}
+            aria-label={t("timeline.previousDay")}
+          >
+            <ArrowIcon direction="left" />
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => setDate(today())}>
+            {t("timeline.goToday")}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setDate((current) => shiftDate(current, 1))}
+            aria-label={t("timeline.nextDay")}
+          >
+            <ArrowIcon direction="right" />
+          </Button>
+        </div>
         <input
           type="date"
           value={date}
           onChange={(ev) => setDate(ev.target.value)}
           className="rounded-lg border border-border bg-surface text-foreground px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+          aria-label={t("coreHour.date")}
         />
-      </label>
+      </div>
+
+      <DayTimeline
+        date={date}
+        sessions={sessions}
+        onAdd={(startedAt) => {
+          setEditingSession(null);
+          setEditorStart(startedAt);
+          setEditorOpen(true);
+        }}
+        onEdit={(session) => {
+          setEditingSession(session);
+          setEditorStart(null);
+          setEditorOpen(true);
+        }}
+      />
 
       <section className="space-y-4" data-testid="ch-history-analytics" aria-label={t("coreHour.focusOverview")}>
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -226,33 +274,7 @@ export default function HistoryPage({ userId }: { userId: string }) {
       </section>
 
       <section className="space-y-2" data-testid="ch-history-entries">
-        <div className="flex items-center justify-between border-b border-border pb-2">
-          <h2 className="text-sm font-semibold text-foreground">{t("today.sessions")}</h2>
-          <span className="text-xs text-muted">{sessions.length}</span>
-        </div>
-        {sessions.map((session) => (
-          <article key={session.id} className="flex items-center justify-between gap-3 rounded-lg border border-border bg-surface px-4 py-3">
-            <div className="min-w-0">
-              <p className="truncate text-sm font-medium text-foreground">{session.activity || t("today.unnamed")}</p>
-              <p className="mt-1 text-xs text-muted">
-                {new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }).format(new Date(session.started_at))}
-                {" · "}
-                {Math.round(session.elapsed_seconds / 60)} {t("coreHour.minutes")}
-                {session.tag_name ? " · " + session.tag_name : ""}
-              </p>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              disabled={Boolean(activeSession)}
-              onClick={() => { setEditingSession(session); setEditorOpen(true); }}
-            >
-              {t("coreHour.edit")}
-            </Button>
-          </article>
-        ))}
-
-        <h2 className="text-sm font-semibold text-foreground">{t("coreHour.checkIns")}</h2>
+        <h2 className="border-b border-border pb-2 text-sm font-semibold text-foreground">{t("coreHour.checkIns")}</h2>
         {entries.map((entry) => (
           <article key={entry.id} className="rounded-lg border border-border bg-surface px-4 py-3">
             {editingId === entry.id ? (
@@ -298,11 +320,13 @@ export default function HistoryPage({ userId }: { userId: string }) {
       </section>
       {editorOpen && (
         <SessionEditor
-          key={editingSession?.id ?? "new"}
+          key={editingSession?.id ?? editorStart?.toISOString() ?? "new"}
           isOpen
           userId={userId}
           session={editingSession}
           defaultDate={date}
+          initialStartedAt={editorStart ?? undefined}
+          initialEndedAt={editorStart ? new Date(editorStart.getTime() + 30 * 60_000) : undefined}
           tags={tags}
           onClose={() => setEditorOpen(false)}
           onSaved={async () => {

@@ -12,6 +12,7 @@ All notable changes to this project will be documented in this file.
 - The desktop workspace now supports persisted light and dark themes with reorganized navigation and consistent action styling.
 
 ### Added
+- CoreHour day timeline with colored session blocks, previous/today/next navigation, current-time marker, and click-to-add manual time.
 - Manual CoreHour session entry and completed-session editing with overlap validation.
 - CoreHour Today workspace with activity descriptions, default tags, recent/favorite quick starts, daily sessions, and a session-end summary.
 - A fifth SQLite migration for CoreHour session activity context.
