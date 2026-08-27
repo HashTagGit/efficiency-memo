@@ -5,7 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
 
-pub(crate) const SCHEMA_VERSION: i64 = 9;
+pub(crate) const SCHEMA_VERSION: i64 = 11;
 const MIN_SUPPORTED_SCHEMA_VERSION: i64 = 7;
 pub(crate) const DB_FILENAME: &str = "efficiency-memo.db";
 pub(crate) const SIDECAR_FILENAME: &str = "efficiency-memo.db.next";
@@ -222,6 +222,24 @@ fn validate_required_schema(connection: &Connection, schema_version: i64) -> Res
             &["natural_break_enabled", "natural_break_minutes"],
         )?;
         validate_table_columns(connection, "ph_reminder_events", &["source"])?;
+    }
+    if schema_version >= 10 {
+        validate_table_columns(
+            connection,
+            "ph_schedule_policies",
+            &[
+                "system_deferral_enabled",
+                "deferral_grace_minutes",
+                "system_deferred",
+            ],
+        )?;
+    }
+    if schema_version >= 11 {
+        validate_table_columns(
+            connection,
+            "ph_schedule_policies",
+            &["system_deferral_until"],
+        )?;
     }
     for version in 1..=schema_version {
         let applied: i64 = connection
@@ -527,6 +545,8 @@ mod tests {
             include_str!("../migrations/0007_ch_planned_blocks.sql"),
             include_str!("../migrations/0008_pause_hydrate_schedule_policy.sql"),
             include_str!("../migrations/0009_pause_hydrate_natural_rest.sql"),
+            include_str!("../migrations/0010_pause_hydrate_system_deferral.sql"),
+            include_str!("../migrations/0011_pause_hydrate_deferral_status.sql"),
         ] {
             connection.execute_batch(migration).unwrap();
         }
@@ -547,7 +567,9 @@ mod tests {
                     (6, 'migration', 'installed', 1, X'', 0),
                     (7, 'migration', 'installed', 1, X'', 0),
                     (8, 'migration', 'installed', 1, X'', 0),
-                    (9, 'migration', 'installed', 1, X'', 0);
+                    (9, 'migration', 'installed', 1, X'', 0),
+                    (10, 'migration', 'installed', 1, X'', 0),
+                    (11, 'migration', 'installed', 1, X'', 0);
                 INSERT INTO users VALUES ('local-user', 'local@example.test', 'created', 'updated');
                 INSERT INTO ch_tags VALUES ('tag-1', 'local-user', 'Focus', '#000000', 0, 'created', 0);
                 INSERT INTO ch_sessions (
@@ -563,7 +585,7 @@ mod tests {
                 );
                 UPDATE ch_settings SET value = '60' WHERE key = 'interval_minutes';
                 INSERT INTO ph_reminders VALUES ('local-user', 'break', 1, 60, NULL, NULL, NULL, 'updated');
-                INSERT INTO ph_schedule_policies VALUES ('local-user', 31, 540, 1080, 0, 1320, 420, 'updated', 0, 5);
+                INSERT INTO ph_schedule_policies VALUES ('local-user', 31, 540, 1080, 0, 1320, 420, 'updated', 0, 5, 1, 5, 0, NULL);
                 INSERT INTO ph_reminder_events VALUES ('event-1', 'local-user', 'break', 'completed', 'occurred', 'manual');",
             )
             .unwrap();
@@ -585,14 +607,50 @@ mod tests {
         drop(database(&source));
 
         let preview = create_backup_at(&source, &destination, preferences()).unwrap();
-        assert_eq!(preview.schema_version, 9);
+        assert_eq!(preview.schema_version, 11);
         assert_eq!(preview.preferences, preferences());
         assert_eq!(preview.counts.core_hour_sessions, 1);
         assert_eq!(preview.counts.core_hour_plans, 1);
         assert_eq!(preview.counts.pause_hydrate_events, 1);
 
+        let legacy_v10_destination = temp_path("backup-v10");
+        fs::copy(&destination, &legacy_v10_destination).unwrap();
+        let legacy_v10 = Connection::open(&legacy_v10_destination).unwrap();
+        legacy_v10
+            .execute("UPDATE em_backup_metadata SET schema_version = 10", [])
+            .unwrap();
+        legacy_v10
+            .execute("DELETE FROM _sqlx_migrations WHERE version = 11", [])
+            .unwrap();
+        legacy_v10
+            .execute("ALTER TABLE ph_schedule_policies DROP COLUMN system_deferral_until", [])
+            .unwrap();
+        drop(legacy_v10);
+        assert_eq!(inspect_backup(&legacy_v10_destination).unwrap().schema_version, 10);
+
+        let legacy_v9_destination = temp_path("backup-v9");
+        fs::copy(&legacy_v10_destination, &legacy_v9_destination).unwrap();
+        let legacy_v9 = Connection::open(&legacy_v9_destination).unwrap();
+        legacy_v9
+            .execute("UPDATE em_backup_metadata SET schema_version = 9", [])
+            .unwrap();
+        legacy_v9
+            .execute("DELETE FROM _sqlx_migrations WHERE version = 10", [])
+            .unwrap();
+        legacy_v9
+            .execute("ALTER TABLE ph_schedule_policies DROP COLUMN system_deferral_enabled", [])
+            .unwrap();
+        legacy_v9
+            .execute("ALTER TABLE ph_schedule_policies DROP COLUMN deferral_grace_minutes", [])
+            .unwrap();
+        legacy_v9
+            .execute("ALTER TABLE ph_schedule_policies DROP COLUMN system_deferred", [])
+            .unwrap();
+        drop(legacy_v9);
+        assert_eq!(inspect_backup(&legacy_v9_destination).unwrap().schema_version, 9);
+
         let legacy_v8_destination = temp_path("backup-v8");
-        fs::copy(&destination, &legacy_v8_destination).unwrap();
+        fs::copy(&legacy_v9_destination, &legacy_v8_destination).unwrap();
         let legacy_v8 = Connection::open(&legacy_v8_destination).unwrap();
         legacy_v8
             .execute("UPDATE em_backup_metadata SET schema_version = 8", [])
@@ -627,14 +685,14 @@ mod tests {
 
         let backup = Connection::open(&destination).unwrap();
         backup
-            .execute("UPDATE em_backup_metadata SET schema_version = 10", [])
+            .execute("UPDATE em_backup_metadata SET schema_version = 12", [])
             .unwrap();
         drop(backup);
         assert_eq!(inspect_backup(&destination).unwrap_err(), "future-schema");
 
         let backup = Connection::open(&destination).unwrap();
         backup
-            .execute("UPDATE em_backup_metadata SET schema_version = 9", [])
+            .execute("UPDATE em_backup_metadata SET schema_version = 11", [])
             .unwrap();
         backup
             .execute("DELETE FROM _sqlx_migrations WHERE version = 6", [])
@@ -657,6 +715,8 @@ mod tests {
 
         let _ = fs::remove_file(source);
         let _ = fs::remove_file(destination);
+        let _ = fs::remove_file(legacy_v10_destination);
+        let _ = fs::remove_file(legacy_v9_destination);
         let _ = fs::remove_file(legacy_v8_destination);
         let _ = fs::remove_file(legacy_v7_destination);
     }

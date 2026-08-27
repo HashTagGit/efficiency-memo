@@ -23,6 +23,12 @@ pub(crate) struct SchedulePolicyInput {
     quiet_end_minute: i64,
     natural_break_enabled: bool,
     natural_break_minutes: i64,
+    system_deferral_enabled: bool,
+    deferral_grace_minutes: i64,
+    #[serde(default)]
+    system_deferred: bool,
+    #[serde(default)]
+    system_deferral_until: Option<String>,
 }
 
 impl Default for SchedulePolicyInput {
@@ -36,6 +42,10 @@ impl Default for SchedulePolicyInput {
             quiet_end_minute: 420,
             natural_break_enabled: false,
             natural_break_minutes: 5,
+            system_deferral_enabled: true,
+            deferral_grace_minutes: 5,
+            system_deferred: false,
+            system_deferral_until: None,
         }
     }
 }
@@ -83,6 +93,7 @@ fn valid_policy(policy: &SchedulePolicyInput) -> bool {
         && (0..=1439).contains(&policy.quiet_end_minute)
         && policy.quiet_start_minute != policy.quiet_end_minute
         && (2..=30).contains(&policy.natural_break_minutes)
+        && (1..=30).contains(&policy.deferral_grace_minutes)
 }
 
 fn minute_in_window(minute: i64, start: i64, end: i64) -> bool {
@@ -115,7 +126,7 @@ fn schedule_allows(policy: &SchedulePolicyInput, weekday: i64, minute_of_day: i6
 fn load_policy(connection: &Connection, user_id: &str) -> Result<SchedulePolicyInput, String> {
     connection
         .query_row(
-            "SELECT active_weekdays_mask, work_start_minute, work_end_minute, quiet_enabled, quiet_start_minute, quiet_end_minute, natural_break_enabled, natural_break_minutes FROM ph_schedule_policies WHERE user_id = ?1",
+            "SELECT active_weekdays_mask, work_start_minute, work_end_minute, quiet_enabled, quiet_start_minute, quiet_end_minute, natural_break_enabled, natural_break_minutes, system_deferral_enabled, deferral_grace_minutes, system_deferred, system_deferral_until FROM ph_schedule_policies WHERE user_id = ?1",
             [user_id],
             |row| {
                 Ok(SchedulePolicyInput {
@@ -127,6 +138,10 @@ fn load_policy(connection: &Connection, user_id: &str) -> Result<SchedulePolicyI
                     quiet_end_minute: row.get(5)?,
                     natural_break_enabled: row.get(6)?,
                     natural_break_minutes: row.get(7)?,
+                    system_deferral_enabled: row.get(8)?,
+                    deferral_grace_minutes: row.get(9)?,
+                    system_deferred: row.get(10)?,
+                    system_deferral_until: row.get(11)?,
                 })
             },
         )
@@ -177,7 +192,7 @@ fn save_preferences(input: SavePreferencesInput, connection: &mut Connection) ->
     }
     transaction
         .execute(
-            "INSERT INTO ph_schedule_policies (user_id, active_weekdays_mask, work_start_minute, work_end_minute, quiet_enabled, quiet_start_minute, quiet_end_minute, updated_at, natural_break_enabled, natural_break_minutes) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10) ON CONFLICT(user_id) DO UPDATE SET active_weekdays_mask = excluded.active_weekdays_mask, work_start_minute = excluded.work_start_minute, work_end_minute = excluded.work_end_minute, quiet_enabled = excluded.quiet_enabled, quiet_start_minute = excluded.quiet_start_minute, quiet_end_minute = excluded.quiet_end_minute, updated_at = excluded.updated_at, natural_break_enabled = excluded.natural_break_enabled, natural_break_minutes = excluded.natural_break_minutes",
+            "INSERT INTO ph_schedule_policies (user_id, active_weekdays_mask, work_start_minute, work_end_minute, quiet_enabled, quiet_start_minute, quiet_end_minute, updated_at, natural_break_enabled, natural_break_minutes, system_deferral_enabled, deferral_grace_minutes, system_deferred, system_deferral_until) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, 0, NULL) ON CONFLICT(user_id) DO UPDATE SET active_weekdays_mask = excluded.active_weekdays_mask, work_start_minute = excluded.work_start_minute, work_end_minute = excluded.work_end_minute, quiet_enabled = excluded.quiet_enabled, quiet_start_minute = excluded.quiet_start_minute, quiet_end_minute = excluded.quiet_end_minute, updated_at = excluded.updated_at, natural_break_enabled = excluded.natural_break_enabled, natural_break_minutes = excluded.natural_break_minutes, system_deferral_enabled = excluded.system_deferral_enabled, deferral_grace_minutes = excluded.deferral_grace_minutes, system_deferred = CASE WHEN excluded.system_deferral_enabled = 0 THEN 0 ELSE ph_schedule_policies.system_deferred END, system_deferral_until = CASE WHEN excluded.system_deferral_enabled = 0 THEN NULL ELSE ph_schedule_policies.system_deferral_until END",
             params![
                 input.user_id,
                 input.policy.active_weekdays_mask,
@@ -189,6 +204,8 @@ fn save_preferences(input: SavePreferencesInput, connection: &mut Connection) ->
                 input.updated_at,
                 input.policy.natural_break_enabled,
                 input.policy.natural_break_minutes,
+                input.policy.system_deferral_enabled,
+                input.policy.deferral_grace_minutes,
             ],
         )
         .map_err(|error| error.to_string())?;
@@ -196,22 +213,97 @@ fn save_preferences(input: SavePreferencesInput, connection: &mut Connection) ->
     Ok(newly_enabled)
 }
 
+fn begin_system_deferral(
+    transaction: &rusqlite::Transaction<'_>,
+    user_id: &str,
+    now: &str,
+) -> Result<(), String> {
+    transaction
+        .execute(
+            "UPDATE ph_reminders SET pending_at = NULL, updated_at = ?1 WHERE user_id = ?2 AND pending_at IS NOT NULL",
+            params![now, user_id],
+        )
+        .map_err(|error| error.to_string())?;
+    transaction
+        .execute(
+            "UPDATE ph_schedule_policies SET system_deferred = 1, system_deferral_until = NULL, updated_at = ?1 WHERE user_id = ?2 AND system_deferral_enabled = 1",
+            params![now, user_id],
+        )
+        .map_err(|error| error.to_string())?;
+    Ok(())
+}
+
+fn end_system_deferral(
+    transaction: &rusqlite::Transaction<'_>,
+    user_id: &str,
+    now: DateTime<chrono::FixedOffset>,
+    policy: &SchedulePolicyInput,
+    weekday: i64,
+    minute_of_day: i64,
+) -> Result<bool, String> {
+    let grace_minutes = policy.deferral_grace_minutes;
+    let now_text = now
+        .with_timezone(&Utc)
+        .to_rfc3339_opts(SecondsFormat::Millis, true);
+    let grace_end = now + Duration::minutes(grace_minutes);
+    let grace_end_text = grace_end
+        .with_timezone(&Utc)
+        .to_rfc3339_opts(SecondsFormat::Millis, true);
+    let candidates: Vec<String> = {
+        let mut statement = transaction
+            .prepare(
+                "SELECT kind FROM ph_reminders WHERE user_id = ?1 AND enabled = 1 AND pending_at IS NULL AND next_due_at IS NOT NULL AND next_due_at <= ?2 AND (muted_until IS NULL OR muted_until <= ?3) ORDER BY CASE kind WHEN 'break' THEN 0 ELSE 1 END",
+            )
+            .map_err(|error| error.to_string())?;
+        let rows = statement
+            .query_map(params![user_id, grace_end_text, now_text], |row| row.get(0))
+            .map_err(|error| error.to_string())?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|error| error.to_string())?;
+        rows
+    };
+    for index in 0..candidates.len() {
+        let due_minute = minute_of_day + grace_minutes + index as i64 * 5;
+        if due_minute >= 1440 || !schedule_allows(policy, weekday, due_minute) {
+            return Ok(false);
+        }
+    }
+    let deferral_until = (!candidates.is_empty()).then_some(grace_end_text.clone());
+    for (index, kind) in candidates.into_iter().enumerate() {
+        let next_due_at = (grace_end + Duration::minutes(index as i64 * 5))
+            .with_timezone(&Utc)
+            .to_rfc3339_opts(SecondsFormat::Millis, true);
+        transaction
+            .execute(
+                "UPDATE ph_reminders SET next_due_at = ?1, updated_at = ?2 WHERE user_id = ?3 AND kind = ?4 AND enabled = 1 AND pending_at IS NULL",
+                params![next_due_at, now_text, user_id, kind],
+            )
+            .map_err(|error| error.to_string())?;
+    }
+    transaction
+        .execute(
+            "UPDATE ph_schedule_policies SET system_deferred = 0, system_deferral_until = ?1, updated_at = ?2 WHERE user_id = ?3",
+            params![deferral_until, now_text, user_id],
+        )
+        .map_err(|error| error.to_string())?;
+    Ok(true)
+}
+
 fn claim_pending(
     user_id: &str,
     now: &str,
     weekday: i64,
     minute_of_day: i64,
+    notifications_allowed: Option<bool>,
     connection: &mut Connection,
 ) -> Result<Vec<String>, String> {
     if !(0..=6).contains(&weekday) || !(0..=1439).contains(&minute_of_day) {
         return Err("invalid-local-time".to_string());
     }
+    let parsed_now = DateTime::parse_from_rfc3339(now)
+        .map_err(|_| "invalid-local-time".to_string())?;
     let transaction = connection.transaction().map_err(|error| error.to_string())?;
     let policy = load_policy(&transaction, user_id)?;
-    if !schedule_allows(&policy, weekday, minute_of_day) {
-        transaction.commit().map_err(|error| error.to_string())?;
-        return Ok(Vec::new());
-    }
     let active: bool = transaction
         .query_row(
             "SELECT EXISTS(SELECT 1 FROM ch_sessions WHERE user_id = ?1 AND ended_at IS NULL)",
@@ -219,6 +311,55 @@ fn claim_pending(
             |row| row.get(0),
         )
         .map_err(|error| error.to_string())?;
+    if policy.system_deferral_enabled {
+        match notifications_allowed {
+            Some(false) => {
+                begin_system_deferral(&transaction, user_id, now)?;
+                transaction.commit().map_err(|error| error.to_string())?;
+                return Ok(Vec::new());
+            }
+            Some(true) if policy.system_deferred => {
+                if active || !schedule_allows(&policy, weekday, minute_of_day) {
+                    transaction.commit().map_err(|error| error.to_string())?;
+                    return Ok(Vec::new());
+                }
+                if !end_system_deferral(
+                    &transaction,
+                    user_id,
+                    parsed_now,
+                    &policy,
+                    weekday,
+                    minute_of_day,
+                )? {
+                    transaction.commit().map_err(|error| error.to_string())?;
+                    return Ok(Vec::new());
+                }
+                transaction.commit().map_err(|error| error.to_string())?;
+                return Ok(Vec::new());
+            }
+            None if policy.system_deferred => {
+                transaction.commit().map_err(|error| error.to_string())?;
+                return Ok(Vec::new());
+            }
+            _ => {}
+        }
+    }
+    if policy
+        .system_deferral_until
+        .as_deref()
+        .is_some_and(|until| until <= now)
+    {
+        transaction
+            .execute(
+                "UPDATE ph_schedule_policies SET system_deferral_until = NULL, updated_at = ?1 WHERE user_id = ?2",
+                params![now, user_id],
+            )
+            .map_err(|error| error.to_string())?;
+    }
+    if !schedule_allows(&policy, weekday, minute_of_day) {
+        transaction.commit().map_err(|error| error.to_string())?;
+        return Ok(Vec::new());
+    }
     if active {
         transaction.commit().map_err(|error| error.to_string())?;
         return Ok(Vec::new());
@@ -381,6 +522,7 @@ pub(crate) fn claim_pause_hydrate_reminders(
     now: String,
     weekday: i64,
     minute_of_day: i64,
+    notifications_allowed: Option<bool>,
     app: AppHandle,
 ) -> Result<Vec<String>, String> {
     claim_pending(
@@ -388,6 +530,7 @@ pub(crate) fn claim_pause_hydrate_reminders(
         &now,
         weekday,
         minute_of_day,
+        notifications_allowed,
         &mut connection(&app)?,
     )
 }
@@ -433,7 +576,11 @@ mod tests {
                     quiet_enabled INTEGER NOT NULL, quiet_start_minute INTEGER NOT NULL,
                     quiet_end_minute INTEGER NOT NULL, updated_at TEXT NOT NULL,
                     natural_break_enabled INTEGER NOT NULL DEFAULT 0,
-                    natural_break_minutes INTEGER NOT NULL DEFAULT 5
+                    natural_break_minutes INTEGER NOT NULL DEFAULT 5,
+                    system_deferral_enabled INTEGER NOT NULL DEFAULT 1,
+                    deferral_grace_minutes INTEGER NOT NULL DEFAULT 5,
+                    system_deferred INTEGER NOT NULL DEFAULT 0,
+                    system_deferral_until TEXT
                 );
                 ",
             )
@@ -493,10 +640,10 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            claim_pending("local-user", "2026-08-27T10:00:00Z", 3, 600, &mut connection).unwrap(),
+            claim_pending("local-user", "2026-08-27T10:00:00Z", 3, 600, None, &mut connection).unwrap(),
             vec!["break"]
         );
-        assert!(claim_pending("local-user", "2026-08-27T10:00:01Z", 3, 600, &mut connection)
+        assert!(claim_pending("local-user", "2026-08-27T10:00:01Z", 3, 600, None, &mut connection)
             .unwrap()
             .is_empty());
     }
@@ -517,21 +664,165 @@ mod tests {
             )
             .unwrap();
 
-        assert!(claim_pending("local-user", "2026-08-28T10:01:00Z", 4, 601, &mut connection)
+        assert!(claim_pending("local-user", "2026-08-28T10:01:00Z", 4, 601, None, &mut connection)
             .unwrap()
             .is_empty());
-        assert!(claim_pending("local-user", "2026-08-27T08:59:00Z", 3, 539, &mut connection)
+        assert!(claim_pending("local-user", "2026-08-27T08:59:00Z", 3, 539, None, &mut connection)
             .unwrap()
             .is_empty());
-        assert!(claim_pending("local-user", "2026-08-27T09:30:00Z", 3, 570, &mut connection)
+        assert!(claim_pending("local-user", "2026-08-27T09:30:00Z", 3, 570, None, &mut connection)
             .unwrap()
             .is_empty());
         connection
             .execute("UPDATE ph_schedule_policies SET quiet_enabled = 0", [])
             .unwrap();
         assert_eq!(
-            claim_pending("local-user", "2026-08-27T10:01:00Z", 3, 601, &mut connection)
+            claim_pending("local-user", "2026-08-27T10:01:00Z", 3, 601, None, &mut connection)
                 .unwrap(),
+            vec!["break"]
+        );
+    }
+
+    #[test]
+    fn system_deferral_withdraws_pending_and_staggers_resume() {
+        let mut connection = database();
+        for kind in ["break", "hydration"] {
+            connection
+                .execute(
+                    "INSERT INTO ph_reminders VALUES (?1, ?2, 1, 60, ?3, ?3, NULL, ?3)",
+                    params!["local-user", kind, "2026-08-27T09:00:00Z"],
+                )
+                .unwrap();
+        }
+        connection
+            .execute(
+                "INSERT INTO ph_schedule_policies VALUES (?1, 24, 540, 1080, 0, 1320, 420, ?2, 0, 5, 1, 5, 0, NULL)",
+                params!["local-user", "2026-08-27T09:00:00Z"],
+            )
+            .unwrap();
+
+        assert!(claim_pending(
+            "local-user",
+            "2026-08-27T10:00:00Z",
+            3,
+            600,
+            Some(false),
+            &mut connection,
+        )
+        .unwrap()
+        .is_empty());
+        let pending: i64 = connection
+            .query_row(
+                "SELECT COUNT(*) FROM ph_reminders WHERE pending_at IS NOT NULL",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        let deferred: bool = connection
+            .query_row(
+                "SELECT system_deferred FROM ph_schedule_policies",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(pending, 0);
+        assert!(deferred);
+        assert!(claim_pending(
+            "local-user",
+            "2026-08-27T10:00:30Z",
+            3,
+            600,
+            None,
+            &mut connection,
+        )
+        .unwrap()
+        .is_empty());
+        assert!(claim_pending(
+            "local-user",
+            "2026-08-27T17:50:00Z",
+            3,
+            1070,
+            Some(true),
+            &mut connection,
+        )
+        .unwrap()
+        .is_empty());
+        assert!(claim_pending(
+            "local-user",
+            "2026-08-28T08:59:00Z",
+            4,
+            539,
+            Some(true),
+            &mut connection,
+        )
+        .unwrap()
+        .is_empty());
+        connection
+            .execute("INSERT INTO ch_sessions VALUES ('local-user', NULL)", [])
+            .unwrap();
+        assert!(claim_pending(
+            "local-user",
+            "2026-08-28T10:01:00Z",
+            4,
+            601,
+            Some(true),
+            &mut connection,
+        )
+        .unwrap()
+        .is_empty());
+        let deferred: bool = connection
+            .query_row(
+                "SELECT system_deferred FROM ph_schedule_policies",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert!(deferred);
+        connection.execute("DELETE FROM ch_sessions", []).unwrap();
+
+        assert!(claim_pending(
+            "local-user",
+            "2026-08-28T10:02:00Z",
+            4,
+            602,
+            Some(true),
+            &mut connection,
+        )
+        .unwrap()
+        .is_empty());
+        let due: Vec<(String, String)> = connection
+            .prepare("SELECT kind, next_due_at FROM ph_reminders ORDER BY CASE kind WHEN 'break' THEN 0 ELSE 1 END")
+            .unwrap()
+            .query_map([], |row| Ok((row.get(0)?, row.get(1)?)))
+            .unwrap()
+            .collect::<Result<Vec<_>, _>>()
+            .unwrap();
+        assert_eq!(
+            due,
+            vec![
+                ("break".into(), "2026-08-28T10:07:00.000Z".into()),
+                ("hydration".into(), "2026-08-28T10:12:00.000Z".into()),
+            ]
+        );
+        let deferral_until: Option<String> = connection
+            .query_row(
+                "SELECT system_deferral_until FROM ph_schedule_policies",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(deferral_until.as_deref(), Some("2026-08-28T10:07:00.000Z"));
+
+        assert_eq!(
+            claim_pending(
+                "local-user",
+                "2026-08-28T10:07:01Z",
+                4,
+                607,
+                Some(true),
+                &mut connection,
+            )
+            .unwrap(),
             vec!["break"]
         );
     }
@@ -553,7 +844,7 @@ mod tests {
             .unwrap();
         connection
             .execute(
-                "INSERT INTO ph_schedule_policies VALUES (?1, 8, 540, 1080, 0, 1320, 420, ?2, 1, 5)",
+                "INSERT INTO ph_schedule_policies VALUES (?1, 8, 540, 1080, 0, 1320, 420, ?2, 1, 5, 1, 5, 0, NULL)",
                 params!["local-user", "2026-08-27T09:00:00Z"],
             )
             .unwrap();

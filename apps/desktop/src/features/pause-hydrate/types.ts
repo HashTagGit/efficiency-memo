@@ -14,6 +14,8 @@ export interface SchedulePolicy {
   quietEndMinute: number;
   naturalBreakEnabled: boolean;
   naturalBreakMinutes: number;
+  systemDeferralEnabled: boolean;
+  deferralGraceMinutes: number;
 }
 
 export interface ReminderState {
@@ -38,6 +40,8 @@ export interface PauseHydrateState {
   completedToday: Record<ReminderKind, number>;
   todayEvents: ReminderEvent[];
   coreHourActive: boolean;
+  systemDeferred: boolean;
+  systemDeferralUntil: string | null;
   schedulePolicy: SchedulePolicy;
 }
 

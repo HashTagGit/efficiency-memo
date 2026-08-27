@@ -9,7 +9,15 @@ import {
   saveReminderPreferences,
 } from "./data";
 import { readSystemIdleSeconds } from "../../lib/system-idle";
-import { observeIdleForNaturalRest } from "./natural-rest";
+import {
+  readSystemInterruptionState,
+  type SystemInterruptionState,
+} from "../../lib/system-interruption";
+import {
+  hasReminderPollGap,
+  notificationAllowanceForPoll,
+  observeIdleForNaturalRest,
+} from "./natural-rest";
 import {
   reminderNotificationPermission,
   requestReminderNotifications,
@@ -29,6 +37,7 @@ interface PauseHydrateContextValue {
   loading: boolean;
   notificationPermission: ReminderNotificationPermission;
   naturalBreakAvailable: boolean | null;
+  systemInterruption: SystemInterruptionState | null | undefined;
   refresh: () => Promise<void>;
   requestNotificationPermission: () => Promise<void>;
   savePreferences: (preferences: ReminderPreferenceInput[], policy: SchedulePolicy) => Promise<void>;
@@ -44,8 +53,10 @@ export function PauseHydrateProvider({ children }: { children: React.ReactNode }
   const [loading, setLoading] = useState(true);
   const [notificationPermission, setNotificationPermission] = useState<ReminderNotificationPermission>("unknown");
   const [naturalBreakAvailable, setNaturalBreakAvailable] = useState<boolean | null>(null);
+  const [systemInterruption, setSystemInterruption] = useState<SystemInterruptionState | null>();
   const polling = useRef(false);
   const idleArmed = useRef(false);
+  const lastPollAt = useRef(Date.now());
 
   const refresh = useCallback(async () => {
     if (!userId) return;
@@ -68,18 +79,28 @@ export function PauseHydrateProvider({ children }: { children: React.ReactNode }
   useEffect(() => {
     if (!userId) return;
     let disposed = false;
-    void readSystemIdleSeconds().then((idleSeconds) => {
+    void Promise.all([readSystemIdleSeconds(), readSystemInterruptionState()]).then(([
+      idleSeconds,
+      interruption,
+    ]) => {
       if (disposed) return;
       const observation = observeIdleForNaturalRest(false, idleSeconds);
       setNaturalBreakAvailable(observation.available);
       idleArmed.current = observation.armed;
+      setSystemInterruption(interruption);
     });
     const tick = async () => {
       if (polling.current) return;
       polling.current = true;
       try {
         const now = new Date();
-        const idleSeconds = await readSystemIdleSeconds();
+        const deferredAfterGap = hasReminderPollGap(lastPollAt.current, now.getTime());
+        lastPollAt.current = now.getTime();
+        const [idleSeconds, interruption] = await Promise.all([
+          readSystemIdleSeconds(),
+          readSystemInterruptionState(),
+        ]);
+        setSystemInterruption(interruption);
         const observation = observeIdleForNaturalRest(idleArmed.current, idleSeconds);
         setNaturalBreakAvailable(observation.available);
         idleArmed.current = observation.armed;
@@ -88,7 +109,15 @@ export function PauseHydrateProvider({ children }: { children: React.ReactNode }
           && await completeNaturalBreak(userId, idleSeconds, now)) {
           idleArmed.current = false;
         }
-        const kinds = await markNewPendingReminders(userId, now);
+        const kinds = await markNewPendingReminders(
+          userId,
+          now,
+          notificationAllowanceForPoll(
+            interruption?.notificationsAllowed ?? null,
+            interruption === null ? null : interruption.reason !== "unsupported",
+            deferredAfterGap,
+          ),
+        );
         for (const kind of kinds) {
           await sendReminderNotification(
             t(`pauseHydrate.${kind}`),
@@ -128,6 +157,7 @@ export function PauseHydrateProvider({ children }: { children: React.ReactNode }
       loading,
       notificationPermission,
       naturalBreakAvailable,
+      systemInterruption,
       refresh,
       requestNotificationPermission,
       savePreferences,

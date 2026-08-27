@@ -9,6 +9,7 @@ mod pause_hydrate;
 mod sidecar;
 mod sync;
 mod system_idle;
+mod system_interruption;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -67,6 +68,18 @@ pub fn run() {
             sql: include_str!("../migrations/0009_pause_hydrate_natural_rest.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 10,
+            description: "add pause and hydrate system deferral",
+            sql: include_str!("../migrations/0010_pause_hydrate_system_deferral.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 11,
+            description: "persist pause and hydrate deferral status",
+            sql: include_str!("../migrations/0011_pause_hydrate_deferral_status.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
@@ -101,6 +114,7 @@ pub fn run() {
             data_control::reset_local_data,
             data_control::take_applied_restore_preferences,
             system_idle::get_system_idle_seconds,
+            system_interruption::get_system_interruption_state,
             desktop_companion::show_main_window,
             desktop_companion::update_desktop_companion,
             core_hour::save_core_hour_session_block,

@@ -21,6 +21,8 @@ interface ScheduleDraft {
   quietEnd: string;
   naturalBreakEnabled: boolean;
   naturalBreakMinutes: number;
+  systemDeferralEnabled: boolean;
+  deferralGraceMinutes: number;
 }
 
 const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6] as const;
@@ -46,11 +48,22 @@ const emptySchedule: ScheduleDraft = {
   quietEnd: minutesToTime(DEFAULT_SCHEDULE_POLICY.quietEndMinute),
   naturalBreakEnabled: DEFAULT_SCHEDULE_POLICY.naturalBreakEnabled,
   naturalBreakMinutes: DEFAULT_SCHEDULE_POLICY.naturalBreakMinutes,
+  systemDeferralEnabled: DEFAULT_SCHEDULE_POLICY.systemDeferralEnabled,
+  deferralGraceMinutes: DEFAULT_SCHEDULE_POLICY.deferralGraceMinutes,
 };
 
 export default function PauseHydratePage() {
   const { locale, t } = useI18n();
-  const { state, loading, notificationPermission, naturalBreakAvailable, savePreferences, act, requestNotificationPermission } = usePauseHydrate();
+  const {
+    state,
+    loading,
+    notificationPermission,
+    naturalBreakAvailable,
+    systemInterruption,
+    savePreferences,
+    act,
+    requestNotificationPermission,
+  } = usePauseHydrate();
   const [draft, setDraft] = useState<DraftPreferences>(emptyDraft);
   const [schedule, setSchedule] = useState<ScheduleDraft>(emptySchedule);
   const [saving, setSaving] = useState(false);
@@ -87,6 +100,8 @@ export default function PauseHydratePage() {
       quietEnd: minutesToTime(state.schedulePolicy.quietEndMinute),
       naturalBreakEnabled: state.schedulePolicy.naturalBreakEnabled,
       naturalBreakMinutes: state.schedulePolicy.naturalBreakMinutes,
+      systemDeferralEnabled: state.schedulePolicy.systemDeferralEnabled,
+      deferralGraceMinutes: state.schedulePolicy.deferralGraceMinutes,
     });
   }, [dirty, state]);
 
@@ -101,6 +116,9 @@ export default function PauseHydratePage() {
   const naturalBreakInvalid = !Number.isInteger(schedule.naturalBreakMinutes)
     || schedule.naturalBreakMinutes < 2
     || schedule.naturalBreakMinutes > 30;
+  const deferralGraceInvalid = !Number.isInteger(schedule.deferralGraceMinutes)
+    || schedule.deferralGraceMinutes < 1
+    || schedule.deferralGraceMinutes > 30;
 
   function updateDraft(kind: ReminderKind, value: Partial<DraftPreferences[ReminderKind]>) {
     setDraft((current) => ({ ...current, [kind]: { ...current[kind], ...value } }));
@@ -125,7 +143,7 @@ export default function PauseHydratePage() {
   }
 
   async function handleSave() {
-    if (workInvalid || quietInvalid || naturalBreakInvalid) return;
+    if (workInvalid || quietInvalid || naturalBreakInvalid || deferralGraceInvalid) return;
     setSaving(true);
     try {
       await savePreferences(
@@ -139,6 +157,8 @@ export default function PauseHydratePage() {
           quietEndMinute,
           naturalBreakEnabled: schedule.naturalBreakEnabled,
           naturalBreakMinutes: schedule.naturalBreakMinutes,
+          systemDeferralEnabled: schedule.systemDeferralEnabled,
+          deferralGraceMinutes: schedule.deferralGraceMinutes,
         },
       );
       setDirty(false);
@@ -160,6 +180,10 @@ export default function PauseHydratePage() {
   function nextStatus(kind: ReminderKind): string {
     const reminder = state?.reminders[kind];
     if (!reminder || !draft[kind].enabled) return t("pauseHydrate.off");
+    if (schedule.systemDeferralEnabled
+      && (state?.systemDeferred || systemInterruption?.notificationsAllowed === false)) {
+      return t("pauseHydrate.systemDeferred");
+    }
     if (reminder.pendingAt) return t("pauseHydrate.dueNow");
     if (state?.coreHourActive && reminder.nextDueAt && new Date(reminder.nextDueAt) <= new Date()) {
       return t("pauseHydrate.waitingForFocus");
@@ -187,6 +211,45 @@ export default function PauseHydratePage() {
     naturalBreakAvailable === true ? t("pauseHydrate.naturalBreakReady")
     : naturalBreakAvailable === false ? t("pauseHydrate.naturalBreakUnsupported")
     : t("pauseHydrate.naturalBreakChecking");
+  const systemGuardAvailable = systemInterruption !== undefined
+    && systemInterruption !== null
+    && systemInterruption.reason !== "unsupported";
+  const systemGuardBlocked = systemInterruption?.notificationsAllowed === false;
+  const systemGuardUnsupported = systemInterruption === null
+    || systemInterruption?.reason === "unsupported";
+  const systemGraceActive = Boolean(
+    state?.systemDeferralUntil
+    && new Date(state.systemDeferralUntil).getTime() > Date.now(),
+  );
+  const systemGuardDot = systemInterruption === undefined || systemGuardUnsupported
+    ? "bg-muted"
+    : systemGuardBlocked
+      ? "bg-warning"
+      : "bg-info";
+  const systemGuardStatus = systemInterruption === undefined
+    ? t("pauseHydrate.systemGuardChecking")
+    : systemInterruption === null
+      ? state?.systemDeferred
+        ? t("pauseHydrate.systemGuardWaiting")
+        : systemGraceActive
+          ? t("pauseHydrate.systemGuardGrace")
+          : t("pauseHydrate.systemGuardUnsupported")
+      : systemInterruption.reason === "unsupported"
+        ? state?.systemDeferred
+          ? t("pauseHydrate.systemGuardRecovery")
+          : systemGraceActive
+            ? t("pauseHydrate.systemGuardGrace")
+            : t("pauseHydrate.systemGuardUnsupported")
+      : systemGuardBlocked
+        ? t("pauseHydrate.systemGuardBlocked")
+        : state?.systemDeferred
+          ? t("pauseHydrate.systemGuardRecovery")
+          : systemGraceActive
+            ? t("pauseHydrate.systemGuardGrace")
+          : t("pauseHydrate.systemGuardReady");
+  const systemGuardReason = systemGuardBlocked && systemInterruption
+    ? t(`pauseHydrate.systemReason.${systemInterruption.reason}`)
+    : null;
 
   if (loading || !state) {
     return <p className="py-16 text-center text-sm text-muted">{t("app.loading")}</p>;
@@ -363,6 +426,52 @@ export default function PauseHydratePage() {
           </div>
           <p className="mt-2 text-xs text-danger" aria-live="polite">{naturalBreakInvalid ? t("pauseHydrate.naturalBreakInvalid") : ""}</p>
         </div>
+
+        <div className="border-t border-border pt-5">
+          <div className="flex flex-wrap items-start justify-between gap-x-8 gap-y-4">
+            <div className="min-w-0 max-w-xl">
+              <h3 className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <span aria-hidden="true" className={`h-2 w-2 shrink-0 rounded-full ${systemGuardDot}`} />
+                {t("pauseHydrate.systemGuard")}
+              </h3>
+              <p className="mt-2 text-xs leading-relaxed text-muted">{t("pauseHydrate.systemGuardHint")}</p>
+              <p className="mt-1.5 text-xs leading-relaxed text-muted" aria-live="polite">
+                {systemGuardStatus}
+                {systemGuardReason ? ` · ${systemGuardReason}` : ""}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-start gap-5">
+              <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+                <input
+                  type="checkbox"
+                  checked={schedule.systemDeferralEnabled}
+                  disabled={!systemGuardAvailable && !schedule.systemDeferralEnabled}
+                  onChange={(event) => updateSchedule({ systemDeferralEnabled: event.target.checked })}
+                  className="h-4 w-4 accent-[var(--accent)] disabled:opacity-50"
+                />
+                {t("pauseHydrate.systemGuardEnabled")}
+              </label>
+              <label className="text-xs text-muted">
+                {t("pauseHydrate.deferralGrace")}
+                <span className="mt-1.5 flex items-center gap-2">
+                  <input
+                    type="number"
+                    min={1}
+                    max={30}
+                    step={1}
+                    disabled={!systemGuardAvailable || !schedule.systemDeferralEnabled}
+                    value={schedule.deferralGraceMinutes}
+                    aria-invalid={deferralGraceInvalid}
+                    onChange={(event) => updateSchedule({ deferralGraceMinutes: Number(event.target.value) })}
+                    className="h-10 w-24 min-w-0 rounded-md border border-border bg-background px-3 tabular-nums text-foreground focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
+                  />
+                  <span>{t("coreHour.minutes")}</span>
+                </span>
+              </label>
+            </div>
+          </div>
+          <p className="mt-2 text-xs text-danger" aria-live="polite">{deferralGraceInvalid ? t("pauseHydrate.deferralGraceInvalid") : ""}</p>
+        </div>
       </section>
 
       <div className="grid gap-4 lg:grid-cols-2">
@@ -435,7 +544,7 @@ export default function PauseHydratePage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3 border-b border-border pb-7">
-        <Button isLoading={saving} disabled={loading || workInvalid || quietInvalid || naturalBreakInvalid} onClick={() => void handleSave()}>{t("pauseHydrate.saveSettings")}</Button>
+        <Button isLoading={saving} disabled={loading || workInvalid || quietInvalid || naturalBreakInvalid || deferralGraceInvalid} onClick={() => void handleSave()}>{t("pauseHydrate.saveSettings")}</Button>
         <span className="text-sm text-success" aria-live="polite">{saved ? t("pauseHydrate.saved") : ""}</span>
       </div>
 

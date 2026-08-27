@@ -52,7 +52,11 @@ export function DesktopCompanionBridge() {
   const { locale, t } = useI18n();
   const timer = useCoreHourTimer();
   const { activeSession, pendingCheckIn, startSession, endSession } = useSession();
-  const { state: pauseHydrate, refresh: refreshPauseHydrate } = usePauseHydrate();
+  const {
+    state: pauseHydrate,
+    systemInterruption,
+    refresh: refreshPauseHydrate,
+  } = usePauseHydrate();
   const commandHandler = useRef<(command: DesktopCommand) => void>(() => undefined);
   const focusCommandBusy = useRef(false);
   const timeFormatter = useMemo(
@@ -149,6 +153,10 @@ export function DesktopCompanionBridge() {
   const reminderStatus = (reminder: ReminderState | undefined): string => {
     if (!reminder) return t("app.loading");
     if (!reminder.enabled) return t("pauseHydrate.off");
+    if (pauseHydrate?.schedulePolicy.systemDeferralEnabled
+      && (pauseHydrate.systemDeferred || systemInterruption?.notificationsAllowed === false)) {
+      return t("pauseHydrate.systemDeferred");
+    }
     if (reminder.pendingAt) return t("pauseHydrate.dueNow");
     if (!reminder.nextDueAt) return t("pauseHydrate.dueNow");
     const due = new Date(reminder.nextDueAt);
@@ -200,9 +208,21 @@ export function DesktopCompanionBridge() {
     : pauseHydrate?.reminders.hydration.pendingAt
       ? t("pauseHydrate.hydration")
       : null;
+  const remindersDeferred = Boolean(
+    pauseHydrate?.schedulePolicy.systemDeferralEnabled
+    && (pauseHydrate.systemDeferred || systemInterruption?.notificationsAllowed === false),
+  );
+  const systemGraceActive = Boolean(
+    pauseHydrate?.systemDeferralUntil
+    && new Date(pauseHydrate.systemDeferralUntil).getTime() > Date.now(),
+  );
   const tooltip = pendingReminder
     ? t("desktopCompanion.reminderDue", { name: pendingReminder })
-    : activeSession ? `EfficiencyMemo - ${activity}` : "EfficiencyMemo";
+    : remindersDeferred
+      ? t("desktopCompanion.systemDeferred")
+      : systemGraceActive
+        ? t("desktopCompanion.systemGrace")
+      : activeSession ? `EfficiencyMemo - ${activity}` : "EfficiencyMemo";
 
   useEffect(() => {
     const input: DesktopCompanionInput = {

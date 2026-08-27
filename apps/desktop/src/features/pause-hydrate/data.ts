@@ -26,6 +26,8 @@ export const DEFAULT_SCHEDULE_POLICY: SchedulePolicy = {
   quietEndMinute: 7 * 60,
   naturalBreakEnabled: false,
   naturalBreakMinutes: 5,
+  systemDeferralEnabled: true,
+  deferralGraceMinutes: 5,
 };
 
 interface ReminderRow {
@@ -46,6 +48,10 @@ interface SchedulePolicyRow {
   quiet_end_minute: number;
   natural_break_enabled: number;
   natural_break_minutes: number;
+  system_deferral_enabled: number;
+  deferral_grace_minutes: number;
+  system_deferred: number;
+  system_deferral_until: string | null;
 }
 
 function weekdayMask(activeWeekdays: number[]): number {
@@ -64,6 +70,8 @@ function mapSchedulePolicy(row: SchedulePolicyRow | undefined): SchedulePolicy {
     quietEndMinute: Number(row.quiet_end_minute),
     naturalBreakEnabled: Boolean(row.natural_break_enabled),
     naturalBreakMinutes: Number(row.natural_break_minutes),
+    systemDeferralEnabled: Boolean(row.system_deferral_enabled),
+    deferralGraceMinutes: Number(row.deferral_grace_minutes),
   };
 }
 
@@ -86,7 +94,7 @@ async function ensureReminderRows(userId: string, now: Date): Promise<void> {
     );
   }
   await dbExecute(
-    "INSERT OR IGNORE INTO ph_schedule_policies (user_id, active_weekdays_mask, work_start_minute, work_end_minute, quiet_enabled, quiet_start_minute, quiet_end_minute, updated_at, natural_break_enabled, natural_break_minutes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+    "INSERT OR IGNORE INTO ph_schedule_policies (user_id, active_weekdays_mask, work_start_minute, work_end_minute, quiet_enabled, quiet_start_minute, quiet_end_minute, updated_at, natural_break_enabled, natural_break_minutes, system_deferral_enabled, deferral_grace_minutes) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)",
     [
       userId,
       weekdayMask(DEFAULT_SCHEDULE_POLICY.activeWeekdays),
@@ -98,6 +106,8 @@ async function ensureReminderRows(userId: string, now: Date): Promise<void> {
       now.toISOString(),
       DEFAULT_SCHEDULE_POLICY.naturalBreakEnabled,
       DEFAULT_SCHEDULE_POLICY.naturalBreakMinutes,
+      DEFAULT_SCHEDULE_POLICY.systemDeferralEnabled,
+      DEFAULT_SCHEDULE_POLICY.deferralGraceMinutes,
     ],
   );
 }
@@ -125,7 +135,7 @@ export async function loadPauseHydrateState(
       [userId],
     ),
     dbSelect<SchedulePolicyRow>(
-      "SELECT active_weekdays_mask, work_start_minute, work_end_minute, quiet_enabled, quiet_start_minute, quiet_end_minute, natural_break_enabled, natural_break_minutes FROM ph_schedule_policies WHERE user_id = $1",
+      "SELECT active_weekdays_mask, work_start_minute, work_end_minute, quiet_enabled, quiet_start_minute, quiet_end_minute, natural_break_enabled, natural_break_minutes, system_deferral_enabled, deferral_grace_minutes, system_deferred, system_deferral_until FROM ph_schedule_policies WHERE user_id = $1",
       [userId],
     ),
   ]);
@@ -144,6 +154,8 @@ export async function loadPauseHydrateState(
     completedToday,
     todayEvents,
     coreHourActive: Boolean(activeRows[0]?.active),
+    systemDeferred: Boolean(policyRows[0]?.system_deferred),
+    systemDeferralUntil: policyRows[0]?.system_deferral_until ?? null,
     schedulePolicy: mapSchedulePolicy(policyRows[0]),
   };
 }
@@ -167,6 +179,8 @@ export async function saveReminderPreferences(
         quiet_end_minute: policy.quietEndMinute,
         natural_break_enabled: policy.naturalBreakEnabled,
         natural_break_minutes: policy.naturalBreakMinutes,
+        system_deferral_enabled: policy.systemDeferralEnabled,
+        deferral_grace_minutes: policy.deferralGraceMinutes,
       },
       preferences: preferences.map((preference) => {
         const interval = normalizeReminderInterval(preference.kind, preference.intervalMinutes);
@@ -214,6 +228,7 @@ export async function actOnReminder(
 export async function markNewPendingReminders(
   userId: string,
   now = new Date(),
+  notificationsAllowed: boolean | null = null,
 ): Promise<ReminderKind[]> {
   await ensureReminderRows(userId, now);
   const weekday = (now.getDay() + 6) % 7;
@@ -222,6 +237,7 @@ export async function markNewPendingReminders(
     now: now.toISOString(),
     weekday,
     minuteOfDay: now.getHours() * 60 + now.getMinutes(),
+    notificationsAllowed,
   });
 }
 

@@ -83,6 +83,8 @@ interface SchedulePolicyExportRow {
   quiet_end_minute: number;
   natural_break_enabled: number;
   natural_break_minutes: number;
+  system_deferral_enabled: number;
+  deferral_grace_minutes: number;
   updated_at: string;
 }
 
@@ -152,7 +154,7 @@ async function loadPauseHydrateData(userId: string): Promise<PauseHydrateExportD
   const [reminders, events, policies] = await Promise.all([
     dbSelect<ReminderExportRow>("SELECT kind, enabled, interval_minutes, next_due_at, pending_at, muted_until, updated_at FROM ph_reminders WHERE user_id = $1 ORDER BY kind", [userId]),
     dbSelect<ReminderEventExportRow>("SELECT id, kind, action, occurred_at, source FROM ph_reminder_events WHERE user_id = $1 ORDER BY occurred_at", [userId]),
-    dbSelect<SchedulePolicyExportRow>("SELECT active_weekdays_mask, work_start_minute, work_end_minute, quiet_enabled, quiet_start_minute, quiet_end_minute, natural_break_enabled, natural_break_minutes, updated_at FROM ph_schedule_policies WHERE user_id = $1", [userId]),
+    dbSelect<SchedulePolicyExportRow>("SELECT active_weekdays_mask, work_start_minute, work_end_minute, quiet_enabled, quiet_start_minute, quiet_end_minute, natural_break_enabled, natural_break_minutes, system_deferral_enabled, deferral_grace_minutes, updated_at FROM ph_schedule_policies WHERE user_id = $1", [userId]),
   ]);
   return { reminders, events, schedulePolicy: policies[0] ?? null };
 }
