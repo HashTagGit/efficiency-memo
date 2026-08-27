@@ -1,10 +1,9 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Sidebar, type SidebarLabels } from './sidebar';
 import type { ToolManifest } from '@memo/shared';
 
-const THEME_KEY = 'efficiency-memo-theme';
 type Theme = 'dark' | 'light';
 
 function ThemeIcon({ theme }: { theme: Theme }) {
@@ -26,6 +25,8 @@ export interface ShellProps {
   onToolSelect: (toolId: string) => void;
   isCollapsed: boolean;
   onToggle: () => void;
+  theme?: Theme;
+  onThemeToggle?: () => void;
   labels?: Partial<SidebarLabels>;
   localeLabel?: string;
   localeAriaLabel?: string;
@@ -40,6 +41,8 @@ export function Shell({
   onToolSelect,
   isCollapsed,
   onToggle,
+  theme,
+  onThemeToggle,
   labels,
   localeLabel,
   localeAriaLabel,
@@ -49,18 +52,6 @@ export function Shell({
   ...rest
 }: ShellProps) {
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [theme, setTheme] = useState<Theme>(() => (
-    typeof window !== 'undefined' && window.localStorage.getItem(THEME_KEY) === 'light' ? 'light' : 'dark'
-  ));
-
-  useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    document.documentElement.style.colorScheme = theme;
-    window.localStorage.setItem(THEME_KEY, theme);
-  }, [theme]);
-
-  const toggleTheme = () => setTheme((current) => current === 'dark' ? 'light' : 'dark');
-
   return (
     <div className={`flex h-[100dvh] w-full bg-background ${className ?? ''}`} {...rest}>
       {/* Desktop Sidebar */}
@@ -72,7 +63,7 @@ export function Shell({
           isCollapsed={isCollapsed}
           onToggle={onToggle}
           theme={theme}
-          onThemeToggle={toggleTheme}
+          onThemeToggle={onThemeToggle}
           labels={labels}
           localeLabel={localeLabel}
           localeAriaLabel={localeAriaLabel}
@@ -109,7 +100,7 @@ export function Shell({
             isCollapsed={false}
             onToggle={() => setMobileOpen(false)}
             theme={theme}
-            onThemeToggle={toggleTheme}
+            onThemeToggle={onThemeToggle}
             labels={labels}
             localeLabel={localeLabel}
             localeAriaLabel={localeAriaLabel}
@@ -142,17 +133,17 @@ export function Shell({
               <line x1="3" y1="18" x2="21" y2="18" />
             </svg>
           </button>
-          <button
+          {theme && onThemeToggle && <button
             type="button"
             data-testid="mobile-theme-toggle"
-            onClick={toggleTheme}
+            onClick={onThemeToggle}
             className="ml-auto inline-flex items-center gap-2 rounded-md px-2.5 py-2 text-sm text-muted hover:bg-surface-strong hover:text-foreground"
             aria-label={theme === 'dark' ? (labels?.switchToLight ?? 'Switch to light mode') : (labels?.switchToDark ?? 'Switch to dark mode')}
             aria-pressed={theme === 'light'}
           >
             <ThemeIcon theme={theme} />
             <span>{theme === 'dark' ? (labels?.lightMode ?? 'Light mode') : (labels?.darkMode ?? 'Dark mode')}</span>
-          </button>
+          </button>}
         </header>
 
         {/* Page Content */}

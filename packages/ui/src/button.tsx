@@ -14,7 +14,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
 
 const variantClasses: Record<ButtonVariant, string> = {
   primary:
-    'bg-accent text-background hover:bg-accent-strong',
+    'bg-accent text-on-accent hover:bg-accent-strong',
   secondary:
     'bg-surface text-foreground border border-border hover:bg-surface-strong',
   ghost:

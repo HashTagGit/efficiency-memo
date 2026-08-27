@@ -71,6 +71,13 @@ The desktop app lives in `apps/desktop/` and is the recommended deployable surfa
 - CoreHour and Pause & Hydrate manifests are enabled. Charger Reminder is retained but disabled; WebDAV sync code is outside the current product focus.
 - React Router handles SPA routing (`BrowserRouter` with `<Routes>`).
 
+### Appearance
+
+- `lib/appearance.tsx` owns persisted color mode, resolved system mode, and palette state.
+- `packages/ui` receives resolved appearance values through props and remains presentation-only.
+- `index.css` maps Ember, Grove, and Tide through the same semantic token names, so feature pages do not know which palette is active.
+- `/settings` is the primary global settings surface; the retained `/settings/sync` route is not linked from primary navigation.
+
 ### Data Locations
 
 - Windows: `%APPDATA%\com.efficiency-memo.app\efficiency-memo.db`

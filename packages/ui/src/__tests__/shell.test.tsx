@@ -117,8 +117,8 @@ describe('Shell', () => {
 
   });
 
-  it('toggles and persists the selected theme', () => {
-    localStorage.removeItem('efficiency-memo-theme');
+  it('invokes the configured theme toggle', () => {
+    const onThemeToggle = vi.fn();
     render(
       <Shell
         tools={mockTools}
@@ -126,15 +126,15 @@ describe('Shell', () => {
         onToolSelect={vi.fn()}
         isCollapsed={false}
         onToggle={vi.fn()}
+        theme="dark"
+        onThemeToggle={onThemeToggle}
       >
         <div>Content</div>
       </Shell>
     );
 
-    expect(document.documentElement.dataset.theme).toBe('dark');
     fireEvent.click(screen.getByTestId('mobile-theme-toggle'));
-    expect(document.documentElement.dataset.theme).toBe('light');
-    expect(localStorage.getItem('efficiency-memo-theme')).toBe('light');
+    expect(onThemeToggle).toHaveBeenCalledTimes(1);
   });
 
   it('renders and invokes the locale control when configured', () => {

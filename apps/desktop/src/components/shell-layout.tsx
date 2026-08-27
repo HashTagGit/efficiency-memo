@@ -7,6 +7,7 @@ import type { ToolManifest } from "@memo/shared";
 import { getRegisteredTools } from "../lib/tool-registry/registry";
 import { currentLocaleLabel, useI18n } from "../lib/i18n";
 import { localizedToolCopy } from "../lib/tool-registry/presentation";
+import { useAppearance } from "../lib/appearance";
 
 function getActiveToolId(pathname: string): string {
   const toolMatch = pathname.match(/^\/tools\/([^/]+)/);
@@ -20,13 +21,14 @@ export function ShellLayout({ children }: { children: React.ReactNode }) {
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const { locale, toggleLocale, t } = useI18n();
+  const { theme, toggleTheme } = useAppearance();
 
   const tools = getRegisteredTools().filter((tool) => tool.enabled);
   const activeToolId = getActiveToolId(location.pathname);
 
   const handleToolSelect = (toolId: string) => {
     if (toolId === "settings") {
-      navigate("/settings/sync");
+      navigate("/settings");
       return;
     }
     const tool = tools.find((t) => t.id === toolId);
@@ -49,7 +51,7 @@ export function ShellLayout({ children }: { children: React.ReactNode }) {
       name: t("nav.settings"),
       icon: "settings",
       description: "Sync and app settings",
-      routes: ["/settings/sync"],
+      routes: ["/settings"],
       enabled: true,
     },
   ];
@@ -61,6 +63,8 @@ export function ShellLayout({ children }: { children: React.ReactNode }) {
       onToolSelect={handleToolSelect}
       isCollapsed={isCollapsed}
       onToggle={() => setIsCollapsed((prev) => !prev)}
+      theme={theme}
+      onThemeToggle={toggleTheme}
       labels={{
         appName: t("app.name"),
         tools: t("nav.tools"),

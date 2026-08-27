@@ -24,6 +24,11 @@ EfficiencyMemo is a pnpm monorepo with independent tools behind one desktop work
 - Defer due reminders while a CoreHour session is active
 - Review today's completed actions from timestamped local events
 
+### Appearance
+- Choose System, Light, or Dark mode independently from the color palette
+- Switch between Ember, Grove, and Tide palettes across every tool
+- Change application language from the same global settings page
+
 ## Quick Start — Desktop App (recommended)
 
 The Tauri desktop app is a single `.exe` (or `.msi` installer) that runs locally with a local SQLite database. No container runtime, no cloud account, no internet required for core features.
@@ -63,6 +68,7 @@ On first launch the app creates its database in `%APPDATA%/com.efficiency-memo.a
 5. **Review the day** — Open **CoreHour → Timeline** to select a date, inspect or edit session blocks, add missed time from an empty slot, and review totals and check-ins.
 6. **Review the week** — Open **CoreHour → Insights** to compare this week with last week, inspect goal consistency, and review activity and tag trends.
 7. **Set healthy reminders** — Open **Pause & Hydrate**, enable either reminder, choose its interval, and save. Due reminders wait while CoreHour is active.
+8. **Adjust appearance** — Open **Settings** to choose a mode, color palette, and language. Changes preview and persist immediately.
 
 Use the native Tauri window opened by `tauri:dev`; `http://localhost:1420` is only the Vite development server and does not provide the Tauri SQLite bridge.
 
@@ -103,7 +109,7 @@ Key design choices:
 - **Local SQLite** — Tauri plugin-sql opens `sqlite:efficiency-memo.db` from the OS app-data directory. All 6 migrations run on first launch.
 - **CoreHour session state** — Active-session progress is kept locally and restored as paused after an app restart, so closed-app time is never counted.
 - **Bilingual workspace** — The desktop shell and active tools support English and Simplified Chinese, with the selected language persisted locally.
-- **Theme preferences** — Switch between light and dark themes from the workspace shell; the preference is persisted locally.
+- **Appearance preferences** — System/light/dark mode and Ember/Grove/Tide palettes are persisted locally; the workspace shell retains a quick mode toggle.
 - **Native notifications** — `tauri-plugin-notification` handles due CoreHour check-ins and Pause & Hydrate reminders.
 - **Deferred code** — Charger Reminder is retained but disabled. WebDAV sync is not part of the current product scope.
 

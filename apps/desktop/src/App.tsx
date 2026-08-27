@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ShellLayout } from "./components/shell-layout";
 import { DashboardPage } from "./pages/dashboard/page";
 import { SyncSettingsPage } from "./pages/settings/sync/page";
+import { AppSettingsPage } from "./pages/settings/page";
 import { useI18n } from "./lib/i18n";
 
 // Lazy-load tool pages
@@ -70,6 +71,7 @@ function App() {
                     </Suspense>
                   }
                 />
+                <Route path="/settings" element={<AppSettingsPage />} />
                 <Route path="/settings/sync" element={<SyncSettingsPage />} />
               </Routes>
             </ShellLayout>
