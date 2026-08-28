@@ -18,6 +18,7 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 - Pause & Hydrate reliable schedules with active weekdays, work/quiet hours, and visible notification-permission state.
 - Opt-in Natural Rest on Windows, using native system idle to complete one movement break without inferring hydration.
 - Native macOS Natural Rest idle detection through the current login session's CoreGraphics event state.
+- Capability-gated Linux Natural Rest through Mutter on GNOME Wayland and XScreenSaver on native X11; unsupported Wayland sessions remain disabled.
 - Windows system-interruption deferral with persisted blocked state, recovery grace, staggered reminders, and suspend-gap protection.
 - Operational Now home with current focus, next plan, reminder status, device attention, and compact full-tool navigation.
 - Dedicated control-border and keyboard-focus roles across every palette and mode, consumed by shared primitives and native desktop controls.
@@ -29,9 +30,10 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 - Standardize first-use, no-results, completed, loading, unavailable, not-found, and recoverable-error states.
 - Keep safe stale data visible during refresh and offer section-level retry without losing local context.
 
-### 2. Respectful reminder policy
+### 2. Linux package and session validation
 
-- Add a reliable Linux idle adapter across Wayland/X11 desktop environments before enabling Natural Rest there.
+- Build and inspect `.deb` and AppImage native dependencies.
+- Run Natural Rest on clean GNOME Wayland, Plasma Wayland, and X11 sessions; Plasma Wayland must remain explicitly unsupported rather than returning an invented duration.
 
 ### 3. Local Activity Assist experiment
 

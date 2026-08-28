@@ -1082,6 +1082,7 @@ name = "efficiency-memo"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "dbus",
  "dirs 5.0.1",
  "hex",
  "keyring",
@@ -1097,6 +1098,7 @@ dependencies = [
  "tauri-plugin-global-shortcut",
  "tauri-plugin-notification",
  "tauri-plugin-sql",
+ "x11-dl",
 ]
 
 [[package]]

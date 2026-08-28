@@ -33,6 +33,84 @@ fn idle_seconds_from_macos(value: f64) -> Option<u64> {
     (value.is_finite() && value >= 0.0).then(|| value.floor() as u64)
 }
 
+#[cfg(any(target_os = "linux", test))]
+fn idle_seconds_from_millis(value: u64) -> u64 {
+    value / 1000
+}
+
+#[cfg(any(target_os = "linux", test))]
+fn is_wayland_session(wayland_display: Option<&str>, session_type: Option<&str>) -> bool {
+    wayland_display.is_some_and(|value| !value.is_empty())
+        || session_type.is_some_and(|value| value.eq_ignore_ascii_case("wayland"))
+}
+
+#[cfg(target_os = "linux")]
+fn mutter_idle_seconds() -> Option<u64> {
+    use dbus::blocking::Connection;
+    use std::time::Duration;
+
+    let connection = Connection::new_session().ok()?;
+    let proxy = connection.with_proxy(
+        "org.gnome.Mutter.IdleMonitor",
+        "/org/gnome/Mutter/IdleMonitor/Core",
+        Duration::from_millis(300),
+    );
+    let (milliseconds,): (u64,) = proxy
+        .method_call(
+            "org.gnome.Mutter.IdleMonitor",
+            "GetIdletime",
+            (),
+        )
+        .ok()?;
+    Some(idle_seconds_from_millis(milliseconds))
+}
+
+#[cfg(target_os = "linux")]
+fn x11_idle_seconds() -> Option<u64> {
+    use std::ffi::c_void;
+    use std::ptr;
+    use x11_dl::{xlib, xss};
+
+    std::env::var_os("DISPLAY")?;
+    let xlib = xlib::Xlib::open().ok()?;
+    let xss = xss::Xss::open().ok()?;
+    let display = unsafe { (xlib.XOpenDisplay)(ptr::null()) };
+    if display.is_null() {
+        return None;
+    }
+
+    let result = unsafe {
+        let mut event_base = 0;
+        let mut error_base = 0;
+        if (xss.XScreenSaverQueryExtension)(display, &mut event_base, &mut error_base) == 0 {
+            (xlib.XCloseDisplay)(display);
+            return None;
+        }
+        let info = (xss.XScreenSaverAllocInfo)();
+        if info.is_null() {
+            (xlib.XCloseDisplay)(display);
+            return None;
+        }
+        let root = (xlib.XDefaultRootWindow)(display);
+        let queried = (xss.XScreenSaverQueryInfo)(display, root, info) != 0;
+        let idle = queried.then(|| idle_seconds_from_millis((*info).idle as u64));
+        (xlib.XFree)(info.cast::<c_void>());
+        (xlib.XCloseDisplay)(display);
+        idle
+    };
+    result
+}
+
+#[cfg(target_os = "linux")]
+fn linux_idle_seconds() -> Option<u64> {
+    let wayland_display = std::env::var("WAYLAND_DISPLAY").ok();
+    let session_type = std::env::var("XDG_SESSION_TYPE").ok();
+    if is_wayland_session(wayland_display.as_deref(), session_type.as_deref()) {
+        return mutter_idle_seconds();
+    }
+    x11_idle_seconds().or_else(mutter_idle_seconds)
+}
+
 #[tauri::command]
 pub(crate) fn get_system_idle_seconds() -> Result<Option<u64>, String> {
     #[cfg(target_os = "windows")]
@@ -62,7 +140,12 @@ pub(crate) fn get_system_idle_seconds() -> Result<Option<u64>, String> {
         return Ok(idle_seconds_from_macos(seconds));
     }
 
-    #[cfg(not(any(target_os = "windows", target_os = "macos")))]
+    #[cfg(target_os = "linux")]
+    {
+        return Ok(linux_idle_seconds());
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
     {
         Ok(None)
     }
@@ -71,7 +154,8 @@ pub(crate) fn get_system_idle_seconds() -> Result<Option<u64>, String> {
 #[cfg(test)]
 mod tests {
     use super::{
-        get_system_idle_seconds, idle_seconds_from_macos, idle_seconds_from_ticks,
+        get_system_idle_seconds, idle_seconds_from_macos, idle_seconds_from_millis,
+        idle_seconds_from_ticks, is_wayland_session,
     };
 
     #[test]
@@ -86,6 +170,14 @@ mod tests {
         assert_eq!(idle_seconds_from_macos(-1.0), None);
         assert_eq!(idle_seconds_from_macos(f64::NAN), None);
         assert_eq!(idle_seconds_from_macos(f64::INFINITY), None);
+    }
+
+    #[test]
+    fn linux_idle_helpers_floor_milliseconds_and_detect_wayland() {
+        assert_eq!(idle_seconds_from_millis(12_999), 12);
+        assert!(is_wayland_session(Some("wayland-0"), Some("x11")));
+        assert!(is_wayland_session(None, Some("WAYLAND")));
+        assert!(!is_wayland_session(None, Some("x11")));
     }
 
     #[cfg(target_os = "windows")]
