@@ -10,10 +10,11 @@ export function DataSummary({ counts }: { counts: DataCounts }) {
     { label: t("dataPrivacy.coreHourPlans"), value: counts.coreHourPlans, color: "border-planned text-planned" },
     { label: t("dataPrivacy.coreHourTags"), value: counts.coreHourTags, color: "border-focus text-focus" },
     { label: t("dataPrivacy.pauseHydrateEvents"), value: counts.pauseHydrateEvents, color: "border-hydration text-hydration" },
+    { label: t("dataPrivacy.activityAssistSamples"), value: counts.activityAssistSamples, color: "border-suggested text-suggested" },
   ];
 
   return (
-    <dl className="grid gap-px overflow-hidden rounded-md border border-border bg-border sm:grid-cols-2 lg:grid-cols-5">
+    <dl className="grid gap-px overflow-hidden rounded-md border border-border bg-border sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
       {metrics.map((metric) => (
         <div
           key={metric.label}

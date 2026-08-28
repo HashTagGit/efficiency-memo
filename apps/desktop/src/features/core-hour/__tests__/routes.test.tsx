@@ -32,6 +32,7 @@ describe("CoreHour navigation", () => {
     expect(markup).toContain('href="/tools/core-hour"');
     expect(markup).toContain('href="/tools/core-hour/history"');
     expect(markup).toContain('href="/tools/core-hour/insights"');
+    expect(markup).toContain('href="/tools/core-hour/assist"');
     expect(markup).toContain('href="/tools/core-hour/tags"');
     expect(markup).toContain('href="/tools/core-hour/settings"');
   });

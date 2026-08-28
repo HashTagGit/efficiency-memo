@@ -17,6 +17,7 @@ import { useI18n } from "../../../lib/i18n";
 import { Button, EmptyState } from "@memo/ui";
 import { UncertainTimeReview } from "../components/uncertain-time-review";
 import { useCoreHourLoadState, useCoreHourTimer } from "../runtime";
+import ActivityAssistPage from "../../activity-assist/activity-assist-page";
 
 export function CoreHourHome({ timer }: { timer: TimerState }) {
   const [intervalMinutes, setIntervalMinutes] = useState(30);
@@ -91,6 +92,7 @@ function CoreHourWorkspace({ userId }: { userId: string }) {
               ["/tools/core-hour", t("coreHour.timer")],
               ["/tools/core-hour/history", t("coreHour.history")],
               ["/tools/core-hour/insights", t("coreHour.insights")],
+              ["/tools/core-hour/assist", t("coreHour.assist")],
               ["/tools/core-hour/tags", t("coreHour.tags")],
               ["/tools/core-hour/settings", t("coreHour.settings")],
             ].map(([to, label]) => (
@@ -150,6 +152,7 @@ function CoreHourWorkspace({ userId }: { userId: string }) {
         <Route index element={<CoreHourHome timer={timer} />} />
         <Route path="history" element={<HistoryPage userId={userId} />} />
         <Route path="insights" element={<InsightsPage userId={userId} />} />
+        <Route path="assist" element={<ActivityAssistPage userId={userId} />} />
         <Route path="tags" element={<TagsPage userId={userId} />} />
         <Route path="settings" element={<SettingsPage />} />
       </Routes>

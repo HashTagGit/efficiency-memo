@@ -22,6 +22,7 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 - Windows system-interruption deferral with persisted blocked state, recovery grace, staggered reminders, and suspend-gap protection.
 - Operational Now home with current focus, next plan, reminder status, device attention, and compact full-tool navigation.
 - Dedicated control-border and keyboard-focus roles across every palette and mode, consumed by shared primitives and native desktop controls.
+- Windows-first Activity Assist collection foundation with opt-in foreground executable sampling, collection pause, exclusions, short retention, inspection, and deletion.
 
 ## Next releases
 
@@ -37,9 +38,8 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 
 ### 3. Local Activity Assist experiment
 
-- Windows-first, off by default, foreground application name only.
-- Short raw retention, pause/exclusion/delete controls, and local-only processing.
-- Show unconfirmed suggestions in CoreHour; only explicit acceptance creates actual time.
+- Group retained samples into unconfirmed CoreHour suggestions without changing Actual Sessions.
+- Add review, edit, dismiss, and explicit acceptance; only acceptance may create actual time through the validated manual-session path.
 
 Stop the experiment if useful suggestions require window titles, URLs, screenshots, content, keystrokes, or cloud inference.
 
