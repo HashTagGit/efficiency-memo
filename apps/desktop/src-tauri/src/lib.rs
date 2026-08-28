@@ -5,6 +5,7 @@ use tauri_plugin_sql::{Migration, MigrationKind};
 mod activity_assist;
 mod core_hour;
 mod data_control;
+mod daily_review;
 mod desktop_companion;
 mod foreground_application;
 mod pause_hydrate;
@@ -100,6 +101,12 @@ pub fn run() {
             sql: include_str!("../migrations/0014_activity_assist_rules.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 15,
+            description: "create CoreHour daily reviews",
+            sql: include_str!("../migrations/0015_ch_daily_reviews.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
@@ -150,6 +157,8 @@ pub fn run() {
             activity_assist::accept_activity_assist_suggestion,
             activity_assist::save_activity_assist_rule,
             activity_assist::delete_activity_assist_rule,
+            daily_review::load_daily_review,
+            daily_review::save_daily_review,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

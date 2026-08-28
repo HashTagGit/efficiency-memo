@@ -208,7 +208,11 @@ export function DashboardPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">
-      <PageHeader title={t("dashboard.title")} subtitle={t("dashboard.subtitle")} />
+      <PageHeader
+        title={t("dashboard.title")}
+        subtitle={t("dashboard.subtitle")}
+        action={<Button variant="secondary" onClick={() => navigate("/tools/core-hour/review")}>{t("dashboard.dayCloseout")}</Button>}
+      />
 
       {nowData && dataLoading && (
         <p className="text-sm text-muted" role="status" aria-live="polite">{t("dashboard.updating")}</p>

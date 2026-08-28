@@ -6,6 +6,7 @@ import { useSession } from "../hooks/use-session";
 import type { TimerState } from "../hooks/use-timer";
 import HistoryPage from "./history-page";
 import InsightsPage from "./insights-page";
+import DailyReviewPage from "./daily-review-page";
 import SettingsPage from "./settings-page";
 import TagsPage from "./tags-page";
 import {
@@ -92,6 +93,7 @@ function CoreHourWorkspace({ userId }: { userId: string }) {
               ["/tools/core-hour", t("coreHour.timer")],
               ["/tools/core-hour/history", t("coreHour.history")],
               ["/tools/core-hour/insights", t("coreHour.insights")],
+              ["/tools/core-hour/review", t("coreHour.review")],
               ["/tools/core-hour/assist", t("coreHour.assist")],
               ["/tools/core-hour/tags", t("coreHour.tags")],
               ["/tools/core-hour/settings", t("coreHour.settings")],
@@ -152,6 +154,7 @@ function CoreHourWorkspace({ userId }: { userId: string }) {
         <Route index element={<CoreHourHome timer={timer} />} />
         <Route path="history" element={<HistoryPage userId={userId} />} />
         <Route path="insights" element={<InsightsPage userId={userId} />} />
+        <Route path="review" element={<DailyReviewPage userId={userId} />} />
         <Route path="assist" element={<ActivityAssistPage userId={userId} />} />
         <Route path="tags" element={<TagsPage userId={userId} />} />
         <Route path="settings" element={<SettingsPage />} />

@@ -35,5 +35,6 @@ describe("CoreHour navigation", () => {
     expect(markup).toContain('href="/tools/core-hour/assist"');
     expect(markup).toContain('href="/tools/core-hour/tags"');
     expect(markup).toContain('href="/tools/core-hour/settings"');
+    expect(markup).toContain('href="/tools/core-hour/review"');
   });
 });

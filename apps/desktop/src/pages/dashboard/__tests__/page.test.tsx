@@ -81,6 +81,7 @@ describe("Now dashboard", () => {
     );
 
     expect(screen.getByRole("heading", { name: "Now" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Day closeout" })).toBeTruthy();
     expect(screen.getByText("Write brief")).toBeTruthy();
     expect(await screen.findByText("Review roadmap")).toBeTruthy();
     expect(screen.getByText("Drink water needs your attention.")).toBeTruthy();

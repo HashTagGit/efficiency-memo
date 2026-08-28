@@ -25,6 +25,7 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 - Windows-first Activity Assist collection foundation with opt-in foreground executable sampling, collection pause, exclusions, short retention, inspection, and deletion.
 - Activity Assist stable suggestions with edit, dismiss, and atomic explicit acceptance into confirmed CoreHour sessions.
 - Explicit application mapping rules that prefill later suggestions, remain editable/deletable, appear in portable/readable exports, and surface pending review on Now.
+- Guided Daily Review with plan-versus-actual and recovery facts, open-item guards, one bounded outcome, and an atomically applied next focus target.
 - Module locator colors for CoreHour, Pause & Hydrate, Charger Reminder, and Settings, while primary actions remain governed by the selected palette.
 - Semantic Alert containers plus explicit button pressed and disabled reactions without component-level product hues.
 
@@ -48,9 +49,9 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 
 **Exit gate:** repeat applications require fewer edits, while every Actual Session still requires explicit acceptance. Stop if useful categorization requires titles, URLs, content, screenshots, keystrokes, or cloud inference.
 
-### Phase 2 — guided review and adjustment
+### Phase 2 — guided review and adjustment (in progress)
 
-- Add an optional end-of-day closeout for pending suggestions/uncertain time, plan-versus-actual, recovery/hydration facts, one outcome, and one next adjustment.
+- Shipped: optional end-of-day closeout for pending suggestions/uncertain time, plan-versus-actual, recovery/hydration facts, one outcome, and one next adjustment.
 - Add a weekly reset for capacity, longest focus blocks, interruptions, recovery coverage, device attention, and goal adjustment.
 - Review reminders must respect quiet hours and system interruption state.
 

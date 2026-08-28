@@ -12,6 +12,7 @@ export function DataSummary({ counts }: { counts: DataCounts }) {
     { label: t("dataPrivacy.pauseHydrateEvents"), value: counts.pauseHydrateEvents, color: "border-hydration text-hydration" },
     { label: t("dataPrivacy.activityAssistSamples"), value: counts.activityAssistSamples, color: "border-suggested text-suggested" },
     { label: t("dataPrivacy.activityAssistRules"), value: counts.activityAssistRules, color: "border-privacy text-privacy" },
+    { label: t("dataPrivacy.dailyReviews"), value: counts.dailyReviews, color: "border-focus text-focus" },
   ];
 
   return (

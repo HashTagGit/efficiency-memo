@@ -21,6 +21,7 @@ export interface DataCounts {
   pauseHydrateEvents: number;
   activityAssistSamples: number;
   activityAssistRules: number;
+  dailyReviews: number;
 }
 
 export interface BackupPreview {

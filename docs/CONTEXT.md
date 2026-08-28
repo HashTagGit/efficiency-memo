@@ -79,9 +79,27 @@ _Avoid_: Sign out, disabled reminder
 A local rule that prevents an application identifier from being retained or suggested.
 _Avoid_: Website block, productivity category
 
+**Application Mapping Rule**:
+A user-confirmed mapping from one exact application identifier to a suggested activity and optional tag; it only prefills later suggestions.
+_Avoid_: Auto-confirmation, productivity classification
+
 **Raw Retention**:
 The short maximum lifetime of Activity Samples before automatic deletion.
 _Avoid_: History retention, backup period
+
+## CoreHour review
+
+**Daily Review**:
+A user-completed closeout for one local date that records one bounded outcome and one subsequent focus target.
+_Avoid_: Journal, daily report, AI summary
+
+**Review Outcome**:
+The user's selected description of how planned focus matched the day: on track, overcommitted, underplanned, or interrupted.
+_Avoid_: Productivity score, mood
+
+**Next Focus Target**:
+The daily focus goal selected during a Daily Review and applied to later CoreHour goal progress.
+_Avoid_: Automatic schedule, performance quota
 
 ## Data control
 
