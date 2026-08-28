@@ -6,7 +6,7 @@ Make appearance a first-class application preference with curated, accessible co
 
 ## Scope
 
-- Separate color mode (`System`, `Light`, `Dark`) from palette (`Ember`, `Grove`, `Tide`).
+- Separate color mode (`System`, `Light`, `Dark`) from palette (`Ember`, `Grove`, `Tide`, `Clarity`, `Canopy`).
 - Persist both preferences locally and preview changes immediately.
 - Preserve the former `efficiency-memo-theme` preference when the new mode key is absent.
 - Keep the sidebar light/dark command as a fast override of the resolved mode.
@@ -20,7 +20,8 @@ Make appearance a first-class application preference with curated, accessible co
 - `System` follows operating-system changes while the app is running.
 - The sidebar theme command switches from System to an explicit opposite mode.
 - Ember remains the default palette and preserves the existing visual identity.
-- All three palettes have light and dark values for base, surface, content, accent, status, sidebar, and shadow tokens.
+- All five palettes have light and dark values for base, surface, content, accent, status, sidebar, and shadow tokens.
+- Canopy adds an evergreen primary accent while coral remains a bounded recovery role rather than a second action color.
 - Normal foreground/background and primary accent-button pairs meet WCAG AA text contrast.
 - Palette, mode, and language controls are keyboard accessible and expose selected state.
 - English and Simplified Chinese layouts remain usable without overlapping controls.
@@ -28,7 +29,7 @@ Make appearance a first-class application preference with curated, accessible co
 ## Non-Goals
 
 - Arbitrary custom colors, imported themes, or a theme marketplace.
-- High-contrast or color-vision-specific modes before a full component and chart audit.
+- Additional color-vision-specific variants beyond the audited Clarity palette.
 - Density, typography, animation, or layout customization.
 - Additional unconsumed semantic roles until a component needs them.
 - Business workflow features in the same delivery slice.

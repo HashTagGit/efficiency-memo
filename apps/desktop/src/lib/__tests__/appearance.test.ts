@@ -23,6 +23,7 @@ describe("appearance preferences", () => {
   it("accepts known palettes and defaults unknown values", () => {
     expect(readPalette("grove")).toBe("grove");
     expect(readPalette("clarity")).toBe("clarity");
+    expect(readPalette("canopy")).toBe("canopy");
     expect(readPalette("unknown")).toBe(DEFAULT_PALETTE);
   });
 });

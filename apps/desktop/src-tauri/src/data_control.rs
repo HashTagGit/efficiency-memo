@@ -155,7 +155,7 @@ fn same_existing_file(left: &Path, right: &Path) -> bool {
 fn validate_preferences(preferences: &PortablePreferences) -> Result<(), String> {
     if !matches!(preferences.locale.as_str(), "en-US" | "zh-CN")
         || !matches!(preferences.theme_mode.as_str(), "light" | "dark" | "system")
-        || !matches!(preferences.palette.as_str(), "ember" | "grove" | "tide" | "clarity")
+        || !matches!(preferences.palette.as_str(), "ember" | "grove" | "tide" | "clarity" | "canopy")
     {
         return Err("invalid-preferences".to_string());
     }
@@ -717,7 +717,7 @@ mod tests {
         PortablePreferences {
             locale: "zh-CN".into(),
             theme_mode: "dark".into(),
-            palette: "clarity".into(),
+            palette: "canopy".into(),
         }
     }
 

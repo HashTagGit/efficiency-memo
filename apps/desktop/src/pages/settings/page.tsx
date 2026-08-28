@@ -38,7 +38,7 @@ export function AppSettingsPage() {
 
         <div className="mt-6">
           <p className="text-sm font-medium text-foreground">{t("appSettings.palette")}</p>
-          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-4" role="radiogroup" aria-label={t("appSettings.palette")}>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-5" role="radiogroup" aria-label={t("appSettings.palette")}>
             {PALETTES.map((value) => (
               <label
                 key={value}

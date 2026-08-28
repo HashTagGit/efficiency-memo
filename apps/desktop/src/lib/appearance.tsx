@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
-export const PALETTES = ["ember", "grove", "tide", "clarity"] as const;
+export const PALETTES = ["ember", "grove", "tide", "clarity", "canopy"] as const;
 export const DEFAULT_PALETTE: Palette = "ember";
 
 export type ThemeMode = "light" | "dark" | "system";
