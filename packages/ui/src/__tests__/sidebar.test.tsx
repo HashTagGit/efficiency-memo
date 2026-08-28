@@ -60,6 +60,24 @@ describe('Sidebar', () => {
     expect(onToolSelect).toHaveBeenCalledWith('tool-a');
   });
 
+  it('provides a home control that returns to the initial workspace', () => {
+    const onToolSelect = vi.fn();
+    render(
+      <Sidebar
+        tools={mockTools}
+        activeToolId="tool-a"
+        onToolSelect={onToolSelect}
+        isCollapsed={false}
+        onToggle={vi.fn()}
+      />,
+    );
+
+    const home = screen.getByTestId('sidebar-home');
+    expect(home.getAttribute('data-active')).toBe('false');
+    fireEvent.click(home);
+    expect(onToolSelect).toHaveBeenCalledWith('home');
+  });
+
   it('renders collapsed width class when isCollapsed is true', () => {
     render(
       <Sidebar

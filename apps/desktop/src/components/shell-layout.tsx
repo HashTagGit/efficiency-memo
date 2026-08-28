@@ -12,6 +12,7 @@ import { useAppearance } from "../lib/appearance";
 function getActiveToolId(pathname: string): string {
   const toolMatch = pathname.match(/^\/tools\/([^/]+)/);
   if (toolMatch) return toolMatch[1];
+  if (pathname.startsWith("/dashboard")) return "home";
   if (pathname.startsWith("/settings")) return "settings";
   return "";
 }
@@ -33,6 +34,10 @@ export function ShellLayout({ children }: { children: React.ReactNode }) {
   const activeToolId = getActiveToolId(location.pathname);
 
   const handleToolSelect = (toolId: string) => {
+    if (toolId === "home") {
+      navigate("/dashboard");
+      return;
+    }
     if (toolId === "settings") {
       navigate("/settings");
       return;
@@ -83,6 +88,7 @@ export function ShellLayout({ children }: { children: React.ReactNode }) {
         collapseSidebar: t("nav.collapseSidebar"),
         expandSidebar: t("nav.expandSidebar"),
         language: t("nav.language"),
+        openHome: t("nav.openHome"),
       }}
       localeLabel={currentLocaleLabel(locale)}
       localeAriaLabel={t("nav.switchLanguage")}

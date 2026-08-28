@@ -39,6 +39,7 @@ export interface SidebarLabels {
   collapseSidebar: string;
   expandSidebar: string;
   language: string;
+  openHome: string;
 }
 
 const defaultLabels: SidebarLabels = {
@@ -52,6 +53,7 @@ const defaultLabels: SidebarLabels = {
   collapseSidebar: "Collapse sidebar",
   expandSidebar: "Expand sidebar",
   language: "Language",
+  openHome: "Open Now",
 };
 
 export function Sidebar({
@@ -83,9 +85,24 @@ export function Sidebar({
     >
       {/* Header / Toggle */}
       <div className="flex items-center justify-between border-b border-border p-3">
-        {!isCollapsed && (
-          <span className="truncate text-sm font-semibold">{labels.appName}</span>
-        )}
+        <button
+          type="button"
+          data-testid="sidebar-home"
+          onClick={() => onToolSelect('home')}
+          className={`flex min-w-0 flex-1 items-center rounded-md p-1 text-left text-foreground hover:bg-[var(--color-sidebar-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${activeToolId === 'home' ? 'bg-[var(--color-active)]' : ''}`}
+          data-active={activeToolId === 'home'}
+          aria-label={labels.openHome}
+          title={labels.openHome}
+        >
+          {isCollapsed ? (
+            <svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m3 11 9-8 9 8" />
+              <path d="M5 10v10h14V10M9 20v-6h6v6" />
+            </svg>
+          ) : (
+            <span className="truncate text-sm font-semibold">{labels.appName}</span>
+          )}
+        </button>
         <button
           type="button"
           data-testid="sidebar-toggle"
