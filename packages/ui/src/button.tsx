@@ -88,7 +88,7 @@ export function Button({
       {isLoading && (
         <LoadingSpinner className="w-4 h-4 mr-2" />
       )}
-      {isLoading ? 'Loading...' : children}
+      {children}
     </button>
   );
 }

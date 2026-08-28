@@ -74,6 +74,7 @@ describe('Button', () => {
     );
     // Should show spinner (svg or element with role/status)
     expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(screen.getByText('Submit')).toBeInTheDocument();
     // Button should be disabled
     const btn = screen.getByRole('button');
     expect(btn).toBeDisabled();
