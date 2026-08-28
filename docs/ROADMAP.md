@@ -18,6 +18,7 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 - Opt-in Natural Rest on Windows, using native system idle to complete one movement break without inferring hydration.
 - Native macOS Natural Rest idle detection through the current login session's CoreGraphics event state.
 - Windows system-interruption deferral with persisted blocked state, recovery grace, staggered reminders, and suspend-gap protection.
+- Operational Now home with current focus, next plan, reminder status, device attention, and compact full-tool navigation.
 
 ## Next releases
 
@@ -26,16 +27,11 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 - Standardize first-use, no-results, completed, loading, unavailable, not-found, and recoverable-error states.
 - Keep safe stale data visible during refresh and offer section-level retry without losing local context.
 
-### 2. Actionable Now surface
-
-- Replace the tool-card-only launch view with current focus, next planned block, upcoming reminders, and one relevant action per module.
-- Keep every module directly reachable and avoid turning Home into another analytics dashboard.
-
-### 3. Respectful reminder policy
+### 2. Respectful reminder policy
 
 - Add a reliable Linux idle adapter across Wayland/X11 desktop environments before enabling Natural Rest there.
 
-### 4. Local Activity Assist experiment
+### 3. Local Activity Assist experiment
 
 - Windows-first, off by default, foreground application name only.
 - Short raw retention, pause/exclusion/delete controls, and local-only processing.

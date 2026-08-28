@@ -1,9 +1,14 @@
-import React from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Card, EmptyState, PageHeader } from "@memo/ui";
+import { Alert, Button, EmptyState, PageHeader } from "@memo/ui";
 import { getRegisteredTools } from "../../lib/tool-registry/registry";
 import { useI18n } from "../../lib/i18n";
 import { localizedToolCopy } from "../../lib/tool-registry/presentation";
+import { getCurrentUser } from "../../lib/auth";
+import { useSession } from "../../features/core-hour/hooks/use-session";
+import { useCoreHourLoadState, useCoreHourTimer } from "../../features/core-hour/runtime";
+import { usePauseHydrate } from "../../features/pause-hydrate/context";
+import { loadDashboardNow, type DashboardNowData } from "./dashboard-data";
 
 function ToolIcon({ name }: { name: string }) {
   const iconMap: Record<string, React.ReactNode> = {
@@ -39,15 +44,228 @@ function ToolIcon({ name }: { name: string }) {
   );
 }
 
+function formatElapsed(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const remainder = seconds % 60;
+  return [hours, minutes, remainder].map((value) => String(value).padStart(2, "0")).join(":");
+}
+
+function SummaryPanel({
+  icon,
+  title,
+  value,
+  description,
+  tone,
+  actionLabel,
+  onAction,
+}: {
+  icon: React.ReactNode;
+  title: string;
+  value: string;
+  description: string;
+  tone: string;
+  actionLabel: string;
+  onAction: () => void;
+}) {
+  return (
+    <article className={`flex min-h-48 flex-col border-l-2 bg-surface px-5 py-4 ${tone}`}>
+      <div className="flex items-center gap-2 text-sm font-semibold">
+        <span className="flex h-7 w-7 items-center justify-center" aria-hidden="true">{icon}</span>
+        <h2>{title}</h2>
+      </div>
+      <p className="mt-5 text-2xl font-semibold tabular-nums text-foreground">{value}</p>
+      <p className="mt-2 text-sm leading-relaxed text-muted">{description}</p>
+      <div className="mt-auto pt-5">
+        <Button size="sm" variant="secondary" onClick={onAction}>{actionLabel}</Button>
+      </div>
+    </article>
+  );
+}
+
 export function DashboardPage() {
   const navigate = useNavigate();
-  const { t } = useI18n();
+  const { locale, t } = useI18n();
   const tools = getRegisteredTools().filter((tool) => tool.enabled);
+  const userId = getCurrentUser()?.id ?? null;
+  const { activeSession } = useSession();
+  const timer = useCoreHourTimer();
+  const { loading: coreLoading, loadError: coreLoadError } = useCoreHourLoadState();
+  const {
+    state: pauseState,
+    loading: pauseLoading,
+    loadError: pauseLoadError,
+  } = usePauseHydrate();
+  const [nowData, setNowData] = useState<DashboardNowData | null>(null);
+  const [dataLoading, setDataLoading] = useState(true);
+  const [dataError, setDataError] = useState(false);
+  const requestRef = useRef(0);
+
+  const load = useCallback(async () => {
+    const request = ++requestRef.current;
+    setDataLoading(true);
+    setDataError(false);
+    if (!userId) {
+      setDataError(true);
+      setDataLoading(false);
+      return;
+    }
+    try {
+      const next = await loadDashboardNow(userId);
+      if (request !== requestRef.current) return;
+      setNowData(next);
+    } catch {
+      if (request === requestRef.current) setDataError(true);
+    } finally {
+      if (request === requestRef.current) setDataLoading(false);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    void load();
+    return () => { requestRef.current += 1; };
+  }, [load]);
+
+  const timeFormatter = useMemo(
+    () => new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }),
+    [locale],
+  );
+  const nextPlan = nowData?.nextPlan ?? null;
+  const pendingReminder = (["break", "hydration"] as const).find(
+    (kind) => pauseState?.reminders[kind].pendingAt,
+  );
+  const nextReminder = (["break", "hydration"] as const)
+    .filter((kind) => pauseState?.reminders[kind].enabled && pauseState.reminders[kind].nextDueAt)
+    .sort((left, right) => (
+      new Date(pauseState!.reminders[left].nextDueAt!).getTime()
+      - new Date(pauseState!.reminders[right].nextDueAt!).getTime()
+    ))[0];
+
+  const focusValue = coreLoading
+    ? t("dashboard.loading")
+    : coreLoadError
+      ? t("dashboard.unavailable")
+      : activeSession
+        ? formatElapsed(timer.elapsed)
+        : t("dashboard.focusReady");
+  const focusDescription = coreLoading
+    ? t("dashboard.focusLoadingHint")
+    : coreLoadError
+      ? t("dashboard.focusUnavailableHint")
+      : activeSession
+        ? activeSession.activity || t("today.unnamed")
+        : t("dashboard.noActiveFocus");
+  const planValue = dataLoading && !nowData
+    ? t("dashboard.loading")
+    : dataError && !nowData
+      ? t("dashboard.unavailable")
+      : nextPlan?.title || t("dashboard.noPlan");
+  const planDescription = !nowData && dataLoading
+    ? t("dashboard.planLoadingHint")
+    : !nowData && dataError
+      ? t("dashboard.planUnavailableHint")
+      : nextPlan
+        ? t("dashboard.planTime", {
+            start: timeFormatter.format(new Date(nextPlan.started_at)),
+            end: timeFormatter.format(new Date(nextPlan.ended_at)),
+          })
+        : t("dashboard.noPlanHint");
+  const reminderValue = pauseLoading
+    ? t("dashboard.loading")
+    : pauseLoadError && !pauseState
+      ? t("dashboard.unavailable")
+      : pendingReminder
+        ? t("dashboard.dueNow")
+        : nextReminder
+          ? timeFormatter.format(new Date(pauseState!.reminders[nextReminder].nextDueAt!))
+          : t("dashboard.remindersOff");
+  const currentReminderDescription = pendingReminder
+    ? t("dashboard.reminderDue", { name: t(`pauseHydrate.${pendingReminder}`) })
+    : nextReminder
+      ? t("dashboard.nextReminder", { name: t(`pauseHydrate.${nextReminder}`) })
+      : t("dashboard.noReminderHint");
+  const reminderDescription = pauseLoading
+    ? t("dashboard.reminderLoadingHint")
+    : pauseLoadError && !pauseState
+      ? t("dashboard.reminderUnavailableHint")
+      : pauseLoadError
+        ? t("dashboard.reminderStale", { detail: currentReminderDescription })
+        : currentReminderDescription;
+  const deviceValue = dataLoading && !nowData
+    ? t("dashboard.loading")
+    : dataError && !nowData
+      ? t("dashboard.unavailable")
+      : String(nowData?.deviceAttentionCount ?? 0);
+  const deviceDescription = !nowData && dataLoading
+    ? t("dashboard.deviceLoadingHint")
+    : !nowData && dataError
+      ? t("dashboard.deviceUnavailableHint")
+      : !nowData || nowData.deviceCount === 0
+        ? t("dashboard.noDevices")
+        : nowData.deviceAttentionCount > 0
+          ? t("dashboard.deviceAttention", { count: nowData.deviceAttentionCount })
+          : t("dashboard.devicesOnSchedule", { count: nowData.deviceCount });
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="mx-auto max-w-6xl space-y-8">
       <PageHeader title={t("dashboard.title")} subtitle={t("dashboard.subtitle")} />
 
+      {nowData && dataLoading && (
+        <p className="text-sm text-muted" role="status" aria-live="polite">{t("dashboard.updating")}</p>
+      )}
+      {dataError && (
+        <Alert variant="error" title={t("dashboard.loadErrorTitle")}>
+          <p>{t(nowData ? "dashboard.refreshErrorDescription" : "dashboard.loadErrorDescription")}</p>
+          <Button className="mt-3" size="sm" variant="secondary" onClick={() => void load()}>{t("coreHour.retry")}</Button>
+        </Alert>
+      )}
+
+      <section className="grid gap-3 sm:grid-cols-2" data-testid="dashboard-now-grid" aria-label={t("dashboard.nowSummary")}>
+        <SummaryPanel
+          icon={<ToolIcon name="CoreHour" />}
+          title={t("dashboard.focus")}
+          value={focusValue}
+          description={focusDescription}
+          tone="border-focus text-focus"
+          actionLabel={t(activeSession ? "dashboard.openFocus" : "dashboard.startFocus")}
+          onAction={() => navigate("/tools/core-hour")}
+        />
+        <SummaryPanel
+          icon={<ToolIcon name="CoreHour" />}
+          title={t("dashboard.nextPlan")}
+          value={planValue}
+          description={planDescription}
+          tone="border-planned text-planned"
+          actionLabel={t("dashboard.openTimeline")}
+          onAction={() => navigate("/tools/core-hour/history")}
+        />
+        <SummaryPanel
+          icon={<ToolIcon name="Pause & Hydrate" />}
+          title={t("dashboard.reminders")}
+          value={reminderValue}
+          description={reminderDescription}
+          tone="border-recovery text-recovery"
+          actionLabel={t("dashboard.openReminders")}
+          onAction={() => navigate("/tools/pause-hydrate")}
+        />
+        <SummaryPanel
+          icon={<ToolIcon name="Charger Reminder" />}
+          title={t("dashboard.devices")}
+          value={deviceValue}
+          description={deviceDescription}
+          tone="border-warning text-warning"
+          actionLabel={t("dashboard.openDevices")}
+          onAction={() => navigate("/tools/charger-reminder")}
+        />
+      </section>
+
+      <section className="border-t border-border pt-6" aria-labelledby="dashboard-tools-heading">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 id="dashboard-tools-heading" className="text-base font-semibold text-foreground">{t("dashboard.tools")}</h2>
+            <p className="mt-1 text-sm text-muted">{t("dashboard.toolsHint")}</p>
+          </div>
+        </div>
       {tools.length === 0 ? (
         <EmptyState
           data-testid="dashboard-empty-state"
@@ -74,28 +292,30 @@ export function DashboardPage() {
         />
       ) : (
         <div
-          data-testid="dashboard-tool-grid"
-          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+          data-testid="dashboard-tool-launcher"
+          className="mt-4 flex flex-wrap gap-2"
         >
           {tools.map((tool) => {
             const copy = localizedToolCopy(tool, t);
             return (
-              <Card
+              <button
                 key={tool.id}
-                title={copy.name}
-                description={copy.description}
-                openLabel={t("dashboard.open")}
-                icon={<ToolIcon name={tool.name} />}
+                type="button"
                 onClick={() => {
                   const route = tool.routes[0];
                   if (route) navigate(route);
                 }}
+                className="inline-flex min-h-10 items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
                 data-testid={`dashboard-tool-card-${tool.id}`}
-              />
+              >
+                <span className="text-muted"><ToolIcon name={tool.name} /></span>
+                {copy.name}
+              </button>
             );
           })}
         </div>
       )}
+      </section>
     </div>
   );
 }
