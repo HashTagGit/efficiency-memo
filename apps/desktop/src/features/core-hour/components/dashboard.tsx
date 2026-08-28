@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Button } from "@memo/ui";
 import { useSession } from "../hooks/use-session";
 import { useTags } from "../hooks/use-tags";
@@ -79,18 +79,36 @@ export function Dashboard({ userId, intervalMinutes, dailyGoalMinutes, timer }: 
   const [resumeAfterCancel, setResumeAfterCancel] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
   const [editingSession, setEditingSession] = useState<TodaySession | null>(null);
+  const [todayDataLoading, setTodayDataLoading] = useState(true);
+  const [todayDataLoaded, setTodayDataLoaded] = useState(false);
+  const [todayDataError, setTodayDataError] = useState(false);
+  const todayRequestRef = useRef(0);
 
   const refreshToday = useCallback(async () => {
-    const [recent, sessions] = await Promise.all([
-      loadRecentActivities(userId),
-      loadTodaySessions(userId),
-    ]);
-    setRecentActivities(recent);
-    setTodaySessions(sessions);
+    const request = ++todayRequestRef.current;
+    setTodayDataLoading(true);
+    setTodayDataError(false);
+    try {
+      const [recent, sessions] = await Promise.all([
+        loadRecentActivities(userId),
+        loadTodaySessions(userId),
+      ]);
+      if (request !== todayRequestRef.current) return false;
+      setRecentActivities(recent);
+      setTodaySessions(sessions);
+      setTodayDataLoaded(true);
+      return true;
+    } catch {
+      if (request === todayRequestRef.current) setTodayDataError(true);
+      return false;
+    } finally {
+      if (request === todayRequestRef.current) setTodayDataLoading(false);
+    }
   }, [userId]);
 
   useEffect(() => {
     void refreshToday();
+    return () => { todayRequestRef.current += 1; };
   }, [refreshToday]);
 
   useEffect(() => {
@@ -203,6 +221,7 @@ export function Dashboard({ userId, intervalMinutes, dailyGoalMinutes, timer }: 
           <p className="mt-1 text-sm text-muted">{dateLabel}</p>
         </div>
         <div className="flex flex-wrap items-center gap-4">
+          {todayDataLoaded ? (
           <div className="w-52" aria-label={t("today.goalProgress")}>
             <div className="flex items-center justify-between gap-3 text-sm">
               <span className="font-medium text-muted">{t("today.dailyGoal")}</span>
@@ -223,6 +242,11 @@ export function Dashboard({ userId, intervalMinutes, dailyGoalMinutes, timer }: 
               />
             </div>
           </div>
+          ) : (
+            <p className="w-52 text-sm text-muted" role="status" aria-live="polite">
+              {t(todayDataLoading ? "today.dataLoading" : "today.summaryUnavailable")}
+            </p>
+          )}
           <Button
             variant="secondary"
             size="sm"
@@ -235,6 +259,16 @@ export function Dashboard({ userId, intervalMinutes, dailyGoalMinutes, timer }: 
           </Button>
         </div>
       </header>
+
+      {todayDataLoaded && todayDataLoading && (
+        <p className="text-sm text-muted" role="status" aria-live="polite">{t("today.dataUpdating")}</p>
+      )}
+      {todayDataError && (
+        <Alert variant="error" title={t("today.dataLoadErrorTitle")}>
+          <p>{t(todayDataLoaded ? "today.dataRefreshErrorDescription" : "today.dataLoadErrorDescription")}</p>
+          <Button className="mt-3" size="sm" variant="secondary" onClick={() => void refreshToday()}>{t("coreHour.retry")}</Button>
+        </Alert>
+      )}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_20rem]">
         <section className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm" aria-label={t("coreHour.focusSession")}>
@@ -375,7 +409,9 @@ export function Dashboard({ userId, intervalMinutes, dailyGoalMinutes, timer }: 
             <h2 className="text-base font-semibold text-foreground">{t("today.quickStart")}</h2>
             <p className="mt-1 text-sm leading-relaxed text-muted">{t("today.quickStartHint")}</p>
           </div>
-          {recentActivities.length === 0 ? (
+          {!todayDataLoaded ? (
+            <p className="py-5 text-sm leading-relaxed text-muted">{t(todayDataLoading ? "today.dataLoading" : "today.summaryUnavailable")}</p>
+          ) : recentActivities.length === 0 ? (
             <p className="py-5 text-sm leading-relaxed text-muted">{t("today.noRecent")}</p>
           ) : (
             <ul className="divide-y divide-border">
@@ -448,9 +484,11 @@ export function Dashboard({ userId, intervalMinutes, dailyGoalMinutes, timer }: 
       <section aria-labelledby="today-sessions-heading">
         <div className="flex items-center justify-between border-b border-border pb-3">
           <h2 id="today-sessions-heading" className="text-base font-semibold text-foreground">{t("today.sessions")}</h2>
-          <span className="text-sm text-muted">{todaySessions.length}</span>
+          <span className="text-sm text-muted">{todayDataLoaded ? todaySessions.length : t("coreHour.notAvailable")}</span>
         </div>
-        {todaySessions.length === 0 ? (
+        {!todayDataLoaded ? (
+          <p className="py-8 text-sm text-muted">{t(todayDataLoading ? "today.dataLoading" : "today.summaryUnavailable")}</p>
+        ) : todaySessions.length === 0 ? (
           <p className="py-8 text-sm text-muted">{t("today.noSessions")}</p>
         ) : (
           <ul className="divide-y divide-border">
@@ -503,7 +541,7 @@ export function Dashboard({ userId, intervalMinutes, dailyGoalMinutes, timer }: 
           session={editingSession}
           tags={tags}
           onClose={() => setEditorOpen(false)}
-          onSaved={refreshToday}
+          onSaved={async () => { await refreshToday(); }}
         />
       )}
     </div>

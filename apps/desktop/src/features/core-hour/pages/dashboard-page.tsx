@@ -18,18 +18,45 @@ import { Button, EmptyState } from "@memo/ui";
 import { UncertainTimeReview } from "../components/uncertain-time-review";
 import { useCoreHourLoadState, useCoreHourTimer } from "../runtime";
 
-function CoreHourHome({ timer }: { timer: TimerState }) {
+export function CoreHourHome({ timer }: { timer: TimerState }) {
   const [intervalMinutes, setIntervalMinutes] = useState(30);
   const [dailyGoalMinutes, setDailyGoalMinutes] = useState(DEFAULT_DAILY_FOCUS_GOAL);
+  const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [reloadKey, setReloadKey] = useState(0);
+  const { t } = useI18n();
 
   useEffect(() => {
-    void Promise.all([loadCheckInInterval(), loadDailyFocusGoal()]).then(([interval, goal]) => {
-      setIntervalMinutes(interval);
-      setDailyGoalMinutes(goal);
-    });
-  }, []);
+    let cancelled = false;
+    async function load() {
+      setLoading(true);
+      setLoadFailed(false);
+      try {
+        const [interval, goal] = await Promise.all([loadCheckInInterval(), loadDailyFocusGoal()]);
+        if (cancelled) return;
+        setIntervalMinutes(interval);
+        setDailyGoalMinutes(goal);
+      } catch {
+        if (!cancelled) setLoadFailed(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+    void load();
+    return () => { cancelled = true; };
+  }, [reloadKey]);
 
   const user = getCurrentUser();
+  if (loading) return <p className="py-16 text-center text-sm text-muted" role="status" aria-live="polite">{t("today.settingsLoading")}</p>;
+  if (loadFailed) {
+    return (
+      <EmptyState
+        title={t("today.settingsLoadErrorTitle")}
+        description={t("today.settingsLoadErrorDescription")}
+        action={<Button onClick={() => setReloadKey((value) => value + 1)}>{t("coreHour.retry")}</Button>}
+      />
+    );
+  }
   return user ? <Dashboard userId={user.id} intervalMinutes={intervalMinutes} dailyGoalMinutes={dailyGoalMinutes} timer={timer} /> : null;
 }
 
