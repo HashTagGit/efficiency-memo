@@ -24,19 +24,19 @@ Plan -> Focus -> Recover -> Review -> Adjust the next plan
              \-> Activity suggestion -> Explicit confirmation -/
 ```
 
-The repository now implements the three foundations that earlier competitor reviews recommended: semantic module and interaction colors, explicit local Activity Assist rules, and guided daily/weekly reviews with optional DND-aware reminders. It also has five curated palettes with independent light/dark/system modes; a Now surface; CoreHour plan-versus-actual and Insights; mature Pause & Hydrate deferral; tray commands; local backup/restore/reset; and Chinese/English UI. The next release should coordinate those modules and make planning capacity visible instead of adding another timer or a general task manager.
+The repository now implements the foundations that earlier competitor reviews recommended: semantic module and interaction colors, explicit local Activity Assist rules, guided daily/weekly reviews, a bounded cross-module Attention Feed, and transition-triggered device notifications. It also has five curated palettes with independent light/dark/system modes; CoreHour plan-versus-actual and Insights; mature Pause & Hydrate deferral; tray commands; local backup/restore/reset; and Chinese/English UI. The next release should make planning capacity visible instead of adding another timer or a general task manager.
 
 Immediate priorities:
 
-1. Make the Now surface a bounded cross-module attention feed, including review, suggestion, recovery, and device actions.
-2. Complete Charger Reminder's native due-notification loop with snooze and charged actions.
-3. Add a local daily capacity guard that compares planned focus time with the user's target and available work window.
-4. Add a descriptive Work Rhythm summary that connects focus, context changes, and recovery without a productivity score.
+1. Add a local daily capacity guard that compares planned focus time with the user's target and available work window.
+2. Add a descriptive Work Rhythm summary that connects focus, context changes, and recovery without a productivity score.
+3. Add explicit focus-block templates only where they reduce repeated planning work.
+4. Add one bounded Activity Assist undo or previewed batch action without widening collection.
 5. Treat read-only calendar context and an optional companion presentation as separate later experiments; do not add a sixth palette without usage evidence.
 
 ## Current EfficiencyMemo baseline
 
-The following is **Current**, based on the repository at `417cdb3`:
+The following is **Current**, based on the repository at `a92380d`:
 
 | Area | Current capability | Evidence |
 |---|---|---|
@@ -45,8 +45,8 @@ The following is **Current**, based on the repository at `417cdb3`:
 | CoreHour | Today timer, check-ins, manual correction, favorites, plans, day/week Timeline, plan-versus-actual, uncertain-time review, goals, Insights, tags, guided daily/weekly reviews, and optional review reminders | [`core-hour`](../../apps/desktop/src/features/core-hour), [`review-reminder.rs`](../../apps/desktop/src-tauri/src/review_reminder.rs), [`ROADMAP.md`](../ROADMAP.md) |
 | Activity Assist | Off by default; foreground executable only; pause, exclusions, short retention, raw inspection/deletion; stable suggestions; edit, dismiss, atomic explicit acceptance into Actual Sessions, and explicit app-to-activity/tag rules | [`activity_assist.rs`](../../apps/desktop/src-tauri/src/activity_assist.rs), [`activity-assist-page.tsx`](../../apps/desktop/src/features/activity-assist/activity-assist-page.tsx) |
 | Pause & Hydrate | Separate recovery/hydration cadence; work and quiet hours; native notifications; focus deferral; DND/system-interruption handling; natural idle rest where supported; local event history | [`pause-hydrate`](../../apps/desktop/src/features/pause-hydrate), [`ROADMAP.md`](../ROADMAP.md) |
-| Desktop operations | Operational Now dashboard, tray state/actions, global show/hide and focus commands | [`dashboard`](../../apps/desktop/src/pages/dashboard), [`ROADMAP.md`](../ROADMAP.md) |
-| Charger Reminder | Devices, charge history, threshold preference, estimated charge state, create/edit/detail flows | [`charger-reminder`](../../apps/desktop/src/features/charger-reminder) |
+| Desktop operations | Maximum-five-item Attention Feed with owner/action deep links, stale-safe retry, tray state/actions, global show/hide, and focus commands | [`dashboard`](../../apps/desktop/src/pages/dashboard), [`CONTEXT.md`](../CONTEXT.md), [`ROADMAP.md`](../ROADMAP.md) |
+| Charger Reminder | Devices, atomic Full Charge Records, estimated due state, transition-triggered native notifications, persisted once-per-due delivery, and one-day Charge Snooze | [`charger-reminder`](../../apps/desktop/src/features/charger-reminder), [`charger_reminder.rs`](../../apps/desktop/src-tauri/src/charger_reminder.rs) |
 | Trust and portability | Local profile without sign-in; SQLite; privacy controls; portable backup preview/restore; scoped export/reset; WebDAV configuration | [`CONTEXT.md`](../CONTEXT.md), [`data-privacy-page.tsx`](../../apps/desktop/src/pages/settings/data-privacy-page.tsx) |
 | Localization | English and Simplified Chinese across the shell and current tools | [`i18n.tsx`](../../apps/desktop/src/lib/i18n.tsx) |
 
@@ -99,7 +99,7 @@ Rize makes suggestion review and correction part of setup; ActivityWatch exposes
 
 ### 3. Desktop products win through an operational edge surface
 
-Toggl, RescueTime, Stretchly, and PawPal use the tray, menu bar, notifications, overlays, or shortcuts as primary operating surfaces. Akiflow's mobile Daily Dashboard separately shows current/next Live Activity and a feed. EfficiencyMemo has tray actions and native notifications, so the missing value is coordination: one attention feed that prioritizes the next relevant action across focus, plans, reviews, recovery, hydration, Activity Assist, and charging. [RescueTime Assistant](https://help.rescuetime.com/article/413-the-rescuetime-assistant), [Akiflow Daily Dashboard](https://product.akiflow.com/en/help/articles/7855441-daily-dashboard), [PawPal repository](https://github.com/zebangeth/PawPal)
+Toggl, RescueTime, Stretchly, and PawPal use the tray, menu bar, notifications, overlays, or shortcuts as primary operating surfaces. Akiflow's mobile Daily Dashboard separately shows current/next Live Activity and a feed. EfficiencyMemo now coordinates its tray, native notifications, and bounded Attention Feed across focus, reviews, recovery, Activity Assist, and charging; the next value should come from better planning constraints rather than another edge surface. [RescueTime Assistant](https://help.rescuetime.com/article/413-the-rescuetime-assistant), [Akiflow Daily Dashboard](https://product.akiflow.com/en/help/articles/7855441/daily-dashboard), [PawPal repository](https://github.com/zebangeth/PawPal)
 
 ### 4. Color works when it encodes role, ownership, and state
 
@@ -133,26 +133,22 @@ Every row below is explicitly an **Inference**, not proof of user demand.
 
 | Rank | Inferred gap | Current evidence | Why the gap matters | Minimum proof before expansion |
 |---|---|---|---|---|
-| 1 | **Now is not yet a cross-module attention feed.** | Now exposes current focus, next plan, reminder/device status, and pending counts, but not one ordered list of actionable review, suggestion, recovery, or charging states. | Users should not inspect each module to discover pending work. RescueTime's [Assistant](https://help.rescuetime.com/article/413-the-rescuetime-assistant) and Akiflow's [Daily Dashboard](https://product.akiflow.com/en/help/articles/7855441-daily-dashboard) demonstrate compact current/next/action forms. | Derive at most five local items, ordered by urgency; each item deep-links to its owning workflow; no permanent notification inbox. |
-| 2 | **Charger Reminder computes attention but does not complete the native notification/action loop.** | Device state and estimated due information are visible; Pause & Hydrate and review reminders already own native notification bridges. | A due calculation that requires opening the app is not a reminder. | One native due notification per state transition, with snooze and “charged” actions routed through the existing device command path. |
-| 3 | **Planning has no capacity guard.** | CoreHour stores plans, a daily target, and review adjustments, but does not warn when planned focus exceeds the target or available work window. | Sunsama's [daily planning](https://help.sunsama.com/docs/usage-guides/daily-planning/) makes overload visible before work begins; this is more actionable than discovering it in Insights. | Show planned minutes versus target and a configurable work window; suggest defer/skip, never auto-delete or auto-schedule. |
-| 4 | **There is no cross-module Work Rhythm summary.** | Focus sessions, app suggestions, recovery/hydration events, plans, and review outcomes are stored locally but reported in separate modules. | A descriptive summary could expose focus/recovery balance and context-change patterns without the opaque scoring used by commercial trackers. ActivityWatch's [work-time report and category sets](https://github.com/ActivityWatch/activitywatch/releases) support local aggregation as a viable form. | Start with three descriptive facts and one comparison period; no moral score, diagnosis, or hosted model. |
-| 5 | **Repeated plan structures must be recreated.** | CoreHour has favorite activities but no recurring plan or focus-block template. | Akiflow [Time Slots](https://product.akiflow.com/help/articles/3089241-time-slots) and Clockify's [timesheet templates](https://clockify.me/help/apps/android-app) show that repeatable containers reduce setup without requiring a full task manager. | Add a small local plan template copied on explicit action; recurrence comes only after repeated manual use is proven. |
-| 6 | **Activity evidence review has no bounded batch/undo workflow.** | Explicit rules reduce repeated edits, but each accepted suggestion immediately becomes a confirmed session. | Clockify's [2026 desktop update](https://clockify.me/help/whats-new) emphasizes undo, while Timely keeps AI drafts private until review. A reversible review is the next trust improvement, not broader capture. | One recent-action undo or same-label batch acceptance with a preview; keep atomic validation and never auto-confirm. |
-| 7 | **There is no external calendar context.** | Plans and actual sessions are local; no Google/Outlook/ICS read surface exists. | Calendar gaps are useful planning context across Toggl, Sunsama, Akiflow, RescueTime, and Rize. | Start with read-only local `.ics` import and explicit refresh. Do not add OAuth, write-back, or automatic conversion until demand is proven. |
-| 8 | **There is no optional expressive companion layer.** | Current feedback uses standard desktop UI, notifications, and domain colors. | PawPal's [transparent always-on-top companion](https://github.com/zebangeth/PawPal) and Stretchly's [break presentation](https://github.com/hovancik/stretchly/blob/trunk/README.md) show a recognizable alternative, but it is taste-dependent and easy to overbuild. | Prototype with repo-owned static/motion-safe shapes, an off switch, and reduced-motion behavior. Ship only if reminders are noticed more without higher mute rates. |
-| 9 | **There is no in-app command palette, local API, or AI agent.** | Visible navigation, tray actions, and global shortcuts cover the current command set. | Rize and Akiflow now expose agent/MCP surfaces, but those products already have much broader task/client domains. | Hold until command breadth or integration demand is measured; do not scaffold an API or agent in advance. |
+| 1 | **Planning has no capacity guard.** | CoreHour stores plans, a daily target, and review adjustments, but does not warn when planned focus exceeds the target or available work window. | Sunsama's [daily planning](https://help.sunsama.com/docs/usage-guides/daily-planning/) makes overload visible before work begins; this is more actionable than discovering it in Insights. | Show planned minutes versus target and a configurable work window; suggest defer/skip, never auto-delete or auto-schedule. |
+| 2 | **There is no cross-module Work Rhythm summary.** | Focus sessions, app suggestions, recovery/hydration events, plans, and review outcomes are stored locally but reported in separate modules. | A descriptive summary could expose focus/recovery balance and context-change patterns without the opaque scoring used by commercial trackers. ActivityWatch's [work-time report and category sets](https://github.com/ActivityWatch/activitywatch/releases) support local aggregation as a viable form. | Start with three descriptive facts and one comparison period; no moral score, diagnosis, or hosted model. |
+| 3 | **Repeated plan structures must be recreated.** | CoreHour has favorite activities but no recurring plan or focus-block template. | Akiflow [Time Slots](https://product.akiflow.com/help/articles/3089241-time-slots) and Clockify's [timesheet templates](https://clockify.me/help/apps/android-app) show that repeatable containers reduce setup without requiring a full task manager. | Add a small local plan template copied on explicit action; recurrence comes only after repeated manual use is proven. |
+| 4 | **Activity evidence review has no bounded batch/undo workflow.** | Explicit rules reduce repeated edits, but each accepted suggestion immediately becomes a confirmed session. | Clockify's [2026 desktop update](https://clockify.me/help/whats-new) emphasizes undo, while Timely keeps AI drafts private until review. A reversible review is the next trust improvement, not broader capture. | One recent-action undo or same-label batch acceptance with a preview; keep atomic validation and never auto-confirm. |
+| 5 | **There is no external calendar context.** | Plans and actual sessions are local; no Google/Outlook/ICS read surface exists. | Calendar gaps are useful planning context across Toggl, Sunsama, Akiflow, RescueTime, and Rize. | Start with read-only local `.ics` import and explicit refresh. Do not add OAuth, write-back, or automatic conversion until demand is proven. |
+| 6 | **There is no optional expressive companion layer.** | Current feedback uses standard desktop UI, notifications, and domain colors. | PawPal's [transparent always-on-top companion](https://github.com/zebangeth/PawPal) and Stretchly's [break presentation](https://github.com/hovancik/stretchly/blob/trunk/README.md) show a recognizable alternative, but it is taste-dependent and easy to overbuild. | Prototype with repo-owned static/motion-safe shapes, an off switch, and reduced-motion behavior. Ship only if reminders are noticed more without higher mute rates. |
+| 7 | **There is no in-app command palette, local API, or AI agent.** | Visible navigation, tray actions, and global shortcuts cover the current command set. | Rize and Akiflow now expose agent/MCP surfaces, but those products already have much broader task/client domains. | Hold until command breadth or integration demand is measured; do not scaffold an API or agent in advance. |
 
 ## Ranked opportunity portfolio
 
 | Priority | Opportunity | Product location | Value | Complexity | Privacy risk | Scope guard |
 |---|---|---|---|---|---|---|
-| **P0** | Cross-module Attention Feed | Now | High | Medium | Low: derived local states only | Maximum five items; source modules remain authoritative |
-| **P0** | Actionable Charger Reminder notifications | Charger Reminder/desktop companion | High | Medium | Low: local device metadata | One transition-triggered notification; reuse existing notification and device command paths |
-| **P1** | Daily capacity guard | CoreHour planning | High | Medium | Low: existing plan/goal data | Warning and explicit defer only; no auto-scheduler |
-| **P1** | Work Rhythm summary | Insights/Review | High | Medium | Low to medium: locally aggregated app/session/reminder data | Three descriptive facts first; no score or diagnosis |
+| **P0** | Daily capacity guard | CoreHour planning | High | Medium | Low: existing plan/goal data | Warning and explicit defer only; no auto-scheduler |
+| **P0** | Work Rhythm summary | Insights/Review | High | Medium | Low to medium: locally aggregated app/session/reminder data | Three descriptive facts first; no score or diagnosis |
 | **P1** | Explicit focus-block templates | CoreHour planning | Medium | Low to medium | Low | Copy on command before adding recurrence |
-| **P2** | Activity evidence batch/undo | Activity Assist | Medium | Medium | Medium: touches retained app evidence | Preview, atomic validation, short undo window; never auto-confirm |
+| **P1** | Activity evidence batch/undo | Activity Assist | Medium | Medium | Medium: touches retained app evidence | Preview, atomic validation, short undo window; never auto-confirm |
 | **P2** | Read-only calendar bridge | CoreHour planning | High | High | Medium: calendar titles and times can be sensitive | Local ICS first; no write-back, OAuth, or cloud account |
 | **P2** | Optional Companion presentation | Desktop companion | Medium | Medium | Low | Optional, accessible, reduced-motion, no licensed pet dependency |
 | **P3** | Supporter/supported-distribution validation | Distribution | Medium | Medium | Low until hosted service exists | No core feature gate or account requirement |
@@ -220,7 +216,7 @@ All ten palette/mode combinations still require ongoing keyboard, forced-colors,
 
 ### Delivered foundation and remaining Phase 0 validation
 
-At the `417cdb3` baseline, the repository has delivered five curated palettes, core semantic module/status/interaction roles, reusable explicit Activity Assist app rules, guided daily and weekly reviews, and optional review reminders that respect quiet hours, active focus, and supported system interruption state. The Phase 1 and Phase 2 workflows are shipped; Phase 0 remains an audit-and-completion phase rather than a new theme phase.
+At the `a92380d` baseline, the repository has delivered five curated palettes, core semantic module/status/interaction roles, reusable Activity Assist app rules, guided reviews, the bounded Now Attention Feed, and Charger Reminder's persisted native due-notification loop. Phases 1 through 3 are shipped; Phase 0 remains an audit-and-completion phase rather than a new theme phase.
 
 Remaining validation:
 
@@ -228,13 +224,13 @@ Remaining validation:
 - visually audit every current palette in both modes, including keyboard focus, reduced motion, and forced colors;
 - fix defects in the shipped flows before broadening their models.
 
-### Phase 3: cross-module attention and reminder completion
+### Phase 3: cross-module attention and reminder completion (shipped)
 
-Deliver:
+Delivered:
 
 - Now attention feed with no more than five actionable items;
 - deep links to daily/weekly review, Activity Assist, Pause & Hydrate, and Charger owning surfaces;
-- native Charger due notification with snooze and charged actions;
+- native Charger due notification with persisted once-per-due delivery, one-day snooze, and atomic Full Charge Record actions in the owning workflow;
 - stale-data-safe error and retry behavior per section.
 
 Exit evidence:
