@@ -27,6 +27,7 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 - Explicit application mapping rules that prefill later suggestions, remain editable/deletable, appear in portable/readable exports, and surface pending review on Now.
 - Guided Daily Review with plan-versus-actual and recovery facts, open-item guards, one bounded outcome, and an atomically applied next focus target.
 - Weekly Review with capacity, longest-block, session-fragmentation, recovery, daily-review coverage, and current device-attention facts plus the same bounded target adjustment.
+- Optional daily and weekly Review Reminders with persisted once-per-period delivery, active-focus deferral, shared quiet hours, and supported system DND handling.
 - Module locator colors for CoreHour, Pause & Hydrate, Charger Reminder, and Settings, while primary actions remain governed by the selected palette.
 - Semantic Alert containers plus explicit button pressed and disabled reactions without component-level product hues.
 
@@ -50,11 +51,11 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 
 **Exit gate:** repeat applications require fewer edits, while every Actual Session still requires explicit acceptance. Stop if useful categorization requires titles, URLs, content, screenshots, keystrokes, or cloud inference.
 
-### Phase 2 — guided review and adjustment (in progress)
+### Phase 2 — guided review and adjustment (shipped)
 
 - Shipped: optional end-of-day closeout for pending suggestions/uncertain time, plan-versus-actual, recovery/hydration facts, one outcome, and one next adjustment.
 - Shipped: weekly reset for capacity, longest focus blocks, session fragmentation, recovery completion, daily-review coverage, device attention, and goal adjustment.
-- Review reminders must respect quiet hours and system interruption state.
+- Shipped: optional review reminders that respect active focus, shared quiet hours, and supported system interruption state.
 
 **Exit gate:** a saved adjustment changes a later plan or goal. Stop if the workflow becomes a passive report that users open without acting on it.
 

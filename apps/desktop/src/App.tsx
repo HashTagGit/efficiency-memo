@@ -7,6 +7,7 @@ import { AppSettingsPage } from "./pages/settings/page";
 import { DataPrivacyPage } from "./pages/settings/data-privacy-page";
 import { useI18n } from "./lib/i18n";
 import { DesktopCompanionBridge } from "./components/desktop-companion-bridge";
+import { ReviewReminderBridge } from "./components/review-reminder-bridge";
 
 // Lazy-load tool pages
 const ChargerReminderPage = lazy(() =>
@@ -40,6 +41,7 @@ function App() {
   return (
     <BrowserRouter>
       <DesktopCompanionBridge />
+      <ReviewReminderBridge />
       <Routes>
         <Route path="/sign-in" element={<Navigate to="/dashboard" replace />} />
 

@@ -1,3 +1,4 @@
+use crate::local_schedule::minute_in_window;
 use chrono::{DateTime, Duration, SecondsFormat, Utc};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::Deserialize;
@@ -94,14 +95,6 @@ fn valid_policy(policy: &SchedulePolicyInput) -> bool {
         && policy.quiet_start_minute != policy.quiet_end_minute
         && (2..=30).contains(&policy.natural_break_minutes)
         && (1..=30).contains(&policy.deferral_grace_minutes)
-}
-
-fn minute_in_window(minute: i64, start: i64, end: i64) -> bool {
-    if start < end {
-        minute >= start && minute < end
-    } else {
-        minute >= start || minute < end
-    }
 }
 
 fn schedule_allows(policy: &SchedulePolicyInput, weekday: i64, minute_of_day: i64) -> bool {

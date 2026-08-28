@@ -6,10 +6,12 @@ mod activity_assist;
 mod core_hour;
 mod data_control;
 mod daily_review;
+mod local_schedule;
 mod desktop_companion;
 mod foreground_application;
 mod pause_hydrate;
 mod review_time;
+mod review_reminder;
 mod sidecar;
 mod sync;
 mod system_idle;
@@ -115,6 +117,12 @@ pub fn run() {
             sql: include_str!("../migrations/0016_ch_weekly_reviews.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 17,
+            description: "create CoreHour review reminder preferences",
+            sql: include_str!("../migrations/0017_ch_review_reminders.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
@@ -169,6 +177,10 @@ pub fn run() {
             daily_review::save_daily_review,
             weekly_review::load_weekly_review,
             weekly_review::save_weekly_review,
+            review_reminder::load_review_reminder_preferences,
+            review_reminder::save_review_reminder_preferences,
+            review_reminder::claim_review_reminders,
+            review_reminder::acknowledge_review_reminders,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

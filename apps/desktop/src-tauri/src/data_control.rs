@@ -5,7 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
 
-pub(crate) const SCHEMA_VERSION: i64 = 16;
+pub(crate) const SCHEMA_VERSION: i64 = 17;
 const MIN_SUPPORTED_SCHEMA_VERSION: i64 = 7;
 pub(crate) const DB_FILENAME: &str = "efficiency-memo.db";
 pub(crate) const SIDECAR_FILENAME: &str = "efficiency-memo.db.next";
@@ -302,6 +302,18 @@ fn validate_required_schema(connection: &Connection, schema_version: i64) -> Res
             ],
         )?;
     }
+    if schema_version >= 17 {
+        validate_table_columns(
+            connection,
+            "ch_review_reminder_preferences",
+            &[
+                "user_id", "daily_enabled", "daily_minute", "weekly_enabled",
+                "weekly_weekday", "weekly_minute", "last_daily_local_date",
+                "last_weekly_started_on", "pending_daily_local_date",
+                "pending_week_started_on", "updated_at",
+            ],
+        )?;
+    }
     for version in 1..=schema_version {
         let applied: i64 = connection
             .query_row(
@@ -523,6 +535,9 @@ fn reset_data(connection: &mut Connection, scope: ResetScope, user_id: &str) -> 
     match scope {
         ResetScope::CoreHour => {
             transaction
+                .execute("DELETE FROM ch_review_reminder_preferences WHERE user_id = ?1", [user_id])
+                .map_err(|error| error.to_string())?;
+            transaction
                 .execute("DELETE FROM ch_weekly_reviews WHERE user_id = ?1", [user_id])
                 .map_err(|error| error.to_string())?;
             transaction
@@ -639,6 +654,7 @@ mod tests {
             include_str!("../migrations/0014_activity_assist_rules.sql"),
             include_str!("../migrations/0015_ch_daily_reviews.sql"),
             include_str!("../migrations/0016_ch_weekly_reviews.sql"),
+            include_str!("../migrations/0017_ch_review_reminders.sql"),
         ] {
             connection.execute_batch(migration).unwrap();
         }
@@ -666,7 +682,8 @@ mod tests {
                     (13, 'migration', 'installed', 1, X'', 0),
                     (14, 'migration', 'installed', 1, X'', 0),
                     (15, 'migration', 'installed', 1, X'', 0),
-                    (16, 'migration', 'installed', 1, X'', 0);
+                    (16, 'migration', 'installed', 1, X'', 0),
+                    (17, 'migration', 'installed', 1, X'', 0);
                 INSERT INTO users VALUES ('local-user', 'local@example.test', 'created', 'updated');
                 INSERT INTO ch_tags VALUES ('tag-1', 'local-user', 'Focus', '#000000', 0, 'created', 0);
                 INSERT INTO ch_sessions (
@@ -689,7 +706,8 @@ mod tests {
                 INSERT INTO aa_activity_suggestions VALUES ('suggestion-1', 'local-user', 'sample-1', 'code.exe', '2026-08-28T08:00:00Z', '2026-08-28T08:03:00Z', 'pending', NULL, 'created', 'updated');
                 INSERT INTO aa_activity_rules VALUES ('local-user', 'code.exe', 'Implementation', 'tag-1', 'created', 'updated');
                 INSERT INTO ch_daily_reviews VALUES ('review-1', 'local-user', '2026-08-28', 'on-track', 90, 'created', 'updated');
-                INSERT INTO ch_weekly_reviews VALUES ('weekly-1', 'local-user', '2026-08-24', 'on-track', 90, 'created', 'updated');",
+                INSERT INTO ch_weekly_reviews VALUES ('weekly-1', 'local-user', '2026-08-24', 'on-track', 90, 'created', 'updated');
+                INSERT INTO ch_review_reminder_preferences VALUES ('local-user', 1, 1080, 1, 6, 1080, NULL, NULL, NULL, NULL, 'updated');",
             )
             .unwrap();
         connection
@@ -710,7 +728,7 @@ mod tests {
         drop(database(&source));
 
         let preview = create_backup_at(&source, &destination, preferences()).unwrap();
-        assert_eq!(preview.schema_version, 16);
+        assert_eq!(preview.schema_version, 17);
         assert_eq!(preview.preferences, preferences());
         assert_eq!(preview.counts.core_hour_sessions, 1);
         assert_eq!(preview.counts.core_hour_plans, 1);
@@ -720,8 +738,21 @@ mod tests {
         assert_eq!(preview.counts.daily_reviews, 1);
         assert_eq!(preview.counts.weekly_reviews, 1);
 
+        let legacy_v16_destination = temp_path("backup-v16");
+        fs::copy(&destination, &legacy_v16_destination).unwrap();
+        let legacy_v16 = Connection::open(&legacy_v16_destination).unwrap();
+        legacy_v16
+            .execute("UPDATE em_backup_metadata SET schema_version = 16", [])
+            .unwrap();
+        legacy_v16
+            .execute("DELETE FROM _sqlx_migrations WHERE version = 17", [])
+            .unwrap();
+        legacy_v16.execute("DROP TABLE ch_review_reminder_preferences", []).unwrap();
+        drop(legacy_v16);
+        assert_eq!(inspect_backup(&legacy_v16_destination).unwrap().schema_version, 16);
+
         let legacy_v15_destination = temp_path("backup-v15");
-        fs::copy(&destination, &legacy_v15_destination).unwrap();
+        fs::copy(&legacy_v16_destination, &legacy_v15_destination).unwrap();
         let legacy_v15 = Connection::open(&legacy_v15_destination).unwrap();
         legacy_v15
             .execute("UPDATE em_backup_metadata SET schema_version = 15", [])
@@ -859,14 +890,14 @@ mod tests {
 
         let backup = Connection::open(&destination).unwrap();
         backup
-            .execute("UPDATE em_backup_metadata SET schema_version = 17", [])
+            .execute("UPDATE em_backup_metadata SET schema_version = 18", [])
             .unwrap();
         drop(backup);
         assert_eq!(inspect_backup(&destination).unwrap_err(), "future-schema");
 
         let backup = Connection::open(&destination).unwrap();
         backup
-            .execute("UPDATE em_backup_metadata SET schema_version = 16", [])
+            .execute("UPDATE em_backup_metadata SET schema_version = 17", [])
             .unwrap();
         backup
             .execute("DELETE FROM _sqlx_migrations WHERE version = 6", [])
@@ -889,6 +920,7 @@ mod tests {
 
         let _ = fs::remove_file(source);
         let _ = fs::remove_file(destination);
+        let _ = fs::remove_file(legacy_v16_destination);
         let _ = fs::remove_file(legacy_v15_destination);
         let _ = fs::remove_file(legacy_v14_destination);
         let _ = fs::remove_file(legacy_v13_destination);
@@ -909,6 +941,10 @@ mod tests {
         assert_eq!(counts.activity_assist_rules, 0);
         assert_eq!(counts.daily_reviews, 0);
         assert_eq!(counts.weekly_reviews, 0);
+        let review_preferences: i64 = connection
+            .query_row("SELECT COUNT(*) FROM ch_review_reminder_preferences", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(review_preferences, 0);
         assert_eq!(counts.pause_hydrate_events, 1);
         let policies: i64 = connection
             .query_row("SELECT COUNT(*) FROM ph_schedule_policies", [], |row| row.get(0))

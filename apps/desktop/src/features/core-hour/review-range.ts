@@ -1,6 +1,6 @@
 import { isoDay } from "./analytics";
 
-function withOffset(value: Date): string {
+export function localTimestamp(value: Date): string {
   const offset = -value.getTimezoneOffset();
   const sign = offset >= 0 ? "+" : "-";
   const hours = String(Math.floor(Math.abs(offset) / 60)).padStart(2, "0");
@@ -20,7 +20,7 @@ export function localDayRange(date: Date): { localDate: string; startedAt: strin
   const startedAt = new Date(selected.getFullYear(), selected.getMonth(), selected.getDate());
   const endedAt = new Date(startedAt);
   endedAt.setDate(endedAt.getDate() + 1);
-  return { localDate: isoDay(selected), startedAt: withOffset(startedAt), endedAt: withOffset(endedAt) };
+  return { localDate: isoDay(selected), startedAt: localTimestamp(startedAt), endedAt: localTimestamp(endedAt) };
 }
 
 export function localWeekRange(date: Date): { weekStartedOn: string; startedAt: string; endedAt: string } {
@@ -29,5 +29,21 @@ export function localWeekRange(date: Date): { weekStartedOn: string; startedAt: 
   const startedAt = new Date(selected.getFullYear(), selected.getMonth(), selected.getDate());
   const endedAt = new Date(startedAt);
   endedAt.setDate(endedAt.getDate() + 7);
-  return { weekStartedOn: isoDay(selected), startedAt: withOffset(startedAt), endedAt: withOffset(endedAt) };
+  return { weekStartedOn: isoDay(selected), startedAt: localTimestamp(startedAt), endedAt: localTimestamp(endedAt) };
+}
+
+export function localReviewClock(date = new Date()): {
+  observedAt: string;
+  localDate: string;
+  weekStartedOn: string;
+  weekday: number;
+  minuteOfDay: number;
+} {
+  return {
+    observedAt: localTimestamp(date),
+    localDate: isoDay(date),
+    weekStartedOn: localWeekRange(date).weekStartedOn,
+    weekday: (date.getDay() + 6) % 7,
+    minuteOfDay: date.getHours() * 60 + date.getMinutes(),
+  };
 }

@@ -94,6 +94,19 @@ interface WeeklyReviewExportRow {
   updated_at: string;
 }
 
+interface ReviewReminderPreferencesExportRow {
+  daily_enabled: number;
+  daily_minute: number;
+  weekly_enabled: number;
+  weekly_weekday: number;
+  weekly_minute: number;
+  last_daily_local_date: string | null;
+  last_weekly_started_on: string | null;
+  pending_daily_local_date: string | null;
+  pending_week_started_on: string | null;
+  updated_at: string;
+}
+
 interface ReminderExportRow {
   kind: string;
   enabled: number;
@@ -140,6 +153,7 @@ interface CoreHourExportData {
   };
   dailyReviews: DailyReviewExportRow[];
   weeklyReviews: WeeklyReviewExportRow[];
+  reviewReminderPreferences: ReviewReminderPreferencesExportRow | null;
 }
 
 interface PauseHydrateExportData {
@@ -184,7 +198,7 @@ async function loadCoreHourData(userId: string): Promise<CoreHourExportData> {
     [userId],
   );
   if (Number(active?.active) !== 0) throw new Error("active-session");
-  const [sessions, plans, tags, checkIns, entries, settings, assistPreferences, exclusions, rules, dailyReviews, weeklyReviews] = await Promise.all([
+  const [sessions, plans, tags, checkIns, entries, settings, assistPreferences, exclusions, rules, dailyReviews, weeklyReviews, reviewReminderPreferences] = await Promise.all([
     dbSelect<SessionExportRow>("SELECT id, started_at, ended_at, interval_minutes, elapsed_seconds, activity, default_tag_id, is_favorite FROM ch_sessions WHERE user_id = $1 ORDER BY started_at", [userId]),
     dbSelect<PlanExportRow>("SELECT id, title, tag_id, started_at, ended_at, status, session_id, created_at, updated_at FROM ch_plans WHERE user_id = $1 ORDER BY started_at", [userId]),
     dbSelect<TagExportRow>("SELECT id, name, color, is_archived, created_at FROM ch_tags WHERE user_id = $1 ORDER BY created_at", [userId]),
@@ -196,6 +210,7 @@ async function loadCoreHourData(userId: string): Promise<CoreHourExportData> {
     dbSelect<ActivityRuleExportRow>("SELECT application_id, activity, default_tag_id, created_at, updated_at FROM aa_activity_rules WHERE user_id = $1 ORDER BY application_id", [userId]),
     dbSelect<DailyReviewExportRow>("SELECT id, local_date, outcome, next_goal_minutes, created_at, updated_at FROM ch_daily_reviews WHERE user_id = $1 ORDER BY local_date", [userId]),
     dbSelect<WeeklyReviewExportRow>("SELECT id, week_started_on, outcome, next_goal_minutes, created_at, updated_at FROM ch_weekly_reviews WHERE user_id = $1 ORDER BY week_started_on", [userId]),
+    dbSelect<ReviewReminderPreferencesExportRow>("SELECT daily_enabled, daily_minute, weekly_enabled, weekly_weekday, weekly_minute, last_daily_local_date, last_weekly_started_on, pending_daily_local_date, pending_week_started_on, updated_at FROM ch_review_reminder_preferences WHERE user_id = $1", [userId]),
   ]);
   return {
     sessions,
@@ -207,6 +222,7 @@ async function loadCoreHourData(userId: string): Promise<CoreHourExportData> {
     activityAssist: { preferences: assistPreferences[0] ?? null, exclusions, rules },
     dailyReviews,
     weeklyReviews,
+    reviewReminderPreferences: reviewReminderPreferences[0] ?? null,
   };
 }
 

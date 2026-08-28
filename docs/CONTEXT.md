@@ -105,6 +105,10 @@ _Avoid_: Productivity score, mood
 The daily focus goal selected during a Daily Review and applied to later CoreHour goal progress.
 _Avoid_: Automatic schedule, performance quota
 
+**Review Reminder**:
+An optional once-per-period prompt for a due Daily Review or Weekly Review; active focus, shared quiet hours, and supported system interruption state may defer it without marking it delivered.
+_Avoid_: Reminder Event, forced review, recurring alarm
+
 ## Data control
 
 **Portable Backup**:
