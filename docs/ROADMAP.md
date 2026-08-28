@@ -28,6 +28,7 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 - Guided Daily Review with plan-versus-actual and recovery facts, open-item guards, one bounded outcome, and an atomically applied next focus target.
 - Weekly Review with capacity, longest-block, session-fragmentation, recovery, daily-review coverage, and current device-attention facts plus the same bounded target adjustment.
 - Optional daily and weekly Review Reminders with persisted once-per-period delivery, active-focus deferral, shared quiet hours, and supported system DND handling.
+- Transition-triggered native Charger Reminder notifications with persisted once-per-due delivery plus one-day snooze and Full Charge Record actions in the owning device workflow.
 - Module locator colors for CoreHour, Pause & Hydrate, Charger Reminder, and Settings, while primary actions remain governed by the selected palette.
 - Semantic Alert containers plus explicit button pressed and disabled reactions without component-level product hues.
 
@@ -60,11 +61,11 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 
 **Exit gate:** a saved adjustment changes a later plan or goal. Stop if the workflow becomes a passive report that users open without acting on it.
 
-### Phase 3 — cross-module attention and reminder completion
+### Phase 3 — cross-module attention and reminder completion (shipped)
 
 - Shipped: a maximum-five-item Now attention feed with one owner and one next action per item.
 - Shipped: coalesced pending reviews, suggestions, uncertain time, due recovery/hydration, and device attention with deep links to the owning workflow.
-- Add transition-triggered native Charger Reminder notifications with snooze and charged actions through one authoritative command path.
+- Shipped: transition-triggered native Charger Reminder notifications with persisted deduplication; one-day snooze and Full Charge Record actions reuse the owning device workflow.
 
 **Exit gate:** actions do not duplicate state paths, and dismiss/snooze survives restart.
 

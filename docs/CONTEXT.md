@@ -13,6 +13,16 @@ A domain glossary for EfficiencyMemo. Use it as a shared vocabulary when discuss
 - **SQLite Storage** — Local database accessed via `tauri-plugin-sql`; migrations live in `src-tauri/migrations/`.
 - **Archived Surface** — The original `apps/web/` Next.js + Supabase web app, removed in v0.1.0-desktop; available in git history if needed.
 
+## Charger Reminder
+
+**Full Charge Record**:
+A user-confirmed record that one device reached full charge at a specific time; it resets that device's estimate.
+_Avoid_: Automatic charge detection, battery reading
+
+**Charge Snooze**:
+A one-day deferral of the current due prompt that leaves the device estimate unchanged.
+_Avoid_: Full Charge Record, reminder dismissal
+
 ## Now
 
 **Attention Item**:

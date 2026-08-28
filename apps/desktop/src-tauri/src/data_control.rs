@@ -5,7 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
 
-pub(crate) const SCHEMA_VERSION: i64 = 17;
+pub(crate) const SCHEMA_VERSION: i64 = 18;
 const MIN_SUPPORTED_SCHEMA_VERSION: i64 = 7;
 pub(crate) const DB_FILENAME: &str = "efficiency-memo.db";
 pub(crate) const SIDECAR_FILENAME: &str = "efficiency-memo.db.next";
@@ -312,6 +312,13 @@ fn validate_required_schema(connection: &Connection, schema_version: i64) -> Res
                 "last_weekly_started_on", "pending_daily_local_date",
                 "pending_week_started_on", "updated_at",
             ],
+        )?;
+    }
+    if schema_version >= 18 {
+        validate_table_columns(
+            connection,
+            "cr_notification_states",
+            &["device_id", "last_notified_due_at", "snoozed_until", "updated_at"],
         )?;
     }
     for version in 1..=schema_version {
@@ -655,6 +662,7 @@ mod tests {
             include_str!("../migrations/0015_ch_daily_reviews.sql"),
             include_str!("../migrations/0016_ch_weekly_reviews.sql"),
             include_str!("../migrations/0017_ch_review_reminders.sql"),
+            include_str!("../migrations/0018_cr_notification_state.sql"),
         ] {
             connection.execute_batch(migration).unwrap();
         }
@@ -683,7 +691,8 @@ mod tests {
                     (14, 'migration', 'installed', 1, X'', 0),
                     (15, 'migration', 'installed', 1, X'', 0),
                     (16, 'migration', 'installed', 1, X'', 0),
-                    (17, 'migration', 'installed', 1, X'', 0);
+                    (17, 'migration', 'installed', 1, X'', 0),
+                    (18, 'migration', 'installed', 1, X'', 0);
                 INSERT INTO users VALUES ('local-user', 'local@example.test', 'created', 'updated');
                 INSERT INTO ch_tags VALUES ('tag-1', 'local-user', 'Focus', '#000000', 0, 'created', 0);
                 INSERT INTO ch_sessions (
@@ -728,7 +737,7 @@ mod tests {
         drop(database(&source));
 
         let preview = create_backup_at(&source, &destination, preferences()).unwrap();
-        assert_eq!(preview.schema_version, 17);
+        assert_eq!(preview.schema_version, 18);
         assert_eq!(preview.preferences, preferences());
         assert_eq!(preview.counts.core_hour_sessions, 1);
         assert_eq!(preview.counts.core_hour_plans, 1);
@@ -738,8 +747,21 @@ mod tests {
         assert_eq!(preview.counts.daily_reviews, 1);
         assert_eq!(preview.counts.weekly_reviews, 1);
 
+        let legacy_v17_destination = temp_path("backup-v17");
+        fs::copy(&destination, &legacy_v17_destination).unwrap();
+        let legacy_v17 = Connection::open(&legacy_v17_destination).unwrap();
+        legacy_v17
+            .execute("UPDATE em_backup_metadata SET schema_version = 17", [])
+            .unwrap();
+        legacy_v17
+            .execute("DELETE FROM _sqlx_migrations WHERE version = 18", [])
+            .unwrap();
+        legacy_v17.execute("DROP TABLE cr_notification_states", []).unwrap();
+        drop(legacy_v17);
+        assert_eq!(inspect_backup(&legacy_v17_destination).unwrap().schema_version, 17);
+
         let legacy_v16_destination = temp_path("backup-v16");
-        fs::copy(&destination, &legacy_v16_destination).unwrap();
+        fs::copy(&legacy_v17_destination, &legacy_v16_destination).unwrap();
         let legacy_v16 = Connection::open(&legacy_v16_destination).unwrap();
         legacy_v16
             .execute("UPDATE em_backup_metadata SET schema_version = 16", [])
@@ -890,14 +912,14 @@ mod tests {
 
         let backup = Connection::open(&destination).unwrap();
         backup
-            .execute("UPDATE em_backup_metadata SET schema_version = 18", [])
+            .execute("UPDATE em_backup_metadata SET schema_version = 19", [])
             .unwrap();
         drop(backup);
         assert_eq!(inspect_backup(&destination).unwrap_err(), "future-schema");
 
         let backup = Connection::open(&destination).unwrap();
         backup
-            .execute("UPDATE em_backup_metadata SET schema_version = 17", [])
+            .execute("UPDATE em_backup_metadata SET schema_version = 18", [])
             .unwrap();
         backup
             .execute("DELETE FROM _sqlx_migrations WHERE version = 6", [])
@@ -920,6 +942,7 @@ mod tests {
 
         let _ = fs::remove_file(source);
         let _ = fs::remove_file(destination);
+        let _ = fs::remove_file(legacy_v17_destination);
         let _ = fs::remove_file(legacy_v16_destination);
         let _ = fs::remove_file(legacy_v15_destination);
         let _ = fs::remove_file(legacy_v14_destination);

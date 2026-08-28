@@ -10,6 +10,7 @@
  */
 
 import { dbSelect, dbExecute } from "../../lib/db";
+import { invoke } from "@tauri-apps/api/core";
 import { computeDeterministicReminderState } from "./heuristic-engine";
 import { devicePresetSeeds } from "./device-presets";
 import type {
@@ -50,8 +51,16 @@ function sortChargeEventsDescending(events: ChargeEventRecord[]): ChargeEventRec
   return [...events].sort(
     (left, right) =>
       Date.parse(right.charged_at) - Date.parse(left.charged_at) ||
-      Date.parse(right.created_at) - Date.parse(left.created_at),
+      Date.parse(right.created_at) - Date.parse(left.created_at) ||
+      right.id.localeCompare(left.id),
   );
+}
+
+export function selectLatestChargeEvent(
+  candidate: ChargeEventRecord,
+  existing: ChargeEventRecord | null,
+): ChargeEventRecord {
+  return sortChargeEventsDescending(existing ? [candidate, existing] : [candidate])[0];
 }
 
 function validateChargeEventTimestamp(chargedAt: string): void {
@@ -376,24 +385,44 @@ export async function logChargeEvent(
   input: CreateChargeEventInput,
 ): Promise<ChargeEventRecord> {
   validateChargeEventTimestamp(input.charged_at);
-
-  const id = crypto.randomUUID();
-  const now = new Date().toISOString();
-
-  await dbExecute(
-    `INSERT INTO cr_charge_events
-       (id, device_id, charged_at, notes, created_at)
-     VALUES ($1, $2, $3, $4, $5)`,
-    [id, input.device_id, input.charged_at, input.notes ?? null, now],
-  );
-
-  const resultRows = await dbSelect<ChargeEventRecord>(
-    `SELECT * FROM cr_charge_events WHERE id = $1`,
-    [id],
-  );
-
-  await recomputeReminderStateForDevice(input.device_id);
-  return resultRows[0];
+  const device = await getDeviceByIdInternal(input.device_id);
+  if (!device) throw new Error(`Device not found: ${input.device_id}`);
+  const computedAt = new Date().toISOString();
+  const eventId = crypto.randomUUID();
+  const candidate: ChargeEventRecord = {
+    id: eventId,
+    device_id: input.device_id,
+    charged_at: input.charged_at,
+    notes: input.notes ?? null,
+    created_at: computedAt,
+  };
+  const latestChargeEvent = selectLatestChargeEvent(candidate, device.charge_events[0] ?? null);
+  const heuristicState = computeDeterministicReminderState({
+    device_type: device.device.device_type,
+    capacity_mah: device.device.capacity_mah,
+    threshold_percent: device.device.threshold_percent,
+    notify_before_days: device.reminder_preference?.notify_before_days,
+    last_full_charge_at: latestChargeEvent.charged_at,
+    computed_at: computedAt,
+  });
+  return invoke<ChargeEventRecord>("record_charger_full_charge", {
+    input: {
+      eventId,
+      stateId: device.computed_reminder_state?.id ?? crypto.randomUUID(),
+      latestChargeEventId: latestChargeEvent.id,
+      deviceId: input.device_id,
+      chargedAt: input.charged_at,
+      notes: input.notes ?? null,
+      createdAt: computedAt,
+      heuristicVersion: heuristicState.heuristic_version,
+      estimatedBatteryPercent: heuristicState.estimated_battery_percent,
+      estimatedDaysUntilThreshold: heuristicState.estimated_days_until_threshold,
+      reminderDueAt: heuristicState.reminder_due_at,
+      status: heuristicState.status,
+      basis: heuristicState.basis,
+      computedAt,
+    },
+  });
 }
 
 export async function setComputedReminderState(

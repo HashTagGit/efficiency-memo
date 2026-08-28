@@ -71,7 +71,7 @@ export async function loadDashboardNow(userId: string, now = new Date()): Promis
       [userId, now.toISOString(), dayEnd.toISOString()],
     ),
     dbSelect<DeviceCountRow>(
-      "SELECT COUNT(*) AS device_count, SUM(CASE WHEN s.status IS NULL OR s.status <> 'tracking' OR (s.reminder_due_at IS NOT NULL AND julianday(s.reminder_due_at) <= julianday($2)) THEN 1 ELSE 0 END) AS attention_count FROM cr_devices d LEFT JOIN cr_computed_reminder_states s ON s.device_id = d.id WHERE d.user_id = $1",
+      "SELECT COUNT(*) AS device_count, SUM(CASE WHEN (n.snoozed_until IS NULL OR julianday(n.snoozed_until) <= julianday($2)) AND (s.status IS NULL OR s.status <> 'tracking' OR (s.reminder_due_at IS NOT NULL AND julianday(s.reminder_due_at) <= julianday($2))) THEN 1 ELSE 0 END) AS attention_count FROM cr_devices d LEFT JOIN cr_computed_reminder_states s ON s.device_id = d.id LEFT JOIN cr_notification_states n ON n.device_id = d.id WHERE d.user_id = $1",
       [userId, now.toISOString()],
     ),
     dbSelect<SuggestionCountRow>(
