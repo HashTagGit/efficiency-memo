@@ -23,25 +23,62 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 - Operational Now home with current focus, next plan, reminder status, device attention, and compact full-tool navigation.
 - Dedicated control-border and keyboard-focus roles across every palette and mode, consumed by shared primitives and native desktop controls.
 - Windows-first Activity Assist collection foundation with opt-in foreground executable sampling, collection pause, exclusions, short retention, inspection, and deletion.
+- Activity Assist stable suggestions with edit, dismiss, and atomic explicit acceptance into confirmed CoreHour sessions.
+- Module locator colors for CoreHour, Pause & Hydrate, Charger Reminder, and Settings, while primary actions remain governed by the selected palette.
+- Semantic Alert containers plus explicit button pressed and disabled reactions without component-level product hues.
 
-## Next releases
+## Delivery roadmap
 
-### 1. Product-wide view states
+### Phase 0 — semantic UI completion (current)
 
-- Standardize first-use, no-results, completed, loading, unavailable, not-found, and recoverable-error states.
-- Keep safe stale data visible during refresh and offer section-level retry without losing local context.
+- Replace remaining component-local status hues with semantic tokens.
+- Add only consumed device, chart-series, selected, disabled, and forced-colors roles.
+- Audit the same state vocabulary across all four palettes and both modes: rest, hover, pressed, selected, focused, disabled, loading, success, and error.
+- Finish product-wide first-use, no-results, completed, loading, unavailable, not-found, and stale-data-safe recoverable-error states.
 
-### 2. Linux package and session validation
+**Exit gate:** shared primitives contain no hardcoded product/status hue; keyboard focus and interaction state remain distinguishable without color alone.
 
-- Build and inspect `.deb` and AppImage native dependencies.
-- Run Natural Rest on clean GNOME Wayland, Plasma Wayland, and X11 sessions; Plasma Wayland must remain explicitly unsupported rather than returning an invented duration.
+### Phase 1 — assisted capture that learns from confirmation
 
-### 3. Local Activity Assist experiment
+- Add an optional “remember this app” choice when accepting an Activity Assist suggestion.
+- Apply exact executable-to-activity/tag rules locally and deterministically.
+- Provide inspect, edit, and delete controls; rules never create confirmed sessions by themselves.
+- Surface the pending suggestion count on Now.
 
-- Group retained samples into unconfirmed CoreHour suggestions without changing Actual Sessions.
-- Add review, edit, dismiss, and explicit acceptance; only acceptance may create actual time through the validated manual-session path.
+**Exit gate:** repeat applications require fewer edits, while every Actual Session still requires explicit acceptance. Stop if useful categorization requires titles, URLs, content, screenshots, keystrokes, or cloud inference.
 
-Stop the experiment if useful suggestions require window titles, URLs, screenshots, content, keystrokes, or cloud inference.
+### Phase 2 — guided review and adjustment
+
+- Add an optional end-of-day closeout for pending suggestions/uncertain time, plan-versus-actual, recovery/hydration facts, one outcome, and one next adjustment.
+- Add a weekly reset for capacity, longest focus blocks, interruptions, recovery coverage, device attention, and goal adjustment.
+- Review reminders must respect quiet hours and system interruption state.
+
+**Exit gate:** a saved adjustment changes a later plan or goal. Stop if the workflow becomes a passive report that users open without acting on it.
+
+### Phase 3 — cross-module attention and reminder completion
+
+- Evolve Now into a maximum-five-item attention feed with one owner and one next action per item.
+- Include pending suggestions, uncertain time, due recovery/hydration, and device attention with deep links to the owning workflow.
+- Add transition-triggered native Charger Reminder notifications with snooze and charged actions through one authoritative command path.
+
+**Exit gate:** actions do not duplicate state paths, and dismiss/snooze survives restart.
+
+### Phase 4 — optional product-form experiments
+
+- Read-only local `.ics` import before any OAuth or write-back.
+- Optional motion-safe companion presentation for recovery/hydration, disabled by default.
+- A coral/evergreen fifth palette only after the Phase 0 state matrix is complete and contrast-audited.
+- Validate Linux `.deb` and AppImage behavior on GNOME Wayland, Plasma Wayland, and X11; unsupported sessions remain explicit.
+
+Each experiment must be removable without migrating confirmed sessions, plans, reminders, or device data.
+
+### Phase 5 — sustainability validation
+
+- Test supporter funding that unlocks no core feature.
+- Consider a paid signed/supported distribution only when release maintenance provides demonstrated value.
+- Investigate hosted encrypted backup/sync only as a separately threat-modeled service.
+
+**Exit gate:** support demand covers its operating cost without feature captivity. Do not build account infrastructure in anticipation of demand.
 
 ## Product boundaries
 
@@ -56,4 +93,4 @@ Every palette keeps the same meanings: `planned` uses informational color plus a
 
 ## Evidence
 
-The priorities and boundaries are supported by [local-first productivity UI and product strategy](research/local-first-productivity-ui-product-research.md), [UI themes and commercial gap analysis](research/ui-themes-commercial-gap-analysis.md), [CoreHour competitive analysis](research/corehour-competitive-analysis.md), and [adjacent product opportunities](research/adjacent-product-opportunities-2026.md).
+The priorities and boundaries are supported by [the 2026 product and UI landscape](research/product-ui-landscape-2026.md), [local-first productivity UI and product strategy](research/local-first-productivity-ui-product-research.md), [UI themes and commercial gap analysis](research/ui-themes-commercial-gap-analysis.md), [CoreHour competitive analysis](research/corehour-competitive-analysis.md), and [adjacent product opportunities](research/adjacent-product-opportunities-2026.md).
