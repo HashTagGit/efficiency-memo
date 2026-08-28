@@ -78,6 +78,7 @@ function DevicePageState({
 
 function NewDevicePage() {
   const navigate = useNavigate();
+  const { t } = useI18n();
 
   async function handleSubmit(data: DeviceFormData) {
     const user = getCurrentUser();
@@ -94,7 +95,8 @@ function NewDevicePage() {
   }
 
   return (
-    <div className="p-6">
+    <div className="space-y-4 p-6">
+      <Button variant="secondary" onClick={() => navigate("/tools/charger-reminder")}>{t("chargerReminder.backToDevices")}</Button>
       <DeviceForm presets={presets} mode="create" onSubmit={handleSubmit} />
     </div>
   );
@@ -103,6 +105,7 @@ function NewDevicePage() {
 function DeviceDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useI18n();
   const { device, loading, failed, retry } = useDevice(id);
   const back = () => navigate("/tools/charger-reminder");
 
@@ -111,7 +114,11 @@ function DeviceDetailPage() {
   if (!device) return <DevicePageState state="not-found" onRetry={() => void retry()} onBack={back} />;
 
   return (
-    <div className="p-6">
+    <div className="space-y-4 p-6">
+      <div className="flex flex-wrap justify-between gap-2">
+        <Button variant="secondary" onClick={back}>{t("chargerReminder.backToDevices")}</Button>
+        <Button onClick={() => navigate(`/tools/charger-reminder/${id}/edit`)}>{t("chargerReminder.editDevice")}</Button>
+      </div>
       <DeviceDetail item={device} />
     </div>
   );

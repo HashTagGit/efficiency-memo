@@ -9,16 +9,8 @@ interface DeviceListProps {
 }
 
 export function DeviceList({ devices }: DeviceListProps) {
-  if (devices.length === 0) {
-    return (
-      <div data-testid="device-list-empty" style={{ textAlign: "center", padding: "2rem" }}>
-        <p>No devices yet</p>
-      </div>
-    );
-  }
-
   return (
-    <div data-testid="device-list" style={{ display: "grid", gap: "1rem" }}>
+    <div data-testid="device-list" className="grid gap-3 sm:grid-cols-2">
       {devices.map((item) => (
         <DeviceCard key={item.device.id} item={item} />
       ))}

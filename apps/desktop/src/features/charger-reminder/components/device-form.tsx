@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Button } from "@memo/ui";
 import type { DevicePresetType, DeviceRecord } from "../contracts";
+import { useI18n } from "../../../lib/i18n";
 
 function getInitialDeviceType(
   device: DeviceRecord | null | undefined,
@@ -29,17 +30,17 @@ export interface DeviceFormData {
   name: string;
   capacity_mah: number | null;
   threshold_percent: number;
-  reminder_enabled: boolean;
   device_type: DevicePresetType;
   notes?: string;
 }
 
 export function DeviceForm({ presets, device, mode, onSubmit, onCancel }: DeviceFormProps) {
+  const { t } = useI18n();
   const [name, setName] = useState(device?.name ?? "");
   const [capacity, setCapacity] = useState(device?.capacity_mah?.toString() ?? "");
   const [threshold, setThreshold] = useState(device?.threshold_percent ?? presets[0]?.default_threshold ?? 25);
   const [deviceType, setDeviceType] = useState<DevicePresetType>(getInitialDeviceType(device, presets));
-  const [reminderEnabled, setReminderEnabled] = useState(true);
+  const [notes, setNotes] = useState(device?.notes ?? "");
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -48,18 +49,18 @@ export function DeviceForm({ presets, device, mode, onSubmit, onCancel }: Device
     setError(null);
 
     if (!name.trim()) {
-      setError("Device name is required");
+      setError(t("chargerReminder.validationName"));
       return;
     }
 
     const capacityNum = capacity.trim() ? parseInt(capacity, 10) : null;
     if (capacity.trim() && (isNaN(capacityNum!) || capacityNum! <= 0)) {
-      setError("Capacity must be a positive number");
+      setError(t("chargerReminder.validationCapacity"));
       return;
     }
 
     if (threshold < 0 || threshold > 100) {
-      setError("Threshold must be between 0 and 100");
+      setError(t("chargerReminder.validationThreshold"));
       return;
     }
 
@@ -70,16 +71,15 @@ export function DeviceForm({ presets, device, mode, onSubmit, onCancel }: Device
         name: name.trim(),
         capacity_mah: capacityNum,
         threshold_percent: threshold,
-        reminder_enabled: reminderEnabled,
         device_type: deviceType,
-        notes: device?.notes ?? undefined,
+        notes: notes.trim() || undefined,
       };
 
       if (onSubmit) {
         await onSubmit(formData);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to save device");
+    } catch {
+      setError(t("chargerReminder.saveFailed"));
     } finally {
       setIsSubmitting(false);
     }
@@ -88,7 +88,7 @@ export function DeviceForm({ presets, device, mode, onSubmit, onCancel }: Device
   return (
     <div className="rounded-xl border border-border bg-surface p-6 shadow-sm" data-testid="device-form">
       <h2 className="mb-6 text-lg font-semibold text-foreground">
-        {mode === "create" ? "Add Device" : "Edit Device"}
+        {t(mode === "create" ? "chargerReminder.formAddTitle" : "chargerReminder.formEditTitle")}
       </h2>
 
       <form onSubmit={handleSubmit} className="space-y-6">
@@ -100,14 +100,14 @@ export function DeviceForm({ presets, device, mode, onSubmit, onCancel }: Device
 
         <div className="space-y-2">
           <label htmlFor="name" className="text-sm font-semibold text-foreground">
-            Device Name *
+            {t("chargerReminder.deviceName")}
           </label>
           <input
             id="name"
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="e.g., Xbox Controller Battery Pack"
+            placeholder={t("chargerReminder.deviceNamePlaceholder")}
             className="w-full rounded-md border border-control-border bg-background px-4 py-3 text-base text-foreground placeholder:text-muted focus:border-focus-ring focus:outline-none focus:ring-2 focus:ring-focus-ring/20"
             required
           />
@@ -115,7 +115,7 @@ export function DeviceForm({ presets, device, mode, onSubmit, onCancel }: Device
 
         <div className="space-y-2">
           <label htmlFor="deviceType" className="text-sm font-semibold text-foreground">
-            Device Type *
+            {t("chargerReminder.deviceType")}
           </label>
           <select
             id="deviceType"
@@ -125,7 +125,7 @@ export function DeviceForm({ presets, device, mode, onSubmit, onCancel }: Device
           >
             {presets.map((preset) => (
               <option key={preset.type} value={preset.type}>
-                {preset.label}
+                {t(`chargerReminder.preset.${preset.type}`)}
               </option>
             ))}
           </select>
@@ -133,7 +133,7 @@ export function DeviceForm({ presets, device, mode, onSubmit, onCancel }: Device
 
         <div className="space-y-2">
           <label htmlFor="capacity" className="text-sm font-semibold text-foreground">
-            Capacity (mAh) <span className="font-normal text-muted">(optional)</span>
+            {t("chargerReminder.capacity")} <span className="font-normal text-muted">({t("chargerReminder.optional")})</span>
           </label>
           <input
             id="capacity"
@@ -141,14 +141,14 @@ export function DeviceForm({ presets, device, mode, onSubmit, onCancel }: Device
             min="1"
             value={capacity}
             onChange={(e) => setCapacity(e.target.value)}
-            placeholder="e.g., 2400"
+            placeholder={t("chargerReminder.capacityPlaceholder")}
             className="w-full rounded-md border border-control-border bg-background px-4 py-3 text-base text-foreground placeholder:text-muted focus:border-focus-ring focus:outline-none focus:ring-2 focus:ring-focus-ring/20"
           />
         </div>
 
         <div className="space-y-2">
           <label htmlFor="threshold" className="text-sm font-semibold text-foreground">
-            Threshold ({threshold}%)
+            {t("chargerReminder.threshold", { value: threshold })}
           </label>
           <input
             id="threshold"
@@ -160,21 +160,21 @@ export function DeviceForm({ presets, device, mode, onSubmit, onCancel }: Device
             className="w-full accent-accent"
           />
           <p className="text-sm text-muted">
-            Reminder triggers when battery drops to {threshold}%
+            {t("chargerReminder.thresholdHint", { value: threshold })}
           </p>
         </div>
 
-        <div className="flex items-center space-x-3">
-          <input
-            id="reminderEnabled"
-            type="checkbox"
-            checked={reminderEnabled}
-            onChange={(e) => setReminderEnabled(e.target.checked)}
-            className="h-5 w-5 rounded border-control-border text-accent focus:ring-focus-ring"
-          />
-          <label htmlFor="reminderEnabled" className="text-sm font-semibold text-foreground">
-            Reminder Enabled
+        <div className="space-y-2">
+          <label htmlFor="notes" className="text-sm font-semibold text-foreground">
+            {t("chargerReminder.notes")} <span className="font-normal text-muted">({t("chargerReminder.optional")})</span>
           </label>
+          <textarea
+            id="notes"
+            value={notes}
+            onChange={(event) => setNotes(event.target.value)}
+            placeholder={t("chargerReminder.notesPlaceholder")}
+            className="min-h-24 w-full rounded-md border border-control-border bg-background px-4 py-3 text-base text-foreground placeholder:text-muted focus:border-focus-ring focus:outline-none focus:ring-2 focus:ring-focus-ring/20"
+          />
         </div>
 
         <div className="flex gap-3 pt-2">
@@ -186,12 +186,12 @@ export function DeviceForm({ presets, device, mode, onSubmit, onCancel }: Device
             disabled={isSubmitting}
             className="flex-1"
           >
-            {mode === "create" ? "Add Device" : "Save Changes"}
+            {t(mode === "create" ? "chargerReminder.addDevice" : "chargerReminder.saveChanges")}
           </Button>
 
           {mode === "edit" && (
             <Button type="button" variant="secondary" size="lg" onClick={onCancel}>
-              Cancel
+              {t("chargerReminder.cancel")}
             </Button>
           )}
         </div>

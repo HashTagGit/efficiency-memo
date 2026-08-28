@@ -6,6 +6,7 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 
 - Local profile, SQLite persistence, bilingual shell, and System/Light/Dark appearance.
 - Ember, Grove, Tide, and enhanced-contrast Clarity palettes using shared semantic tokens.
+- Bilingual Charger Reminder list, create/edit form, device detail, localized estimate states, and direct card navigation.
 - CoreHour sessions, check-ins, tags, daily goals, Today, Timeline, and Insights.
 - CoreHour planned blocks with separate day/week plan-versus-actual timelines and explicit conversion.
 - CoreHour direct plan move/resize plus selected-week and current-week plan-versus-actual review.
