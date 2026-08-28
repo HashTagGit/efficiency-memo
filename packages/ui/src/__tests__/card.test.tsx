@@ -73,6 +73,7 @@ describe('Card', () => {
     expect(card?.className).toMatch(/bg-card/);
     expect(card?.className).toMatch(/border-border/);
     expect(card?.className).toMatch(/text-foreground/);
+    expect(card?.className).toMatch(/focus-visible:ring-focus-ring/);
 
     const iconContainer = screen.getByTestId('card-icon').parentElement;
     expect(iconContainer?.className).toMatch(/bg-accent\/10/);

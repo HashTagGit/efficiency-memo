@@ -116,7 +116,7 @@ export function Shell({
           data-testid="shell-header"
           className="flex items-center px-4 py-3 bg-surface border-b border-border md:hidden"
         >
-          <button type="button" data-testid="mobile-menu-button" onClick={() => setMobileOpen(true)} className="rounded-md p-2 text-muted hover:bg-surface-strong hover:text-foreground" aria-label="Open menu">
+          <button type="button" data-testid="mobile-menu-button" onClick={() => setMobileOpen(true)} className="rounded-md p-2 text-muted hover:bg-surface-strong hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring" aria-label="Open menu">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="20"
@@ -137,7 +137,7 @@ export function Shell({
             type="button"
             data-testid="mobile-theme-toggle"
             onClick={onThemeToggle}
-            className="ml-auto inline-flex items-center gap-2 rounded-md px-2.5 py-2 text-sm text-muted hover:bg-surface-strong hover:text-foreground"
+            className="ml-auto inline-flex items-center gap-2 rounded-md px-2.5 py-2 text-sm text-muted hover:bg-surface-strong hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             aria-label={theme === 'dark' ? (labels?.switchToLight ?? 'Switch to light mode') : (labels?.switchToDark ?? 'Switch to dark mode')}
             aria-pressed={theme === 'light'}
           >

@@ -63,10 +63,10 @@ describe('Input', () => {
     expect(errorEl?.textContent).toBe('Invalid');
   });
 
-  it('applies border-border class when no error', () => {
+  it('applies border-control-border class when no error', () => {
     render(<Input />);
     const input = screen.getByTestId('input');
-    expect(input.className).toMatch(/border-border/);
+    expect(input.className).toMatch(/border-control-border/);
   });
 
   it('applies bg-surface token class', () => {
@@ -81,10 +81,10 @@ describe('Input', () => {
     expect(input.className).toMatch(/text-foreground/);
   });
 
-  it('applies focus:ring-accent token class', () => {
+  it('applies focus:ring-focus-ring token class', () => {
     render(<Input />);
     const input = screen.getByTestId('input');
-    expect(input.className).toMatch(/focus:ring-accent/);
+    expect(input.className).toMatch(/focus:ring-focus-ring/);
   });
 
   it('applies focus:ring-danger when error is present', () => {

@@ -93,7 +93,7 @@ export function Sidebar({
           type="button"
           data-testid="sidebar-toggle"
           onClick={onToggle}
-          className="p-1.5 rounded-md hover:bg-[var(--color-sidebar-hover)] transition-colors"
+          className="rounded-md p-1.5 transition-colors hover:bg-[var(--color-sidebar-hover)] focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
           aria-label={isCollapsed ? labels.expandSidebar : labels.collapseSidebar}
         >
           <svg
@@ -126,7 +126,7 @@ export function Sidebar({
                   onClick={() => onToolSelect(tool.id)}
                   className={`
                     relative flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left
-                    transition-colors duration-150
+                    transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring
                     ${isActive
                       ? 'bg-[var(--color-active)] text-foreground before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-accent'
                       : 'text-muted hover:bg-[var(--color-sidebar-hover)] hover:text-foreground'
@@ -164,7 +164,7 @@ export function Sidebar({
               data-testid={`sidebar-tool-item-${tool.id}`}
               data-active={isActive}
               onClick={() => onToolSelect(tool.id)}
-              className={`relative flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors duration-150 ${isActive ? 'bg-[var(--color-active)] text-foreground before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-accent' : 'text-muted hover:bg-[var(--color-sidebar-hover)] hover:text-foreground'}`}
+              className={`relative flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${isActive ? 'bg-[var(--color-active)] text-foreground before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-accent' : 'text-muted hover:bg-[var(--color-sidebar-hover)] hover:text-foreground'}`}
             >
               <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center"><ToolIcon name={tool.icon} /></span>
               <span data-testid="tool-name" className={`truncate text-sm font-medium ${isCollapsed ? 'hidden' : 'block'}`}>{tool.name}</span>
@@ -176,7 +176,7 @@ export function Sidebar({
             data-testid="theme-toggle"
             type="button"
             onClick={onThemeToggle}
-            className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-muted hover:bg-[var(--color-sidebar-hover)] hover:text-foreground"
+            className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-muted hover:bg-[var(--color-sidebar-hover)] hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             aria-label={theme === 'dark' ? labels.switchToLight : labels.switchToDark}
             aria-pressed={theme === 'light'}
           >
@@ -195,7 +195,7 @@ export function Sidebar({
             data-testid="locale-toggle"
             type="button"
             onClick={onLocaleToggle}
-            className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-muted hover:bg-[var(--color-sidebar-hover)] hover:text-foreground"
+            className="flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left text-muted hover:bg-[var(--color-sidebar-hover)] hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             aria-label={localeAriaLabel ?? labels.language}
           >
             <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center text-xs font-semibold">文</span>

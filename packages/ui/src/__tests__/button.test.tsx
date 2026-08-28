@@ -25,7 +25,8 @@ describe('Button', () => {
     render(<Button variant="secondary">Secondary</Button>);
     const btn = screen.getByText('Secondary');
     expect(btn.className).toMatch(/bg-surface/);
-    expect(btn.className).toMatch(/border/);
+    expect(btn.className).toMatch(/border-control-border/);
+    expect(btn.className).toMatch(/focus-visible:ring-focus-ring/);
   });
 
   it('renders ghost variant', () => {

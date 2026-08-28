@@ -13,9 +13,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
     const inputClasses = [
       'w-full px-3 py-2 rounded-lg border bg-surface text-foreground',
       'placeholder:text-muted transition-colors',
-      'focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent',
+      'focus:outline-none focus:ring-2 focus:ring-focus-ring focus:border-transparent',
       'disabled:opacity-50 disabled:cursor-not-allowed',
-      error ? 'border-danger focus:ring-danger' : 'border-border',
+      error ? 'border-danger focus:ring-danger' : 'border-control-border',
       className,
     ].join(' ');
 

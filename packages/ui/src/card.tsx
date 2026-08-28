@@ -25,7 +25,7 @@ export function Card({
   ...rest
 }: CardProps & React.HTMLAttributes<HTMLDivElement | HTMLAnchorElement>) {
   const baseClasses =
-    'group relative flex min-h-44 flex-col gap-3 rounded-xl border border-border bg-card p-6 text-foreground shadow-sm transition-[border-color,background-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background cursor-pointer';
+    'group relative flex min-h-44 flex-col gap-3 rounded-xl border border-border bg-card p-6 text-foreground shadow-sm transition-[border-color,background-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-accent/50 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background cursor-pointer';
 
   const mergedClasses = className ? `${baseClasses} ${className}` : baseClasses;
 

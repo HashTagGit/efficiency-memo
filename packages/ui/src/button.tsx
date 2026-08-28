@@ -16,7 +16,7 @@ const variantClasses: Record<ButtonVariant, string> = {
   primary:
     'bg-accent text-on-accent hover:bg-accent-strong',
   secondary:
-    'bg-surface text-foreground border border-border hover:bg-surface-strong',
+    'bg-surface text-foreground border border-control-border hover:bg-surface-strong',
   ghost:
     'text-foreground hover:bg-surface',
   danger:
@@ -68,7 +68,7 @@ export function Button({
   ...rest
 }: ButtonProps) {
   const baseClasses =
-    'inline-flex items-center justify-center rounded-md font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50';
+    'inline-flex items-center justify-center rounded-md font-medium transition-[background-color,border-color,color,box-shadow,transform] duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50';
 
   const classes = [
     baseClasses,

@@ -15,6 +15,8 @@
   --foreground: #edf1f5;
   --muted: #9da8b5;
   --border: rgba(184, 196, 210, 0.18);
+  --control-border: #748292;
+  --focus-ring: #edbb63;
 
   /* ── Accent ── */
   --accent: #d6a24a;
@@ -64,6 +66,8 @@
   --foreground: #1a2530;
   --muted: #617080;
   --border: #d7dfe7;
+  --control-border: #73808e;
+  --focus-ring: #9a650b;
   --accent: #9a650b;
   --accent-strong: #7f5208;
   --on-accent: #ffffff;
@@ -95,6 +99,8 @@
   --foreground: #f2edf3;
   --muted: #b7abba;
   --border: rgba(196, 177, 202, 0.2);
+  --control-border: #7c6c84;
+  --focus-ring: #e2bfef;
   --accent: #d6ace8;
   --accent-strong: #e2bfef;
   --on-accent: #2b1536;
@@ -126,6 +132,8 @@
   --foreground: #281f2b;
   --muted: #6d6172;
   --border: #ded5e1;
+  --control-border: #807184;
+  --focus-ring: #6f4885;
   --accent: #6f4885;
   --accent-strong: #5b376f;
   --on-accent: #ffffff;
@@ -157,6 +165,8 @@
   --foreground: #edf2f4;
   --muted: #9baab1;
   --border: rgba(174, 197, 207, 0.2);
+  --control-border: #6b7e80;
+  --focus-ring: #7bc0d5;
   --accent: #61abc2;
   --accent-strong: #7bc0d5;
   --on-accent: #062c29;
@@ -188,6 +198,8 @@
   --foreground: #1d2b31;
   --muted: #607179;
   --border: #d2dde1;
+  --control-border: #708184;
+  --focus-ring: #216f88;
   --accent: #216f88;
   --accent-strong: #185a70;
   --on-accent: #ffffff;
@@ -219,6 +231,8 @@
   --foreground: #f6f8fb;
   --muted: #cbd4de;
   --border: #8b99a7;
+  --control-border: #8b99a7;
+  --focus-ring: #d0e1ff;
   --accent: #b9d3ff;
   --accent-strong: #d0e1ff;
   --on-accent: #061b3c;
@@ -250,6 +264,8 @@
   --foreground: #101820;
   --muted: #3d4b58;
   --border: #596775;
+  --control-border: #596775;
+  --focus-ring: #0b4897;
   --accent: #0b4897;
   --accent-strong: #073b7c;
   --on-accent: #ffffff;
@@ -287,6 +303,8 @@
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted);
   --color-border: var(--border);
+  --color-control-border: var(--control-border);
+  --color-focus-ring: var(--focus-ring);
   --color-accent: var(--accent);
   --color-accent-strong: var(--accent-strong);
   --color-on-accent: var(--on-accent);
