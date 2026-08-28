@@ -4,13 +4,15 @@ import { useI18n } from "../../lib/i18n";
 import {
   acceptActivityAssistSuggestion,
   clearActivityAssistSamples,
+  deleteActivityAssistRule,
   dismissActivityAssistSuggestion,
   loadActivityAssistState,
+  saveActivityAssistRule,
   saveActivityAssistPreferences,
 } from "./data";
 import { useTags } from "../core-hour/hooks/use-tags";
-import type { Tag } from "../core-hour/types";
 import type { ActivityAssistPreferences, ActivityAssistState, ActivitySuggestion } from "./types";
+import { ActivityRuleEditor, SuggestionReview, type SuggestionValues } from "./activity-assist-review";
 
 const retentionOptions = [24, 48, 72, 168] as const;
 const defaultPreferences: ActivityAssistPreferences = {
@@ -18,98 +20,6 @@ const defaultPreferences: ActivityAssistPreferences = {
   paused: false,
   retentionHours: 72,
 };
-
-function localDateTime(value: string): string {
-  const date = new Date(value);
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
-}
-
-function SuggestionReview({
-  suggestion,
-  tags,
-  busy,
-  onAccept,
-  onDismiss,
-}: {
-  suggestion: ActivitySuggestion;
-  tags: Tag[];
-  busy: boolean;
-  onAccept: (values: { activity: string; tagId: string | null; startedAt: string; endedAt: string }) => void;
-  onDismiss: () => void;
-}) {
-  const { t } = useI18n();
-  const [activity, setActivity] = useState(suggestion.applicationId);
-  const [tagId, setTagId] = useState("");
-  const [startedAt, setStartedAt] = useState(() => localDateTime(suggestion.startedAt));
-  const [endedAt, setEndedAt] = useState(() => localDateTime(suggestion.endedAt));
-  const validRange = Boolean(startedAt && endedAt && endedAt > startedAt && startedAt.slice(0, 10) === endedAt.slice(0, 10));
-
-  return (
-    <li className="rounded-md border border-dashed border-accent/50 bg-surface p-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p className="text-xs font-semibold uppercase text-accent">{t("activityAssist.suggestionLabel")}</p>
-          <p className="mt-1 font-mono text-sm text-muted">{suggestion.applicationId}</p>
-        </div>
-        <Button size="sm" variant="ghost" disabled={busy} onClick={onDismiss}>{t("activityAssist.dismissSuggestion")}</Button>
-      </div>
-      <div className="mt-4 grid gap-4 lg:grid-cols-2">
-        <label className="text-sm font-medium text-foreground">
-          {t("activityAssist.activityLabel")}
-          <input
-            value={activity}
-            disabled={busy}
-            onChange={(event) => setActivity(event.target.value)}
-            className="mt-1.5 w-full rounded-md border border-control-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-focus-ring"
-          />
-        </label>
-        <label className="text-sm font-medium text-foreground">
-          {t("activityAssist.tagLabel")}
-          <select
-            value={tagId}
-            disabled={busy}
-            onChange={(event) => setTagId(event.target.value)}
-            className="mt-1.5 h-10 w-full rounded-md border border-control-border bg-background px-3 text-foreground focus:outline-none focus:ring-2 focus:ring-focus-ring"
-          >
-            <option value="">{t("activityAssist.noTag")}</option>
-            {tags.map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}
-          </select>
-        </label>
-        <label className="text-sm font-medium text-foreground">
-          {t("activityAssist.startedAt")}
-          <input
-            type="datetime-local"
-            value={startedAt}
-            disabled={busy}
-            onChange={(event) => setStartedAt(event.target.value)}
-            className="mt-1.5 w-full rounded-md border border-control-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-focus-ring"
-          />
-        </label>
-        <label className="text-sm font-medium text-foreground">
-          {t("activityAssist.endedAt")}
-          <input
-            type="datetime-local"
-            value={endedAt}
-            disabled={busy}
-            onChange={(event) => setEndedAt(event.target.value)}
-            className="mt-1.5 w-full rounded-md border border-control-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-focus-ring"
-          />
-        </label>
-      </div>
-      {!validRange && <p className="mt-3 text-sm text-danger" role="alert">{t("activityAssist.invalidRange")}</p>}
-      <div className="mt-4 flex justify-end">
-        <Button
-          size="sm"
-          isLoading={busy}
-          disabled={!activity.trim() || !validRange}
-          onClick={() => onAccept({ activity: activity.trim(), tagId: tagId || null, startedAt, endedAt })}
-        >
-          {t("activityAssist.acceptSuggestion")}
-        </Button>
-      </div>
-    </li>
-  );
-}
 
 export default function ActivityAssistPage({ userId }: { userId: string }) {
   const { locale, t } = useI18n();
@@ -125,6 +35,7 @@ export default function ActivityAssistPage({ userId }: { userId: string }) {
   const [dirty, setDirty] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
   const [busySuggestion, setBusySuggestion] = useState<string | null>(null);
+  const [busyRule, setBusyRule] = useState<string | null>(null);
   const requestRef = useRef(0);
   const dirtyRef = useRef(dirty);
   dirtyRef.current = dirty;
@@ -204,7 +115,7 @@ export default function ActivityAssistPage({ userId }: { userId: string }) {
 
   async function acceptSuggestion(
     suggestion: ActivitySuggestion,
-    values: { activity: string; tagId: string | null; startedAt: string; endedAt: string },
+    values: SuggestionValues,
   ) {
     setBusySuggestion(suggestion.id);
     setOperationError(false);
@@ -218,6 +129,7 @@ export default function ActivityAssistPage({ userId }: { userId: string }) {
         endedAt: new Date(values.endedAt).toISOString(),
         startLocalDate: values.startedAt.slice(0, 10),
         endLocalDate: values.endedAt.slice(0, 10),
+        rememberRule: values.rememberRule,
       }));
     } catch {
       setOperationError(true);
@@ -235,6 +147,30 @@ export default function ActivityAssistPage({ userId }: { userId: string }) {
       setOperationError(true);
     } finally {
       setBusySuggestion(null);
+    }
+  }
+
+  async function saveRule(applicationId: string, activity: string, defaultTagId: string | null) {
+    setBusyRule(applicationId);
+    setOperationError(false);
+    try {
+      setState(await saveActivityAssistRule({ userId, applicationId, activity, defaultTagId }));
+    } catch {
+      setOperationError(true);
+    } finally {
+      setBusyRule(null);
+    }
+  }
+
+  async function deleteRule(applicationId: string) {
+    setBusyRule(applicationId);
+    setOperationError(false);
+    try {
+      setState(await deleteActivityAssistRule(userId, applicationId));
+    } catch {
+      setOperationError(true);
+    } finally {
+      setBusyRule(null);
     }
   }
 
@@ -274,12 +210,33 @@ export default function ActivityAssistPage({ userId }: { userId: string }) {
               <ul className="space-y-3">
                 {state.pendingSuggestions.map((suggestion) => (
                   <SuggestionReview
-                    key={suggestion.id}
+                    key={`${suggestion.id}:${suggestion.suggestedActivity}:${suggestion.suggestedTagId ?? ""}:${suggestion.ruleApplied}`}
                     suggestion={suggestion}
                     tags={tags.filter((tag) => !tag.is_archived)}
                     busy={busySuggestion === suggestion.id}
                     onAccept={(values) => void acceptSuggestion(suggestion, values)}
                     onDismiss={() => void dismissSuggestion(suggestion.id)}
+                  />
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <section className="border-t border-border pt-6" aria-labelledby="activity-assist-rules-heading">
+            <h2 id="activity-assist-rules-heading" className="text-base font-semibold text-foreground">{t("activityAssist.rulesTitle")}</h2>
+            <p className="mt-1 text-sm text-muted">{t("activityAssist.rulesHint")}</p>
+            {state.rules.length === 0 ? (
+              <p className="mt-4 text-sm text-muted">{t("activityAssist.noRules")}</p>
+            ) : (
+              <ul className="mt-3">
+                {state.rules.map((rule) => (
+                  <ActivityRuleEditor
+                    key={rule.applicationId}
+                    rule={rule}
+                    tags={tags.filter((tag) => !tag.is_archived)}
+                    busy={busyRule === rule.applicationId}
+                    onSave={(values) => void saveRule(rule.applicationId, values.activity, values.tagId)}
+                    onDelete={() => void deleteRule(rule.applicationId)}
                   />
                 ))}
               </ul>

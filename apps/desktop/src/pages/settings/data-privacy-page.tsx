@@ -34,6 +34,7 @@ const emptyCounts: DataCounts = {
   coreHourTags: 0,
   pauseHydrateEvents: 0,
   activityAssistSamples: 0,
+  activityAssistRules: 0,
 };
 
 function backupFilename(): string {

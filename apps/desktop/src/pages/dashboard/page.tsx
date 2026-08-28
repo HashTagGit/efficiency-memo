@@ -220,6 +220,16 @@ export function DashboardPage() {
         </Alert>
       )}
 
+      {(nowData?.pendingSuggestionCount ?? 0) > 0 && (
+        <section className="flex flex-wrap items-center justify-between gap-3 border-l-2 border-suggested bg-suggested/5 px-4 py-3" aria-label={t("dashboard.activitySuggestions")}>
+          <div>
+            <p className="text-sm font-semibold text-foreground">{t("dashboard.activitySuggestions")}</p>
+            <p className="mt-1 text-sm text-muted">{t("dashboard.pendingSuggestionCount", { count: nowData!.pendingSuggestionCount })}</p>
+          </div>
+          <Button size="sm" variant="secondary" onClick={() => navigate("/tools/core-hour/assist")}>{t("dashboard.reviewSuggestions")}</Button>
+        </section>
+      )}
+
       <section className="grid gap-3 sm:grid-cols-2" data-testid="dashboard-now-grid" aria-label={t("dashboard.nowSummary")}>
         <SummaryPanel
           icon={<ToolIcon name="CoreHour" />}

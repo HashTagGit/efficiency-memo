@@ -94,6 +94,12 @@ pub fn run() {
             sql: include_str!("../migrations/0013_activity_assist_suggestions.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 14,
+            description: "create activity assist rules",
+            sql: include_str!("../migrations/0014_activity_assist_rules.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
@@ -142,6 +148,8 @@ pub fn run() {
             activity_assist::clear_activity_assist_samples,
             activity_assist::dismiss_activity_assist_suggestion,
             activity_assist::accept_activity_assist_suggestion,
+            activity_assist::save_activity_assist_rule,
+            activity_assist::delete_activity_assist_rule,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

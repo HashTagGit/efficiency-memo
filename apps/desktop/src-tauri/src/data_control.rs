@@ -5,7 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
 
-pub(crate) const SCHEMA_VERSION: i64 = 13;
+pub(crate) const SCHEMA_VERSION: i64 = 14;
 const MIN_SUPPORTED_SCHEMA_VERSION: i64 = 7;
 pub(crate) const DB_FILENAME: &str = "efficiency-memo.db";
 pub(crate) const SIDECAR_FILENAME: &str = "efficiency-memo.db.next";
@@ -111,6 +111,7 @@ pub(crate) struct DataCounts {
     core_hour_tags: i64,
     pause_hydrate_events: i64,
     activity_assist_samples: i64,
+    activity_assist_rules: i64,
 }
 
 #[derive(Debug, Serialize)]
@@ -152,7 +153,7 @@ fn same_existing_file(left: &Path, right: &Path) -> bool {
 fn validate_preferences(preferences: &PortablePreferences) -> Result<(), String> {
     if !matches!(preferences.locale.as_str(), "en-US" | "zh-CN")
         || !matches!(preferences.theme_mode.as_str(), "light" | "dark" | "system")
-        || !matches!(preferences.palette.as_str(), "ember" | "grove" | "tide")
+        || !matches!(preferences.palette.as_str(), "ember" | "grove" | "tide" | "clarity")
     {
         return Err("invalid-preferences".to_string());
     }
@@ -269,6 +270,16 @@ fn validate_required_schema(connection: &Connection, schema_version: i64) -> Res
             ],
         )?;
     }
+    if schema_version >= 14 {
+        validate_table_columns(
+            connection,
+            "aa_activity_rules",
+            &[
+                "user_id", "application_id", "activity", "default_tag_id", "created_at",
+                "updated_at",
+            ],
+        )?;
+    }
     for version in 1..=schema_version {
         let applied: i64 = connection
             .query_row(
@@ -295,6 +306,7 @@ fn count_table(connection: &Connection, table: &str) -> Result<i64, String> {
         "ch_tags" => "SELECT COUNT(*) FROM ch_tags",
         "ph_reminder_events" => "SELECT COUNT(*) FROM ph_reminder_events",
         "aa_activity_samples" => "SELECT COUNT(*) FROM aa_activity_samples",
+        "aa_activity_rules" => "SELECT COUNT(*) FROM aa_activity_rules",
         _ => return Err("unsupported-table".to_string()),
     };
     connection
@@ -310,6 +322,7 @@ fn data_counts(connection: &Connection) -> Result<DataCounts, String> {
         core_hour_tags: count_table(connection, "ch_tags")?,
         pause_hydrate_events: count_table(connection, "ph_reminder_events")?,
         activity_assist_samples: count_table(connection, "aa_activity_samples")?,
+        activity_assist_rules: count_table(connection, "aa_activity_rules")?,
     })
 }
 
@@ -484,6 +497,9 @@ fn reset_data(connection: &mut Connection, scope: ResetScope, user_id: &str) -> 
     match scope {
         ResetScope::CoreHour => {
             transaction
+                .execute("DELETE FROM aa_activity_rules WHERE user_id = ?1", [user_id])
+                .map_err(|error| error.to_string())?;
+            transaction
                 .execute(
                     "DELETE FROM aa_activity_suggestions WHERE user_id = ?1 AND status = 'accepted'",
                     [user_id],
@@ -588,6 +604,7 @@ mod tests {
             include_str!("../migrations/0011_pause_hydrate_deferral_status.sql"),
             include_str!("../migrations/0012_activity_assist.sql"),
             include_str!("../migrations/0013_activity_assist_suggestions.sql"),
+            include_str!("../migrations/0014_activity_assist_rules.sql"),
         ] {
             connection.execute_batch(migration).unwrap();
         }
@@ -612,7 +629,8 @@ mod tests {
                     (10, 'migration', 'installed', 1, X'', 0),
                     (11, 'migration', 'installed', 1, X'', 0),
                     (12, 'migration', 'installed', 1, X'', 0),
-                    (13, 'migration', 'installed', 1, X'', 0);
+                    (13, 'migration', 'installed', 1, X'', 0),
+                    (14, 'migration', 'installed', 1, X'', 0);
                 INSERT INTO users VALUES ('local-user', 'local@example.test', 'created', 'updated');
                 INSERT INTO ch_tags VALUES ('tag-1', 'local-user', 'Focus', '#000000', 0, 'created', 0);
                 INSERT INTO ch_sessions (
@@ -632,7 +650,8 @@ mod tests {
                 INSERT INTO ph_reminder_events VALUES ('event-1', 'local-user', 'break', 'completed', 'occurred', 'manual');
                 INSERT INTO aa_preferences VALUES ('local-user', 1, 0, 72, 'updated');
                 INSERT INTO aa_activity_samples VALUES ('sample-1', 'local-user', 'code.exe', '2026-08-28T08:00:00Z', '2026-08-28T08:03:00Z');
-                INSERT INTO aa_activity_suggestions VALUES ('suggestion-1', 'local-user', 'sample-1', 'code.exe', '2026-08-28T08:00:00Z', '2026-08-28T08:03:00Z', 'pending', NULL, 'created', 'updated');",
+                INSERT INTO aa_activity_suggestions VALUES ('suggestion-1', 'local-user', 'sample-1', 'code.exe', '2026-08-28T08:00:00Z', '2026-08-28T08:03:00Z', 'pending', NULL, 'created', 'updated');
+                INSERT INTO aa_activity_rules VALUES ('local-user', 'code.exe', 'Implementation', 'tag-1', 'created', 'updated');",
             )
             .unwrap();
         connection
@@ -642,7 +661,7 @@ mod tests {
         PortablePreferences {
             locale: "zh-CN".into(),
             theme_mode: "dark".into(),
-            palette: "tide".into(),
+            palette: "clarity".into(),
         }
     }
 
@@ -653,15 +672,29 @@ mod tests {
         drop(database(&source));
 
         let preview = create_backup_at(&source, &destination, preferences()).unwrap();
-        assert_eq!(preview.schema_version, 13);
+        assert_eq!(preview.schema_version, 14);
         assert_eq!(preview.preferences, preferences());
         assert_eq!(preview.counts.core_hour_sessions, 1);
         assert_eq!(preview.counts.core_hour_plans, 1);
         assert_eq!(preview.counts.pause_hydrate_events, 1);
         assert_eq!(preview.counts.activity_assist_samples, 0);
+        assert_eq!(preview.counts.activity_assist_rules, 1);
+
+        let legacy_v13_destination = temp_path("backup-v13");
+        fs::copy(&destination, &legacy_v13_destination).unwrap();
+        let legacy_v13 = Connection::open(&legacy_v13_destination).unwrap();
+        legacy_v13
+            .execute("UPDATE em_backup_metadata SET schema_version = 13", [])
+            .unwrap();
+        legacy_v13
+            .execute("DELETE FROM _sqlx_migrations WHERE version = 14", [])
+            .unwrap();
+        legacy_v13.execute("DROP TABLE aa_activity_rules", []).unwrap();
+        drop(legacy_v13);
+        assert_eq!(inspect_backup(&legacy_v13_destination).unwrap().schema_version, 13);
 
         let legacy_v12_destination = temp_path("backup-v12");
-        fs::copy(&destination, &legacy_v12_destination).unwrap();
+        fs::copy(&legacy_v13_destination, &legacy_v12_destination).unwrap();
         let legacy_v12 = Connection::open(&legacy_v12_destination).unwrap();
         legacy_v12
             .execute("UPDATE em_backup_metadata SET schema_version = 12", [])
@@ -760,14 +793,14 @@ mod tests {
 
         let backup = Connection::open(&destination).unwrap();
         backup
-            .execute("UPDATE em_backup_metadata SET schema_version = 14", [])
+            .execute("UPDATE em_backup_metadata SET schema_version = 15", [])
             .unwrap();
         drop(backup);
         assert_eq!(inspect_backup(&destination).unwrap_err(), "future-schema");
 
         let backup = Connection::open(&destination).unwrap();
         backup
-            .execute("UPDATE em_backup_metadata SET schema_version = 13", [])
+            .execute("UPDATE em_backup_metadata SET schema_version = 14", [])
             .unwrap();
         backup
             .execute("DELETE FROM _sqlx_migrations WHERE version = 6", [])
@@ -790,6 +823,7 @@ mod tests {
 
         let _ = fs::remove_file(source);
         let _ = fs::remove_file(destination);
+        let _ = fs::remove_file(legacy_v13_destination);
         let _ = fs::remove_file(legacy_v12_destination);
         let _ = fs::remove_file(legacy_v11_destination);
         let _ = fs::remove_file(legacy_v10_destination);
@@ -804,6 +838,7 @@ mod tests {
         let mut connection = database(&path);
         let counts = reset_data(&mut connection, ResetScope::CoreHour, "local-user").unwrap();
         assert_eq!(counts.core_hour_sessions, 0);
+        assert_eq!(counts.activity_assist_rules, 0);
         assert_eq!(counts.pause_hydrate_events, 1);
         let policies: i64 = connection
             .query_row("SELECT COUNT(*) FROM ph_schedule_policies", [], |row| row.get(0))

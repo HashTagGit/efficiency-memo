@@ -44,6 +44,7 @@ export function acceptActivityAssistSuggestion(input: {
   endedAt: string;
   startLocalDate: string;
   endLocalDate: string;
+  rememberRule: boolean;
 }): Promise<ActivityAssistState> {
   return invoke("accept_activity_assist_suggestion", {
     input: {
@@ -54,4 +55,22 @@ export function acceptActivityAssistSuggestion(input: {
       acceptedAt: new Date().toISOString(),
     },
   });
+}
+
+export function saveActivityAssistRule(input: {
+  userId: string;
+  applicationId: string;
+  activity: string;
+  defaultTagId: string | null;
+}): Promise<ActivityAssistState> {
+  return invoke("save_activity_assist_rule", {
+    input: { ...input, updatedAt: new Date().toISOString() },
+  });
+}
+
+export function deleteActivityAssistRule(
+  userId: string,
+  applicationId: string,
+): Promise<ActivityAssistState> {
+  return invoke("delete_activity_assist_rule", { userId, applicationId });
 }

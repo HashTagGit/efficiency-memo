@@ -16,6 +16,15 @@ export interface ActivitySuggestion {
   applicationId: string;
   startedAt: string;
   endedAt: string;
+  suggestedActivity: string;
+  suggestedTagId: string | null;
+  ruleApplied: boolean;
+}
+
+export interface ActivityRule {
+  applicationId: string;
+  activity: string;
+  defaultTagId: string | null;
 }
 
 export interface ActivityAssistState {
@@ -23,6 +32,7 @@ export interface ActivityAssistState {
   exclusions: string[];
   recentSamples: ActivitySample[];
   pendingSuggestions: ActivitySuggestion[];
+  rules: ActivityRule[];
   sampleCount: number;
   collectorAvailable: boolean;
 }

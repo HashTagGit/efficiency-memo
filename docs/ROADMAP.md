@@ -24,6 +24,7 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 - Dedicated control-border and keyboard-focus roles across every palette and mode, consumed by shared primitives and native desktop controls.
 - Windows-first Activity Assist collection foundation with opt-in foreground executable sampling, collection pause, exclusions, short retention, inspection, and deletion.
 - Activity Assist stable suggestions with edit, dismiss, and atomic explicit acceptance into confirmed CoreHour sessions.
+- Explicit application mapping rules that prefill later suggestions, remain editable/deletable, appear in portable/readable exports, and surface pending review on Now.
 - Module locator colors for CoreHour, Pause & Hydrate, Charger Reminder, and Settings, while primary actions remain governed by the selected palette.
 - Semantic Alert containers plus explicit button pressed and disabled reactions without component-level product hues.
 
@@ -38,7 +39,7 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 
 **Exit gate:** shared primitives contain no hardcoded product/status hue; keyboard focus and interaction state remain distinguishable without color alone.
 
-### Phase 1 — assisted capture that learns from confirmation
+### Phase 1 — assisted capture that learns from confirmation (shipped)
 
 - Add an optional “remember this app” choice when accepting an Activity Assist suggestion.
 - Apply exact executable-to-activity/tag rules locally and deterministically.

@@ -69,6 +69,7 @@ describe("Now dashboard", () => {
       },
       deviceCount: 2,
       deviceAttentionCount: 1,
+      pendingSuggestionCount: 1,
     });
 
     render(
@@ -84,6 +85,8 @@ describe("Now dashboard", () => {
     expect(await screen.findByText("Review roadmap")).toBeTruthy();
     expect(screen.getByText("Drink water needs your attention.")).toBeTruthy();
     expect(screen.getByText("Devices needing attention: 1")).toBeTruthy();
+    expect(screen.getByText("Pending review: 1")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Review suggestions" })).toBeTruthy();
     expect(screen.getByTestId("dashboard-tool-launcher")).toBeTruthy();
   });
 });

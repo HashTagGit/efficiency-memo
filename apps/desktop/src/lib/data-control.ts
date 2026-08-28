@@ -20,6 +20,7 @@ export interface DataCounts {
   coreHourTags: number;
   pauseHydrateEvents: number;
   activityAssistSamples: number;
+  activityAssistRules: number;
 }
 
 export interface BackupPreview {

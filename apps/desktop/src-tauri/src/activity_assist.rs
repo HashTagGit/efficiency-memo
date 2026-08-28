@@ -37,6 +37,17 @@ pub(crate) struct ActivitySuggestion {
     application_id: String,
     started_at: String,
     ended_at: String,
+    suggested_activity: String,
+    suggested_tag_id: Option<String>,
+    rule_applied: bool,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct ActivityRule {
+    application_id: String,
+    activity: String,
+    default_tag_id: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -46,6 +57,7 @@ pub(crate) struct ActivityAssistState {
     exclusions: Vec<String>,
     recent_samples: Vec<ActivitySample>,
     pending_suggestions: Vec<ActivitySuggestion>,
+    rules: Vec<ActivityRule>,
     sample_count: i64,
     collector_available: bool,
 }
@@ -76,6 +88,17 @@ pub(crate) struct AcceptActivitySuggestionInput {
     new_check_in_id: String,
     new_entry_id: String,
     accepted_at: String,
+    remember_rule: bool,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct SaveActivityRuleInput {
+    user_id: String,
+    application_id: String,
+    activity: String,
+    default_tag_id: Option<String>,
+    updated_at: String,
 }
 
 fn database(app: &AppHandle) -> Result<Connection, String> {
@@ -225,6 +248,41 @@ fn generate_suggestions(
     Ok(())
 }
 
+fn upsert_rule(
+    transaction: &rusqlite::Transaction<'_>,
+    user_id: &str,
+    application_id: &str,
+    activity: &str,
+    default_tag_id: Option<&str>,
+    updated_at: &str,
+) -> Result<(), String> {
+    let application_id = normalize_application_id(application_id)
+        .ok_or_else(|| "invalid-rule".to_string())?;
+    let activity = activity.trim();
+    if activity.is_empty() || activity.chars().count() > 160 || parse_time(updated_at).is_err() {
+        return Err("invalid-rule".to_string());
+    }
+    if let Some(tag_id) = default_tag_id {
+        let valid: bool = transaction
+            .query_row(
+                "SELECT EXISTS(SELECT 1 FROM ch_tags WHERE id = ?1 AND user_id = ?2 AND is_archived = 0)",
+                params![tag_id, user_id],
+                |row| row.get(0),
+            )
+            .map_err(|error| error.to_string())?;
+        if !valid {
+            return Err("invalid-tag".to_string());
+        }
+    }
+    transaction
+        .execute(
+            "INSERT INTO aa_activity_rules (user_id, application_id, activity, default_tag_id, created_at, updated_at) VALUES (?1, ?2, ?3, ?4, ?5, ?5) ON CONFLICT(user_id, application_id) DO UPDATE SET activity = excluded.activity, default_tag_id = excluded.default_tag_id, updated_at = excluded.updated_at",
+            params![user_id, application_id, activity, default_tag_id, updated_at],
+        )
+        .map_err(|error| error.to_string())?;
+    Ok(())
+}
+
 fn load_state(connection: &Connection, user_id: &str) -> Result<ActivityAssistState, String> {
     let preferences = load_preferences(connection, user_id)?;
     let exclusions = {
@@ -258,7 +316,17 @@ fn load_state(connection: &Connection, user_id: &str) -> Result<ActivityAssistSt
     };
     let pending_suggestions = {
         let mut statement = connection
-            .prepare("SELECT id, application_id, started_at, ended_at FROM aa_activity_suggestions WHERE user_id = ?1 AND status = 'pending' ORDER BY started_at DESC LIMIT ?2")
+            .prepare(
+                "SELECT s.id, s.application_id, s.started_at, s.ended_at,
+                        COALESCE(r.activity, s.application_id),
+                        CASE WHEN t.id IS NULL THEN NULL ELSE r.default_tag_id END,
+                        r.application_id IS NOT NULL
+                 FROM aa_activity_suggestions s
+                 LEFT JOIN aa_activity_rules r ON r.user_id = s.user_id AND r.application_id = s.application_id
+                 LEFT JOIN ch_tags t ON t.id = r.default_tag_id AND t.user_id = s.user_id AND t.is_archived = 0
+                 WHERE s.user_id = ?1 AND s.status = 'pending'
+                 ORDER BY s.started_at DESC LIMIT ?2",
+            )
             .map_err(|error| error.to_string())?;
         let values = statement
             .query_map(params![user_id, RECENT_SAMPLE_LIMIT], |row| {
@@ -267,6 +335,32 @@ fn load_state(connection: &Connection, user_id: &str) -> Result<ActivityAssistSt
                     application_id: row.get(1)?,
                     started_at: row.get(2)?,
                     ended_at: row.get(3)?,
+                    suggested_activity: row.get(4)?,
+                    suggested_tag_id: row.get(5)?,
+                    rule_applied: row.get(6)?,
+                })
+            })
+            .map_err(|error| error.to_string())?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|error| error.to_string())?;
+        values
+    };
+    let rules = {
+        let mut statement = connection
+            .prepare(
+                "SELECT r.application_id, r.activity,
+                        CASE WHEN t.id IS NULL THEN NULL ELSE r.default_tag_id END
+                 FROM aa_activity_rules r
+                 LEFT JOIN ch_tags t ON t.id = r.default_tag_id AND t.user_id = r.user_id AND t.is_archived = 0
+                 WHERE r.user_id = ?1 ORDER BY r.application_id",
+            )
+            .map_err(|error| error.to_string())?;
+        let values = statement
+            .query_map([user_id], |row| {
+                Ok(ActivityRule {
+                    application_id: row.get(0)?,
+                    activity: row.get(1)?,
+                    default_tag_id: row.get(2)?,
                 })
             })
             .map_err(|error| error.to_string())?
@@ -286,6 +380,7 @@ fn load_state(connection: &Connection, user_id: &str) -> Result<ActivityAssistSt
         exclusions,
         recent_samples,
         pending_suggestions,
+        rules,
         sample_count,
         collector_available: foreground_application::available(),
     })
@@ -438,16 +533,17 @@ fn accept_suggestion(
         .execute_batch("PRAGMA foreign_keys = ON;")
         .map_err(|error| error.to_string())?;
     let transaction = connection.transaction().map_err(|error| error.to_string())?;
-    let pending: bool = transaction
+    let application_id: Option<String> = transaction
         .query_row(
-            "SELECT EXISTS(SELECT 1 FROM aa_activity_suggestions WHERE id = ?1 AND user_id = ?2 AND status = 'pending')",
+            "SELECT application_id FROM aa_activity_suggestions WHERE id = ?1 AND user_id = ?2 AND status = 'pending'",
             params![input.suggestion_id, input.user_id],
             |row| row.get(0),
         )
+        .optional()
         .map_err(|error| error.to_string())?;
-    if !pending {
-        return Err("not-found".to_string());
-    }
+    let application_id = application_id.ok_or_else(|| "not-found".to_string())?;
+    let remembered_activity = input.activity.clone();
+    let remembered_tag_id = input.default_tag_id.clone();
     let session_id = save_session_block_in_transaction(
         SessionBlockInput {
             id: None,
@@ -476,8 +572,61 @@ fn accept_suggestion(
     if changed != 1 {
         return Err("not-found".to_string());
     }
+    if input.remember_rule {
+        upsert_rule(
+            &transaction,
+            &input.user_id,
+            &application_id,
+            &remembered_activity,
+            remembered_tag_id.as_deref(),
+            &input.accepted_at,
+        )?;
+    }
     transaction.commit().map_err(|error| error.to_string())?;
     load_state(connection, &input.user_id)
+}
+
+#[tauri::command]
+pub(crate) fn save_activity_assist_rule(
+    input: SaveActivityRuleInput,
+    app: AppHandle,
+) -> Result<ActivityAssistState, String> {
+    let mut connection = database(&app)?;
+    connection
+        .execute_batch("PRAGMA foreign_keys = ON;")
+        .map_err(|error| error.to_string())?;
+    let transaction = connection.transaction().map_err(|error| error.to_string())?;
+    upsert_rule(
+        &transaction,
+        &input.user_id,
+        &input.application_id,
+        &input.activity,
+        input.default_tag_id.as_deref(),
+        &input.updated_at,
+    )?;
+    transaction.commit().map_err(|error| error.to_string())?;
+    load_state(&connection, &input.user_id)
+}
+
+#[tauri::command]
+pub(crate) fn delete_activity_assist_rule(
+    user_id: String,
+    application_id: String,
+    app: AppHandle,
+) -> Result<ActivityAssistState, String> {
+    let application_id = normalize_application_id(&application_id)
+        .ok_or_else(|| "invalid-rule".to_string())?;
+    let connection = database(&app)?;
+    let changed = connection
+        .execute(
+            "DELETE FROM aa_activity_rules WHERE user_id = ?1 AND application_id = ?2",
+            params![user_id, application_id],
+        )
+        .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("not-found".to_string());
+    }
+    load_state(&connection, &user_id)
 }
 
 pub(crate) fn setup(app: AppHandle) {
@@ -535,6 +684,9 @@ mod tests {
             .unwrap();
         connection
             .execute_batch(include_str!("../migrations/0013_activity_assist_suggestions.sql"))
+            .unwrap();
+        connection
+            .execute_batch(include_str!("../migrations/0014_activity_assist_rules.sql"))
             .unwrap();
         connection
             .execute(
@@ -657,6 +809,7 @@ mod tests {
             new_check_in_id: "accepted-check-in".into(),
             new_entry_id: "accepted-entry".into(),
             accepted_at: "2026-08-28T08:05:00Z".into(),
+            remember_rule: false,
         };
 
         connection
@@ -688,5 +841,63 @@ mod tests {
             )
             .unwrap();
         assert_eq!(accepted, ("accepted".into(), "accepted-session".into()));
+    }
+
+    #[test]
+    fn remembered_rule_prefills_a_later_suggestion_without_confirming_it() {
+        let mut connection = database();
+        connection
+            .execute(
+                "INSERT INTO aa_activity_samples VALUES ('first', 'local-user', 'code.exe', '2026-08-28T08:00:00Z', '2026-08-28T08:03:00Z')",
+                [],
+            )
+            .unwrap();
+        generate_suggestions(
+            &connection,
+            "local-user",
+            DateTime::parse_from_rfc3339("2026-08-28T08:05:00Z").unwrap(),
+        )
+        .unwrap();
+        accept_suggestion(
+            AcceptActivitySuggestionInput {
+                user_id: "local-user".into(),
+                suggestion_id: "suggestion:first".into(),
+                activity: "Implementation".into(),
+                default_tag_id: None,
+                started_at: "2026-08-28T08:00:00Z".into(),
+                ended_at: "2026-08-28T08:03:00Z".into(),
+                start_local_date: "2026-08-28".into(),
+                end_local_date: "2026-08-28".into(),
+                new_session_id: "first-session".into(),
+                new_check_in_id: "first-check-in".into(),
+                new_entry_id: "first-entry".into(),
+                accepted_at: "2026-08-28T08:05:00Z".into(),
+                remember_rule: true,
+            },
+            &mut connection,
+        )
+        .unwrap();
+        connection
+            .execute(
+                "INSERT INTO aa_activity_samples VALUES ('second', 'local-user', 'code.exe', '2026-08-28T09:00:00Z', '2026-08-28T09:03:00Z')",
+                [],
+            )
+            .unwrap();
+        generate_suggestions(
+            &connection,
+            "local-user",
+            DateTime::parse_from_rfc3339("2026-08-28T09:05:00Z").unwrap(),
+        )
+        .unwrap();
+
+        let state = load_state(&connection, "local-user").unwrap();
+        assert_eq!(state.rules.len(), 1);
+        assert_eq!(state.pending_suggestions.len(), 1);
+        assert_eq!(state.pending_suggestions[0].suggested_activity, "Implementation");
+        assert!(state.pending_suggestions[0].rule_applied);
+        let sessions: i64 = connection
+            .query_row("SELECT COUNT(*) FROM ch_sessions", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(sessions, 1);
     }
 }

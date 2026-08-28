@@ -56,6 +56,26 @@ interface SettingExportRow {
   value: string;
 }
 
+interface ActivityAssistPreferencesExportRow {
+  enabled: number;
+  paused: number;
+  retention_hours: number;
+  updated_at: string;
+}
+
+interface ActivityExclusionExportRow {
+  application_id: string;
+  created_at: string;
+}
+
+interface ActivityRuleExportRow {
+  application_id: string;
+  activity: string;
+  default_tag_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 interface ReminderExportRow {
   kind: string;
   enabled: number;
@@ -95,6 +115,11 @@ interface CoreHourExportData {
   checkIns: CheckInExportRow[];
   entries: CheckInEntryExportRow[];
   settings: SettingExportRow[];
+  activityAssist: {
+    preferences: ActivityAssistPreferencesExportRow | null;
+    exclusions: ActivityExclusionExportRow[];
+    rules: ActivityRuleExportRow[];
+  };
 }
 
 interface PauseHydrateExportData {
@@ -139,15 +164,26 @@ async function loadCoreHourData(userId: string): Promise<CoreHourExportData> {
     [userId],
   );
   if (Number(active?.active) !== 0) throw new Error("active-session");
-  const [sessions, plans, tags, checkIns, entries, settings] = await Promise.all([
+  const [sessions, plans, tags, checkIns, entries, settings, assistPreferences, exclusions, rules] = await Promise.all([
     dbSelect<SessionExportRow>("SELECT id, started_at, ended_at, interval_minutes, elapsed_seconds, activity, default_tag_id, is_favorite FROM ch_sessions WHERE user_id = $1 ORDER BY started_at", [userId]),
     dbSelect<PlanExportRow>("SELECT id, title, tag_id, started_at, ended_at, status, session_id, created_at, updated_at FROM ch_plans WHERE user_id = $1 ORDER BY started_at", [userId]),
     dbSelect<TagExportRow>("SELECT id, name, color, is_archived, created_at FROM ch_tags WHERE user_id = $1 ORDER BY created_at", [userId]),
     dbSelect<CheckInExportRow>("SELECT ci.id, ci.session_id, ci.checked_at, ci.skipped, ci.note, ci.duration_seconds FROM ch_check_ins ci JOIN ch_sessions s ON s.id = ci.session_id WHERE s.user_id = $1 ORDER BY ci.checked_at", [userId]),
     dbSelect<CheckInEntryExportRow>("SELECT e.id, e.check_in_id, e.tag_id, e.percentage FROM ch_check_in_entries e JOIN ch_check_ins ci ON ci.id = e.check_in_id JOIN ch_sessions s ON s.id = ci.session_id WHERE s.user_id = $1 ORDER BY ci.checked_at", [userId]),
     dbSelect<SettingExportRow>("SELECT key, value FROM ch_settings ORDER BY key"),
+    dbSelect<ActivityAssistPreferencesExportRow>("SELECT enabled, paused, retention_hours, updated_at FROM aa_preferences WHERE user_id = $1", [userId]),
+    dbSelect<ActivityExclusionExportRow>("SELECT application_id, created_at FROM aa_exclusions WHERE user_id = $1 ORDER BY application_id", [userId]),
+    dbSelect<ActivityRuleExportRow>("SELECT application_id, activity, default_tag_id, created_at, updated_at FROM aa_activity_rules WHERE user_id = $1 ORDER BY application_id", [userId]),
   ]);
-  return { sessions, plans, tags, checkIns, entries, settings };
+  return {
+    sessions,
+    plans,
+    tags,
+    checkIns,
+    entries,
+    settings,
+    activityAssist: { preferences: assistPreferences[0] ?? null, exclusions, rules },
+  };
 }
 
 async function loadPauseHydrateData(userId: string): Promise<PauseHydrateExportData> {
