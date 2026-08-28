@@ -83,6 +83,63 @@ function SummaryPanel({
   );
 }
 
+interface AttentionItem {
+  id: string;
+  owner: string;
+  title: string;
+  description: string;
+  tone: string;
+  actionLabel: string;
+  route: string;
+}
+
+function AttentionFeed({
+  items,
+  onOpen,
+  title,
+  hint,
+  statusLabel,
+  statusTone,
+  retryLabel,
+  onRetry,
+}: {
+  items: AttentionItem[];
+  onOpen: (route: string) => void;
+  title: string;
+  hint: string;
+  statusLabel: string | null;
+  statusTone: string;
+  retryLabel: string;
+  onRetry?: () => void;
+}) {
+  return (
+    <section className="border-t border-border pt-6" aria-labelledby="dashboard-attention-heading">
+      <h2 id="dashboard-attention-heading" className="text-base font-semibold text-foreground">{title}</h2>
+      <p className="mt-1 text-sm text-muted">{hint}</p>
+      {items.length > 0 && (
+        <ul className="mt-4 divide-y divide-border border-y border-border">
+          {items.map((item) => (
+            <li key={item.id} data-testid="dashboard-attention-item" className="grid gap-3 py-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center">
+              <div className={`border-l-2 pl-3 ${item.tone}`}>
+                <p className="text-xs font-semibold">{item.owner}</p>
+                <h3 className="mt-1 text-sm font-semibold text-foreground">{item.title}</h3>
+                <p className="mt-1 text-sm leading-relaxed text-muted">{item.description}</p>
+              </div>
+              <Button size="sm" variant="secondary" onClick={() => onOpen(item.route)}>{item.actionLabel}</Button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {statusLabel && (
+        <div className={`mt-4 flex flex-wrap items-center justify-between gap-3 border-l-2 py-2 pl-3 ${statusTone}`}>
+          <p className="text-sm text-muted" role="status">{statusLabel}</p>
+          {onRetry && <Button size="sm" variant="secondary" onClick={onRetry}>{retryLabel}</Button>}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function DashboardPage() {
   const navigate = useNavigate();
   const { locale, t } = useI18n();
@@ -90,11 +147,12 @@ export function DashboardPage() {
   const userId = getCurrentUser()?.id ?? null;
   const { activeSession } = useSession();
   const timer = useCoreHourTimer();
-  const { loading: coreLoading, loadError: coreLoadError } = useCoreHourLoadState();
+  const { loading: coreLoading, loadError: coreLoadError, refresh: refreshCoreHour } = useCoreHourLoadState();
   const {
     state: pauseState,
     loading: pauseLoading,
     loadError: pauseLoadError,
+    refresh: refreshPauseHydrate,
   } = usePauseHydrate();
   const [nowData, setNowData] = useState<DashboardNowData | null>(null);
   const [dataLoading, setDataLoading] = useState(true);
@@ -126,14 +184,19 @@ export function DashboardPage() {
     return () => { requestRef.current += 1; };
   }, [load]);
 
+  const retryAttention = useCallback(async () => {
+    await Promise.all([refreshCoreHour(), refreshPauseHydrate(), load()]);
+  }, [load, refreshCoreHour, refreshPauseHydrate]);
+
   const timeFormatter = useMemo(
     () => new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }),
     [locale],
   );
   const nextPlan = nowData?.nextPlan ?? null;
-  const pendingReminder = (["break", "hydration"] as const).find(
+  const pendingReminders = (["break", "hydration"] as const).filter(
     (kind) => pauseState?.reminders[kind].pendingAt,
   );
+  const pendingReminder = pendingReminders[0];
   const nextReminder = (["break", "hydration"] as const)
     .filter((kind) => pauseState?.reminders[kind].enabled && pauseState.reminders[kind].nextDueAt)
     .sort((left, right) => (
@@ -205,6 +268,80 @@ export function DashboardPage() {
         : nowData.deviceAttentionCount > 0
           ? t("dashboard.deviceAttention", { count: nowData.deviceAttentionCount })
           : t("dashboard.devicesOnSchedule", { count: nowData.deviceCount });
+  const attentionItems: AttentionItem[] = [];
+  if (timer.uncertainInterval) {
+    attentionItems.push({
+      id: "uncertain-time",
+      owner: t("nav.coreHour"),
+      title: t("dashboard.attentionUncertainTitle"),
+      description: t("dashboard.attentionUncertainDescription"),
+      tone: "border-suggested text-suggested",
+      actionLabel: t("dashboard.reviewTime"),
+      route: "/tools/core-hour",
+    });
+  }
+  if (nowData?.dueReviewKind) {
+    const weekly = nowData.dueReviewKind === "weekly";
+    attentionItems.push({
+      id: "review",
+      owner: t("nav.coreHour"),
+      title: t(weekly ? "dashboard.attentionWeeklyReviewTitle" : "dashboard.attentionDailyReviewTitle"),
+      description: t("dashboard.attentionReviewDescription"),
+      tone: "border-focus text-focus",
+      actionLabel: t(weekly ? "dashboard.openWeeklyReview" : "dashboard.openDailyReview"),
+      route: weekly ? "/tools/core-hour/review/week" : "/tools/core-hour/review",
+    });
+  }
+  if (pendingReminder) {
+    const multiple = pendingReminders.length > 1;
+    attentionItems.push({
+      id: "reminder",
+      owner: t("pauseHydrate.title"),
+      title: multiple
+        ? t("dashboard.attentionMultipleRemindersTitle")
+        : t("dashboard.attentionReminderTitle", { name: t(`pauseHydrate.${pendingReminder}`) }),
+      description: t("dashboard.attentionReminderDescription"),
+      tone: multiple
+        ? "border-warning text-warning"
+        : pendingReminder === "hydration" ? "border-hydration text-hydration" : "border-recovery text-recovery",
+      actionLabel: t("dashboard.openReminders"),
+      route: "/tools/pause-hydrate",
+    });
+  }
+  const pendingSuggestionCount = nowData?.pendingSuggestionCount ?? 0;
+  if (pendingSuggestionCount > 0) {
+    attentionItems.push({
+      id: "activity-suggestions",
+      owner: t("activityAssist.title"),
+      title: t("dashboard.activitySuggestions"),
+      description: t("dashboard.pendingSuggestionCount", { count: pendingSuggestionCount }),
+      tone: "border-suggested text-suggested",
+      actionLabel: t("dashboard.reviewSuggestions"),
+      route: "/tools/core-hour/assist",
+    });
+  }
+  const deviceAttentionCount = nowData?.deviceAttentionCount ?? 0;
+  if (deviceAttentionCount > 0) {
+    attentionItems.push({
+      id: "devices",
+      owner: t("chargerReminder.title"),
+      title: t("dashboard.devices"),
+      description: t("dashboard.attentionDeviceDescription", { count: deviceAttentionCount }),
+      tone: "border-warning text-warning",
+      actionLabel: t("dashboard.openDevices"),
+      route: "/tools/charger-reminder",
+    });
+  }
+  const attentionLoading = coreLoading || pauseLoading || dataLoading;
+  const attentionUnavailable = coreLoadError || pauseLoadError || dataError;
+  const attentionStatusLabel = attentionLoading
+    ? t("dashboard.attentionLoading")
+    : attentionUnavailable
+      ? t("dashboard.attentionUnavailable")
+      : attentionItems.length === 0 ? t("dashboard.attentionClear") : null;
+  const attentionStatusTone = attentionLoading
+    ? "border-info"
+    : attentionUnavailable ? "border-warning" : "border-success";
 
   return (
     <div className="mx-auto max-w-6xl space-y-8">
@@ -224,15 +361,16 @@ export function DashboardPage() {
         </Alert>
       )}
 
-      {(nowData?.pendingSuggestionCount ?? 0) > 0 && (
-        <section className="flex flex-wrap items-center justify-between gap-3 border-l-2 border-suggested bg-suggested/5 px-4 py-3" aria-label={t("dashboard.activitySuggestions")}>
-          <div>
-            <p className="text-sm font-semibold text-foreground">{t("dashboard.activitySuggestions")}</p>
-            <p className="mt-1 text-sm text-muted">{t("dashboard.pendingSuggestionCount", { count: nowData!.pendingSuggestionCount })}</p>
-          </div>
-          <Button size="sm" variant="secondary" onClick={() => navigate("/tools/core-hour/assist")}>{t("dashboard.reviewSuggestions")}</Button>
-        </section>
-      )}
+      <AttentionFeed
+        items={attentionItems.slice(0, 5)}
+        onOpen={navigate}
+        title={t("dashboard.attentionTitle")}
+        hint={t("dashboard.attentionHint")}
+        statusLabel={attentionStatusLabel}
+        statusTone={attentionStatusTone}
+        retryLabel={t("dashboard.attentionRetry")}
+        onRetry={attentionUnavailable && !attentionLoading ? () => { void retryAttention(); } : undefined}
+      />
 
       <section className="grid gap-3 sm:grid-cols-2" data-testid="dashboard-now-grid" aria-label={t("dashboard.nowSummary")}>
         <SummaryPanel

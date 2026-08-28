@@ -62,8 +62,8 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 
 ### Phase 3 — cross-module attention and reminder completion
 
-- Evolve Now into a maximum-five-item attention feed with one owner and one next action per item.
-- Include pending suggestions, uncertain time, due recovery/hydration, and device attention with deep links to the owning workflow.
+- Shipped: a maximum-five-item Now attention feed with one owner and one next action per item.
+- Shipped: coalesced pending reviews, suggestions, uncertain time, due recovery/hydration, and device attention with deep links to the owning workflow.
 - Add transition-triggered native Charger Reminder notifications with snooze and charged actions through one authoritative command path.
 
 **Exit gate:** actions do not duplicate state paths, and dismiss/snooze survives restart.

@@ -13,6 +13,16 @@ A domain glossary for EfficiencyMemo. Use it as a shared vocabulary when discuss
 - **SQLite Storage** — Local database accessed via `tauri-plugin-sql`; migrations live in `src-tauri/migrations/`.
 - **Archived Surface** — The original `apps/web/` Next.js + Supabase web app, removed in v0.1.0-desktop; available in git history if needed.
 
+## Now
+
+**Attention Item**:
+A transient pointer to one unresolved state in an owning tool, with one next action; it is not stored as a separate task.
+_Avoid_: Notification, inbox item, task
+
+**Attention Feed**:
+The bounded Now list of Attention Items, ordered by immediacy across tools.
+_Avoid_: Notification center, task inbox
+
 ## Pause & Hydrate
 
 **Pause & Hydrate**:
