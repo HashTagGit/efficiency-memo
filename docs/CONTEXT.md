@@ -5,10 +5,10 @@ A domain glossary for EfficiencyMemo. Use it as a shared vocabulary when discuss
 ## Glossary
 
 - **Desktop Surface** — The Tauri v2 application (`apps/desktop/`); the project's sole deployable surface.
-- **CoreHour** — The active product workflow: local session timing, periodic check-ins, tags, and daily history.
-- **Deferred Code** — Charger Reminder is retained but disabled; WebDAV sync is outside the current product scope. Neither should change without an explicit product decision.
+- **CoreHour** — The local focus workflow for session timing, periodic check-ins, plans, tags, timelines, and review.
+- **Charger Reminder** — The local device workflow for recording full charges and estimating when battery-powered devices need attention.
 - **Shared Package** — Cross-cutting code in `packages/shared/` (types and constants) and `packages/ui/` (React + Tailwind components); consumed by the desktop surface.
-- **Tool Registry** — The feature-manifest registry that exposes CoreHour and keeps legacy features disabled.
+- **Tool Registry** — The feature-manifest registry that exposes the enabled local tools to the shell and Now surface.
 - **Local Profile** — The single SQLite user selected or created automatically at startup; there is no sign-in step.
 - **SQLite Storage** — Local database accessed via `tauri-plugin-sql`; migrations live in `src-tauri/migrations/`.
 - **Archived Surface** — The original `apps/web/` Next.js + Supabase web app, removed in v0.1.0-desktop; available in git history if needed.
@@ -56,6 +56,32 @@ _Avoid_: Confirmed time, activity log
 **Included Time**:
 The portion of an Uncertain Interval the user explicitly keeps in elapsed focus after review.
 _Avoid_: Automatic idle estimate
+
+## Activity Assist
+
+**Activity Sample**:
+A short-lived local observation of the foreground application identifier and its observation time; it is not confirmed focus time.
+_Avoid_: Actual Session, browsing history, activity log
+
+**Activity Suggestion**:
+A locally grouped candidate time range derived from Activity Samples and waiting for user review.
+_Avoid_: Automatic session, tracked time
+
+**Suggestion Acceptance**:
+The explicit action that creates an Actual Session through the existing validated manual-session path and resolves the Activity Suggestion.
+_Avoid_: Auto-confirmation, background import
+
+**Collection Pause**:
+The user-visible state in which no Activity Samples are recorded while Activity Assist remains configured.
+_Avoid_: Sign out, disabled reminder
+
+**Application Exclusion**:
+A local rule that prevents an application identifier from being retained or suggested.
+_Avoid_: Website block, productivity category
+
+**Raw Retention**:
+The short maximum lifetime of Activity Samples before automatic deletion.
+_Avoid_: History retention, backup period
 
 ## Data control
 
