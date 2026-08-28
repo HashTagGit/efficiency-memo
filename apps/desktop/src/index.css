@@ -291,6 +291,16 @@
   --shadow-lg: 0 28px 80px rgba(16, 24, 32, 0.22);
 }
 
+/* Tool identity changes emphasis without changing status meanings. */
+.tool-accent-scope {
+  --color-active: color-mix(in srgb, var(--module-accent) 14%, transparent);
+}
+
+.tool-accent-focus { --module-accent: var(--focus); }
+.tool-accent-actual { --module-accent: var(--actual); }
+.tool-accent-hydration { --module-accent: var(--hydration); }
+.tool-accent-privacy { --module-accent: var(--privacy); }
+
 /* ─────────────────────────────────────────────────────────────
    Tailwind v4 @theme directive — maps tokens to utilities
    ───────────────────────────────────────────────────────────── */
@@ -307,11 +317,20 @@
   --color-focus-ring: var(--focus-ring);
   --color-accent: var(--accent);
   --color-accent-strong: var(--accent-strong);
+  --color-accent-pressed: var(--accent-pressed);
   --color-on-accent: var(--on-accent);
   --color-success: var(--success);
+  --color-success-container: var(--success-container);
+  --color-success-border: var(--success-border);
   --color-danger: var(--danger);
+  --color-danger-container: var(--danger-container);
+  --color-danger-border: var(--danger-border);
   --color-info: var(--info);
+  --color-info-container: var(--info-container);
+  --color-info-border: var(--info-border);
   --color-warning: var(--warning);
+  --color-warning-container: var(--warning-container);
+  --color-warning-border: var(--warning-border);
   --color-focus: var(--focus);
   --color-planned: var(--planned);
   --color-actual: var(--actual);
@@ -351,7 +370,19 @@
   box-sizing: border-box;
 }
 
-html { color-scheme: dark; }
+html {
+  color-scheme: dark;
+  --module-accent: var(--accent);
+  --accent-pressed: color-mix(in srgb, var(--accent) 76%, var(--foreground));
+  --info-container: color-mix(in srgb, var(--info) 12%, transparent);
+  --info-border: color-mix(in srgb, var(--info) 34%, transparent);
+  --success-container: color-mix(in srgb, var(--success) 12%, transparent);
+  --success-border: color-mix(in srgb, var(--success) 34%, transparent);
+  --warning-container: color-mix(in srgb, var(--warning) 12%, transparent);
+  --warning-border: color-mix(in srgb, var(--warning) 34%, transparent);
+  --danger-container: color-mix(in srgb, var(--danger) 12%, transparent);
+  --danger-border: color-mix(in srgb, var(--danger) 34%, transparent);
+}
 
 body {
   background: var(--background);

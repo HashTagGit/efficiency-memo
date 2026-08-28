@@ -14,10 +14,10 @@ export interface AlertProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 
 const variantClasses: Record<AlertVariant, string> = {
-  info: 'bg-accent/10 text-accent border-accent/20',
-  success: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
-  warning: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
-  error: 'bg-danger/10 text-danger border-danger/20',
+  info: 'bg-info-container text-info border-info-border',
+  success: 'bg-success-container text-success border-success-border',
+  warning: 'bg-warning-container text-warning border-warning-border',
+  error: 'bg-danger-container text-danger border-danger-border',
 };
 
 function InfoIcon() {

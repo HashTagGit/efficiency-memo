@@ -16,6 +16,13 @@ function getActiveToolId(pathname: string): string {
   return "";
 }
 
+const toolAccentClasses: Record<string, string> = {
+  "core-hour": "tool-accent-focus",
+  "charger-reminder": "tool-accent-actual",
+  "pause-hydrate": "tool-accent-hydration",
+  settings: "tool-accent-privacy",
+};
+
 export function ShellLayout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -58,6 +65,7 @@ export function ShellLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <Shell
+      className={toolAccentClasses[activeToolId] ? `tool-accent-scope ${toolAccentClasses[activeToolId]}` : undefined}
       tools={allManifests}
       activeToolId={activeToolId}
       onToolSelect={handleToolSelect}

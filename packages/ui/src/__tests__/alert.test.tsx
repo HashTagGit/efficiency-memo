@@ -29,36 +29,36 @@ describe('Alert', () => {
   });
 
   describe('variant classes', () => {
-    it('info variant applies accent token classes', () => {
+    it('info variant applies semantic token classes', () => {
       render(<Alert variant="info">Info</Alert>);
       const alert = screen.getByTestId('alert');
-      expect(alert.className).toMatch(/bg-accent\/10/);
-      expect(alert.className).toMatch(/text-accent/);
-      expect(alert.className).toMatch(/border-accent\/20/);
+      expect(alert.className).toMatch(/bg-info-container/);
+      expect(alert.className).toMatch(/text-info/);
+      expect(alert.className).toMatch(/border-info-border/);
     });
 
-    it('success variant applies emerald classes', () => {
+    it('success variant applies semantic token classes', () => {
       render(<Alert variant="success">Success</Alert>);
       const alert = screen.getByTestId('alert');
-      expect(alert.className).toMatch(/bg-emerald-500\/10/);
-      expect(alert.className).toMatch(/text-emerald-400/);
-      expect(alert.className).toMatch(/border-emerald-500\/20/);
+      expect(alert.className).toMatch(/bg-success-container/);
+      expect(alert.className).toMatch(/text-success/);
+      expect(alert.className).toMatch(/border-success-border/);
     });
 
-    it('warning variant applies amber classes', () => {
+    it('warning variant applies semantic token classes', () => {
       render(<Alert variant="warning">Warning</Alert>);
       const alert = screen.getByTestId('alert');
-      expect(alert.className).toMatch(/bg-amber-500\/10/);
-      expect(alert.className).toMatch(/text-amber-400/);
-      expect(alert.className).toMatch(/border-amber-500\/20/);
+      expect(alert.className).toMatch(/bg-warning-container/);
+      expect(alert.className).toMatch(/text-warning/);
+      expect(alert.className).toMatch(/border-warning-border/);
     });
 
-    it('error variant applies danger token classes', () => {
+    it('error variant applies semantic token classes', () => {
       render(<Alert variant="error">Error</Alert>);
       const alert = screen.getByTestId('alert');
-      expect(alert.className).toMatch(/bg-danger\/10/);
+      expect(alert.className).toMatch(/bg-danger-container/);
       expect(alert.className).toMatch(/text-danger/);
-      expect(alert.className).toMatch(/border-danger\/20/);
+      expect(alert.className).toMatch(/border-danger-border/);
     });
   });
 

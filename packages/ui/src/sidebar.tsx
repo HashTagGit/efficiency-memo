@@ -128,7 +128,7 @@ export function Sidebar({
                     relative flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left
                     transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring
                     ${isActive
-                      ? 'bg-[var(--color-active)] text-foreground before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-accent'
+                      ? 'bg-[var(--color-active)] text-foreground before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-[var(--module-accent)]'
                       : 'text-muted hover:bg-[var(--color-sidebar-hover)] hover:text-foreground'
                     }
                   `}
@@ -164,7 +164,7 @@ export function Sidebar({
               data-testid={`sidebar-tool-item-${tool.id}`}
               data-active={isActive}
               onClick={() => onToolSelect(tool.id)}
-              className={`relative flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${isActive ? 'bg-[var(--color-active)] text-foreground before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-accent' : 'text-muted hover:bg-[var(--color-sidebar-hover)] hover:text-foreground'}`}
+              className={`relative flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring ${isActive ? 'bg-[var(--color-active)] text-foreground before:absolute before:inset-y-2 before:left-0 before:w-0.5 before:rounded-full before:bg-[var(--module-accent)]' : 'text-muted hover:bg-[var(--color-sidebar-hover)] hover:text-foreground'}`}
             >
               <span className="flex h-5 w-5 flex-shrink-0 items-center justify-center"><ToolIcon name={tool.icon} /></span>
               <span data-testid="tool-name" className={`truncate text-sm font-medium ${isCollapsed ? 'hidden' : 'block'}`}>{tool.name}</span>

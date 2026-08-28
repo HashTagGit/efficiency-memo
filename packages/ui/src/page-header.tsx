@@ -17,7 +17,7 @@ export const PageHeader = React.forwardRef<HTMLDivElement, PageHeaderProps>(
 
     return (
       <div ref={ref} className={containerClasses} data-testid="page-header" {...rest}>
-        <div>
+        <div className="border-l-[3px] border-[var(--module-accent)] pl-4">
           <h1 className="text-3xl font-bold text-foreground font-display">{title}</h1>
           {subtitle && <p className="text-muted mt-1">{subtitle}</p>}
         </div>

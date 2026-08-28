@@ -53,6 +53,11 @@ describe('PageHeader', () => {
     expect(title.className).toMatch(/font-display/);
   });
 
+  it('uses the active tool accent as a restrained section cue', () => {
+    render(<PageHeader title="My Page" />);
+    expect(screen.getByText('My Page').parentElement?.className).toMatch(/module-accent/);
+  });
+
   it('applies text-muted class to subtitle', () => {
     render(
       <PageHeader title="Title" subtitle="Subtitle text" />,

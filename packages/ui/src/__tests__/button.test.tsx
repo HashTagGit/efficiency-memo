@@ -19,6 +19,7 @@ describe('Button', () => {
     render(<Button>Primary</Button>);
     const btn = screen.getByText('Primary');
     expect(btn.className).toMatch(/bg-accent/);
+    expect(btn.className).toMatch(/active:bg-accent-pressed/);
   });
 
   it('renders secondary variant', () => {
@@ -90,7 +91,10 @@ describe('Button', () => {
 
   it('is disabled when disabled prop is true', () => {
     render(<Button disabled>Disabled</Button>);
-    expect(screen.getByRole('button')).toBeDisabled();
+    const button = screen.getByRole('button');
+    expect(button).toBeDisabled();
+    expect(button.className).toMatch(/disabled:bg-surface-strong/);
+    expect(button.className).toMatch(/disabled:text-muted/);
   });
 
   it('accepts data-testid', () => {
