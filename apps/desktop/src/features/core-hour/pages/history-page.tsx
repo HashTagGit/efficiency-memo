@@ -225,7 +225,7 @@ export default function HistoryPage({ userId }: { userId: string }) {
             <select
               value={exportRange}
               onChange={(ev) => setExportRange(ev.target.value as ExportRange)}
-              className="rounded-lg border border-border bg-surface text-foreground text-sm px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-accent"
+              className="rounded-lg border border-control-border bg-surface text-foreground text-sm px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-focus-ring"
               aria-label={t("coreHour.exportRange")}
             >
               <option value="7d">{t("coreHour.last7Days")}</option>
@@ -241,7 +241,7 @@ export default function HistoryPage({ userId }: { userId: string }) {
 
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border bg-surface p-2">
         <div className="flex flex-wrap items-center gap-2">
-          <div className="flex rounded-md border border-border p-0.5" role="group" aria-label={t("coreHour.timelineView")}>
+          <div className="flex rounded-md border border-control-border p-0.5" role="group" aria-label={t("coreHour.timelineView")}>
             {(["day", "week"] as const).map((mode) => (
               <Button
                 key={mode}
@@ -282,7 +282,7 @@ export default function HistoryPage({ userId }: { userId: string }) {
           type="date"
           value={date}
           onChange={(ev) => setDate(ev.target.value)}
-          className="rounded-lg border border-border bg-surface text-foreground px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-accent"
+          className="rounded-lg border border-control-border bg-surface text-foreground px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-focus-ring"
           aria-label={t("coreHour.date")}
         />
       </div>
@@ -349,7 +349,7 @@ export default function HistoryPage({ userId }: { userId: string }) {
                 <select
                   value={tagId}
                   onChange={(ev) => setTagId(ev.target.value)}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                  className="w-full rounded-lg border border-control-border bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-focus-ring"
                 >
                   <option value="">{t("coreHour.uncategorized")}</option>
                   {tags.map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}
@@ -357,7 +357,7 @@ export default function HistoryPage({ userId }: { userId: string }) {
                 <textarea
                   value={note}
                   onChange={(ev) => setNote(ev.target.value)}
-                  className="min-h-20 w-full rounded-lg border border-border bg-background p-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+                  className="min-h-20 w-full rounded-lg border border-control-border bg-background p-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-focus-ring"
                   placeholder={t("coreHour.addNote")}
                 />
                 <div className="flex gap-2">

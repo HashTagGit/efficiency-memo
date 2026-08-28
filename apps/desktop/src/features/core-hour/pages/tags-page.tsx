@@ -30,10 +30,10 @@ export default function TagsPage({ userId }: { userId: string }) {
     <div className="max-w-xl space-y-6" data-testid="ch-tags-page">
       <div className="flex flex-wrap items-end gap-2">
         <label className="flex-1 text-sm font-medium">{t("coreHour.newTag")}
-          <input value={name} onChange={(event) => setName(event.target.value)} className="mt-1 w-full rounded-md border bg-background px-3 py-2" placeholder={t("coreHour.deepWork")} />
+          <input value={name} onChange={(event) => setName(event.target.value)} className="mt-1 w-full rounded-md border border-control-border bg-background px-3 py-2 focus:outline-none focus:ring-2 focus:ring-focus-ring" placeholder={t("coreHour.deepWork")} />
         </label>
         <label className="text-sm font-medium">{t("coreHour.color")}
-          <input type="color" value={color} onChange={(event) => setColor(event.target.value)} className="mt-1 block h-10 w-12 rounded-md border" />
+          <input type="color" value={color} onChange={(event) => setColor(event.target.value)} className="mt-1 block h-10 w-12 rounded-md border border-control-border focus:outline-none focus:ring-2 focus:ring-focus-ring" />
         </label>
         <Button type="button" disabled={!name.trim()} onClick={() => void createTag()}>{t("coreHour.addTag")}</Button>
       </div>
@@ -42,7 +42,7 @@ export default function TagsPage({ userId }: { userId: string }) {
           <li key={tag.id} className="flex items-center gap-3 border-t py-3">
             <span className="h-3 w-3 rounded-full" style={{ backgroundColor: tag.color }} aria-hidden="true" />
             {editingId === tag.id ? (
-              <input autoFocus value={editingName} onChange={(event) => setEditingName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void saveRename(); }} className="flex-1 rounded-md border bg-background px-2 py-1" />
+              <input autoFocus value={editingName} onChange={(event) => setEditingName(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void saveRename(); }} className="flex-1 rounded-md border border-control-border bg-background px-2 py-1 focus:outline-none focus:ring-2 focus:ring-focus-ring" />
             ) : <span className="flex-1 text-sm">{tag.name}</span>}
             {!tag.is_archived && (editingId === tag.id ? <Button type="button" size="sm" onClick={() => void saveRename()}>{t("coreHour.save")}</Button> : <>
               <Button type="button" variant="secondary" size="sm" onClick={() => { setEditingId(tag.id); setEditingName(tag.name); }}>{t("coreHour.rename")}</Button>

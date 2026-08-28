@@ -28,7 +28,7 @@ interface ScheduleDraft {
 const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6] as const;
 
 const timeInputClass =
-  "mt-1.5 h-10 w-full min-w-0 rounded-md border border-border bg-background px-3 tabular-nums text-foreground focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50";
+  "mt-1.5 h-10 w-full min-w-0 rounded-md border border-control-border bg-background px-3 tabular-nums text-foreground focus:outline-none focus:ring-2 focus:ring-focus-ring disabled:opacity-50";
 
 function minutesToTime(minutes: number): string {
   return `${String(Math.floor(minutes / 60) % 24).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
@@ -325,7 +325,7 @@ export default function PauseHydratePage() {
 
         <fieldset>
           <legend className="text-sm font-medium text-foreground">{t("pauseHydrate.activeDays")}</legend>
-          <div className="mt-2 flex flex-wrap rounded-md border border-border p-0.5">
+          <div className="mt-2 flex flex-wrap rounded-md border border-control-border p-0.5">
             {WEEKDAYS.map((day) => {
               const active = schedule.activeWeekdays.includes(day);
               return (
@@ -380,7 +380,7 @@ export default function PauseHydratePage() {
                 type="checkbox"
                 checked={schedule.quietEnabled}
                 onChange={(event) => updateSchedule({ quietEnabled: event.target.checked })}
-                className="h-4 w-4 accent-[var(--accent)]"
+                className="h-4 w-4 rounded border border-control-border accent-[var(--accent)] focus:ring-2 focus:ring-focus-ring"
               />
               {t("pauseHydrate.quietHoursEnabled")}
             </label>
@@ -450,7 +450,7 @@ export default function PauseHydratePage() {
                   checked={schedule.naturalBreakEnabled}
                   disabled={naturalBreakAvailable !== true && !schedule.naturalBreakEnabled}
                   onChange={(event) => updateSchedule({ naturalBreakEnabled: event.target.checked })}
-                  className="h-4 w-4 accent-[var(--accent)] disabled:opacity-50"
+                  className="h-4 w-4 rounded border border-control-border accent-[var(--accent)] focus:ring-2 focus:ring-focus-ring disabled:opacity-50"
                 />
                 {t("pauseHydrate.naturalBreakEnabled")}
               </label>
@@ -466,7 +466,7 @@ export default function PauseHydratePage() {
                     value={schedule.naturalBreakMinutes}
                     aria-invalid={naturalBreakInvalid}
                     onChange={(event) => updateSchedule({ naturalBreakMinutes: Number(event.target.value) })}
-                    className="h-10 w-24 min-w-0 rounded-md border border-border bg-background px-3 tabular-nums text-foreground focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
+                    className="h-10 w-24 min-w-0 rounded-md border border-control-border bg-background px-3 tabular-nums text-foreground focus:outline-none focus:ring-2 focus:ring-focus-ring disabled:opacity-50"
                   />
                   <span>{t("coreHour.minutes")}</span>
                 </span>
@@ -496,7 +496,7 @@ export default function PauseHydratePage() {
                   checked={schedule.systemDeferralEnabled}
                   disabled={!systemGuardAvailable && !schedule.systemDeferralEnabled}
                   onChange={(event) => updateSchedule({ systemDeferralEnabled: event.target.checked })}
-                  className="h-4 w-4 accent-[var(--accent)] disabled:opacity-50"
+                  className="h-4 w-4 rounded border border-control-border accent-[var(--accent)] focus:ring-2 focus:ring-focus-ring disabled:opacity-50"
                 />
                 {t("pauseHydrate.systemGuardEnabled")}
               </label>
@@ -512,7 +512,7 @@ export default function PauseHydratePage() {
                     value={schedule.deferralGraceMinutes}
                     aria-invalid={deferralGraceInvalid}
                     onChange={(event) => updateSchedule({ deferralGraceMinutes: Number(event.target.value) })}
-                    className="h-10 w-24 min-w-0 rounded-md border border-border bg-background px-3 tabular-nums text-foreground focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
+                    className="h-10 w-24 min-w-0 rounded-md border border-control-border bg-background px-3 tabular-nums text-foreground focus:outline-none focus:ring-2 focus:ring-focus-ring disabled:opacity-50"
                   />
                   <span>{t("coreHour.minutes")}</span>
                 </span>
@@ -540,7 +540,7 @@ export default function PauseHydratePage() {
                     type="checkbox"
                     checked={draft[kind].enabled}
                     onChange={(event) => updateDraft(kind, { enabled: event.target.checked })}
-                    className="h-4 w-4 accent-[var(--accent)]"
+                    className="h-4 w-4 rounded border border-control-border accent-[var(--accent)] focus:ring-2 focus:ring-focus-ring"
                   />
                   {t("pauseHydrate.enabled")}
                 </label>
@@ -558,7 +558,7 @@ export default function PauseHydratePage() {
                       disabled={!draft[kind].enabled}
                       value={draft[kind].intervalMinutes}
                       onChange={(event) => updateDraft(kind, { intervalMinutes: Number(event.target.value) })}
-                      className="h-10 min-w-0 w-full rounded-md border border-border bg-background px-3 text-foreground focus:outline-none focus:ring-2 focus:ring-accent disabled:opacity-50"
+                      className="h-10 min-w-0 w-full rounded-md border border-control-border bg-background px-3 text-foreground focus:outline-none focus:ring-2 focus:ring-focus-ring disabled:opacity-50"
                     />
                     <span className="text-xs text-muted">{t("coreHour.minutes")}</span>
                   </span>

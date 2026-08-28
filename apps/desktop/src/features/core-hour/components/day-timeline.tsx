@@ -111,7 +111,7 @@ export function DayTimeline({ date, sessions, plans, onAddPlan, onEditPlan, onUp
               </div>
             ))}
             <div
-              className="absolute bottom-0 left-16 right-0 top-0 cursor-crosshair focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+              className="absolute bottom-0 left-16 right-0 top-0 cursor-crosshair focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus-ring"
               onClick={handleCanvasClick}
               onKeyDown={handleCanvasKeyDown}
               role="button"
@@ -148,7 +148,7 @@ export function DayTimeline({ date, sessions, plans, onAddPlan, onEditPlan, onUp
                     event.stopPropagation();
                     onEditSession(item.session);
                   }}
-                  className="absolute right-4 z-10 overflow-hidden rounded-md border border-border border-l-4 px-3 py-1.5 text-left shadow-sm transition-[filter,transform] hover:-translate-y-px hover:brightness-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                  className="absolute right-4 z-10 overflow-hidden rounded-md border border-border border-l-4 px-3 py-1.5 text-left shadow-sm transition-[filter,transform] hover:-translate-y-px hover:brightness-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                   style={{
                     top: item.top,
                     height: item.height,

@@ -120,7 +120,7 @@ export function PlanEditor({ isOpen, userId, plan, initialStartedAt, initialEnde
             value={tagId}
             onChange={(event) => setTagId(event.target.value)}
             disabled={readOnly}
-            className="mt-1.5 w-full rounded-md border border-border bg-surface px-3 py-2.5 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20 disabled:cursor-not-allowed disabled:opacity-50"
+            className="mt-1.5 w-full rounded-md border border-control-border bg-surface px-3 py-2.5 text-foreground focus:border-focus-ring focus:outline-none focus:ring-2 focus:ring-focus-ring/20 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <option value="">{t("coreHour.noPlanTag")}</option>
             {plan?.tag_id && !tags.some((tag) => tag.id === plan.tag_id) && (

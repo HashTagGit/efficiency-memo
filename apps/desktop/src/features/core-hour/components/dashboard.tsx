@@ -307,7 +307,7 @@ export function Dashboard({ userId, intervalMinutes, dailyGoalMinutes, timer }: 
                     value={activity}
                     onChange={(event) => { setActivity(event.target.value); setFavorite(false); }}
                     placeholder={t("today.activityPlaceholder")}
-                    className="mt-1.5 w-full rounded-md border border-border bg-background px-3 py-2.5 text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+                    className="mt-1.5 w-full rounded-md border border-control-border bg-background px-3 py-2.5 text-foreground placeholder:text-muted focus:border-focus-ring focus:outline-none focus:ring-2 focus:ring-focus-ring/20"
                   />
                 </label>
                 <label className="text-sm font-medium text-foreground">
@@ -315,7 +315,7 @@ export function Dashboard({ userId, intervalMinutes, dailyGoalMinutes, timer }: 
                   <select
                     value={defaultTagId}
                     onChange={(event) => { setDefaultTagId(event.target.value); setFavorite(false); }}
-                    className="mt-1.5 w-full rounded-md border border-border bg-background px-3 py-2.5 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+                    className="mt-1.5 w-full rounded-md border border-control-border bg-background px-3 py-2.5 text-foreground focus:border-focus-ring focus:outline-none focus:ring-2 focus:ring-focus-ring/20"
                   >
                     <option value="">{t("today.noTag")}</option>
                     {tags.map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}
@@ -343,7 +343,7 @@ export function Dashboard({ userId, intervalMinutes, dailyGoalMinutes, timer }: 
                   )}
                   <label className="block text-sm font-medium">
                     {t("coreHour.note")} <span className="font-normal text-muted">({t("coreHour.optional")})</span>
-                    <textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder={t("coreHour.addNote")} className="mt-1 min-h-20 w-full rounded-md border border-border bg-background p-2 text-foreground" />
+                    <textarea value={note} onChange={(event) => setNote(event.target.value)} placeholder={t("coreHour.addNote")} className="mt-1 min-h-20 w-full rounded-md border border-control-border bg-background p-2 text-foreground focus:outline-none focus:ring-2 focus:ring-focus-ring" />
                   </label>
                   <div className="flex gap-2">
                     <Button disabled={!selectedTagId} onClick={() => void handleCompleteCheckIn(selectedTagId)}>{t("coreHour.saveCheckIn")}</Button>
@@ -361,7 +361,7 @@ export function Dashboard({ userId, intervalMinutes, dailyGoalMinutes, timer }: 
                     size="icon"
                     onClick={() => setFavorite((current) => !current)}
                     disabled={!activity.trim()}
-                    className={"h-11 w-11 border border-border p-0 " + (favorite ? "bg-accent/15 text-accent" : "text-muted hover:bg-surface-strong hover:text-foreground")}
+                    className={"h-11 w-11 border border-control-border p-0 " + (favorite ? "bg-accent/15 text-accent" : "text-muted hover:bg-surface-strong hover:text-foreground")}
                     aria-label={favorite ? t("today.unfavorite") : t("today.favorite")}
                     aria-pressed={favorite}
                   >
@@ -469,7 +469,7 @@ export function Dashboard({ userId, intervalMinutes, dailyGoalMinutes, timer }: 
                 size="icon"
                 onClick={() => void handleFavorite(completedSession.activity, completedSession.default_tag_id, !completedSession.is_favorite)}
                 disabled={!completedSession.activity}
-                className={"h-9 w-9 border border-border p-0 " + (completedSession.is_favorite ? "text-accent" : "text-muted hover:bg-surface-strong")}
+                className={"h-9 w-9 border border-control-border p-0 " + (completedSession.is_favorite ? "text-accent" : "text-muted hover:bg-surface-strong")}
                 aria-label={completedSession.is_favorite ? t("today.unfavorite") : t("today.favorite")}
                 aria-pressed={completedSession.is_favorite}
               >

@@ -19,6 +19,7 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 - Native macOS Natural Rest idle detection through the current login session's CoreGraphics event state.
 - Windows system-interruption deferral with persisted blocked state, recovery grace, staggered reminders, and suspend-gap protection.
 - Operational Now home with current focus, next plan, reminder status, device attention, and compact full-tool navigation.
+- Dedicated control-border and keyboard-focus roles across every palette and mode, consumed by shared primitives and native desktop controls.
 
 ## Next releases
 

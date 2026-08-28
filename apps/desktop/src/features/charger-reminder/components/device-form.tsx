@@ -108,7 +108,7 @@ export function DeviceForm({ presets, device, mode, onSubmit, onCancel }: Device
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g., Xbox Controller Battery Pack"
-            className="w-full rounded-md border border-border bg-background px-4 py-3 text-base text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+            className="w-full rounded-md border border-control-border bg-background px-4 py-3 text-base text-foreground placeholder:text-muted focus:border-focus-ring focus:outline-none focus:ring-2 focus:ring-focus-ring/20"
             required
           />
         </div>
@@ -121,7 +121,7 @@ export function DeviceForm({ presets, device, mode, onSubmit, onCancel }: Device
             id="deviceType"
             value={deviceType}
             onChange={(e) => setDeviceType(e.target.value as DevicePresetType)}
-            className="w-full rounded-md border border-border bg-background px-4 py-3 text-base text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+            className="w-full rounded-md border border-control-border bg-background px-4 py-3 text-base text-foreground focus:border-focus-ring focus:outline-none focus:ring-2 focus:ring-focus-ring/20"
           >
             {presets.map((preset) => (
               <option key={preset.type} value={preset.type}>
@@ -142,7 +142,7 @@ export function DeviceForm({ presets, device, mode, onSubmit, onCancel }: Device
             value={capacity}
             onChange={(e) => setCapacity(e.target.value)}
             placeholder="e.g., 2400"
-            className="w-full rounded-md border border-border bg-background px-4 py-3 text-base text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+            className="w-full rounded-md border border-control-border bg-background px-4 py-3 text-base text-foreground placeholder:text-muted focus:border-focus-ring focus:outline-none focus:ring-2 focus:ring-focus-ring/20"
           />
         </div>
 
@@ -170,7 +170,7 @@ export function DeviceForm({ presets, device, mode, onSubmit, onCancel }: Device
             type="checkbox"
             checked={reminderEnabled}
             onChange={(e) => setReminderEnabled(e.target.checked)}
-            className="h-5 w-5 rounded border-border text-accent focus:ring-accent"
+            className="h-5 w-5 rounded border-control-border text-accent focus:ring-focus-ring"
           />
           <label htmlFor="reminderEnabled" className="text-sm font-semibold text-foreground">
             Reminder Enabled

@@ -109,7 +109,7 @@ export function SessionEditor({ isOpen, userId, session, defaultDate, initialSta
           <select
             value={tagId}
             onChange={(event) => setTagId(event.target.value)}
-            className="mt-1.5 w-full rounded-md border border-border bg-surface px-3 py-2.5 text-foreground focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+            className="mt-1.5 w-full rounded-md border border-control-border bg-surface px-3 py-2.5 text-foreground focus:border-focus-ring focus:outline-none focus:ring-2 focus:ring-focus-ring/20"
           >
             <option value="">{t("today.noTag")}</option>
             {session?.default_tag_id && !tags.some((tag) => tag.id === session.default_tag_id) && (

@@ -20,7 +20,7 @@ export function SettingsNavigation() {
           to={item.to}
           end={item.end}
           className={({ isActive }) => (
-            "flex h-9 items-center rounded-md px-3 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-accent "
+            "flex h-9 items-center rounded-md px-3 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring "
             + (isActive
               ? "bg-accent text-on-accent"
               : "text-muted hover:bg-surface hover:text-foreground")

@@ -212,7 +212,7 @@ export function InteractivePlanBlock({
         type="button"
         disabled={saving}
         className={
-          "absolute inset-0 w-full overflow-hidden rounded-md px-2 py-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent "
+          "absolute inset-0 w-full overflow-hidden rounded-md px-2 py-1 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus-ring "
           + (editable ? "touch-none select-none cursor-grab active:cursor-grabbing hover:brightness-105" : "cursor-default")
         }
         onPointerDown={(event) => beginGesture("move", event)}
@@ -246,7 +246,7 @@ export function InteractivePlanBlock({
         <>
           <button
             type="button"
-            className="absolute -top-0.5 inset-x-1 z-20 flex h-2.5 touch-none select-none cursor-ns-resize items-center rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="absolute -top-0.5 inset-x-1 z-20 flex h-2.5 touch-none select-none cursor-ns-resize items-center rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             aria-label={t("coreHour.resizePlanStartNamed", { title })}
             title={t("coreHour.resizePlanStartNamed", { title })}
             onPointerDown={(event) => beginGesture("resize-start", event)}
@@ -260,7 +260,7 @@ export function InteractivePlanBlock({
           </button>
           <button
             type="button"
-            className="absolute -bottom-0.5 inset-x-1 z-20 flex h-2.5 touch-none select-none cursor-ns-resize items-center rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+            className="absolute -bottom-0.5 inset-x-1 z-20 flex h-2.5 touch-none select-none cursor-ns-resize items-center rounded-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
             aria-label={t("coreHour.resizePlanEndNamed", { title })}
             title={t("coreHour.resizePlanEndNamed", { title })}
             onPointerDown={(event) => beginGesture("resize-end", event)}

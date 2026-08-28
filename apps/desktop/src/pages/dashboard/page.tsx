@@ -305,7 +305,7 @@ export function DashboardPage() {
                   const route = tool.routes[0];
                   if (route) navigate(route);
                 }}
-                className="inline-flex min-h-10 items-center gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                className="inline-flex min-h-10 items-center gap-2 rounded-md border border-control-border bg-surface px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                 data-testid={`dashboard-tool-card-${tool.id}`}
               >
                 <span className="text-muted"><ToolIcon name={tool.name} /></span>

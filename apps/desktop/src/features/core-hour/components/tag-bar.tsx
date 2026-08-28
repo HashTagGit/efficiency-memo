@@ -78,7 +78,7 @@ export function TagBar({ userId }: TagBarProps) {
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           placeholder={t("coreHour.newTag")}
-          className="flex-1 rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/20"
+          className="flex-1 rounded-md border border-control-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted focus:border-focus-ring focus:outline-none focus:ring-2 focus:ring-focus-ring/20"
           onKeyDown={(e) => {
             if (e.key === "Enter") {
               e.preventDefault();
@@ -91,7 +91,7 @@ export function TagBar({ userId }: TagBarProps) {
           type="color"
           value={newColor}
           onChange={(e) => setNewColor(e.target.value)}
-          className="h-9 w-9 cursor-pointer rounded-md border border-border bg-background p-0.5"
+          className="h-9 w-9 cursor-pointer rounded-md border border-control-border bg-background p-0.5 focus:outline-none focus:ring-2 focus:ring-focus-ring"
           aria-label={t("coreHour.color")}
           data-testid="tag-color-input"
         />

@@ -165,7 +165,7 @@ export function WeekTimeline({ days, sessions, plans, onAddPlan, onEditPlan, onU
                       />
                     ))}
                     <div
-                      className="absolute inset-0 cursor-crosshair focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent"
+                      className="absolute inset-0 cursor-crosshair focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus-ring"
                       role="button"
                       tabIndex={0}
                       aria-label={t("coreHour.addPlan")}
@@ -205,7 +205,7 @@ export function WeekTimeline({ days, sessions, plans, onAddPlan, onEditPlan, onU
                             event.stopPropagation();
                             onEditSession(item.session);
                           }}
-                          className="absolute z-10 overflow-hidden rounded-md border border-border border-l-4 px-2 py-1 text-left shadow-sm transition-[filter] hover:brightness-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
+                          className="absolute z-10 overflow-hidden rounded-md border border-border border-l-4 px-2 py-1 text-left shadow-sm transition-[filter] hover:brightness-105 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                           style={{
                             top: item.top,
                             height: item.height,

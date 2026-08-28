@@ -225,7 +225,7 @@ export default function InsightsPage({ userId }: { userId: string }) {
             <select
               value={range}
               onChange={(event) => setRange(event.target.value as TrendRange)}
-              className="rounded-md border border-border bg-surface px-2 py-1.5 text-foreground focus:outline-none focus:ring-2 focus:ring-accent"
+              className="rounded-md border border-control-border bg-surface px-2 py-1.5 text-foreground focus:outline-none focus:ring-2 focus:ring-focus-ring"
             >
               <option value="7d">{t("coreHour.last7Days")}</option>
               <option value="30d">{t("coreHour.last30Days")}</option>
