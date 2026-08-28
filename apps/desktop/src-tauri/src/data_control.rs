@@ -5,7 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
 
-pub(crate) const SCHEMA_VERSION: i64 = 12;
+pub(crate) const SCHEMA_VERSION: i64 = 13;
 const MIN_SUPPORTED_SCHEMA_VERSION: i64 = 7;
 pub(crate) const DB_FILENAME: &str = "efficiency-memo.db";
 pub(crate) const SIDECAR_FILENAME: &str = "efficiency-memo.db.next";
@@ -259,6 +259,16 @@ fn validate_required_schema(connection: &Connection, schema_version: i64) -> Res
             &["id", "user_id", "application_id", "started_at", "last_seen_at"],
         )?;
     }
+    if schema_version >= 13 {
+        validate_table_columns(
+            connection,
+            "aa_activity_suggestions",
+            &[
+                "id", "user_id", "source_sample_id", "application_id", "started_at",
+                "ended_at", "status", "session_id", "created_at", "updated_at",
+            ],
+        )?;
+    }
     for version in 1..=schema_version {
         let applied: i64 = connection
             .query_row(
@@ -370,7 +380,7 @@ fn create_backup_at(
     let result = (|| {
         let snapshot = Connection::open(&temp_path).map_err(|error| error.to_string())?;
         snapshot
-            .execute_batch("DELETE FROM aa_activity_samples; VACUUM;")
+            .execute_batch("DELETE FROM aa_activity_suggestions; DELETE FROM aa_activity_samples; VACUUM;")
             .map_err(|error| error.to_string())?;
         snapshot
             .execute_batch(
@@ -474,6 +484,12 @@ fn reset_data(connection: &mut Connection, scope: ResetScope, user_id: &str) -> 
     match scope {
         ResetScope::CoreHour => {
             transaction
+                .execute(
+                    "DELETE FROM aa_activity_suggestions WHERE user_id = ?1 AND status = 'accepted'",
+                    [user_id],
+                )
+                .map_err(|error| error.to_string())?;
+            transaction
                 .execute("DELETE FROM ch_plans WHERE user_id = ?1", [user_id])
                 .map_err(|error| error.to_string())?;
             transaction
@@ -571,6 +587,7 @@ mod tests {
             include_str!("../migrations/0010_pause_hydrate_system_deferral.sql"),
             include_str!("../migrations/0011_pause_hydrate_deferral_status.sql"),
             include_str!("../migrations/0012_activity_assist.sql"),
+            include_str!("../migrations/0013_activity_assist_suggestions.sql"),
         ] {
             connection.execute_batch(migration).unwrap();
         }
@@ -594,7 +611,8 @@ mod tests {
                     (9, 'migration', 'installed', 1, X'', 0),
                     (10, 'migration', 'installed', 1, X'', 0),
                     (11, 'migration', 'installed', 1, X'', 0),
-                    (12, 'migration', 'installed', 1, X'', 0);
+                    (12, 'migration', 'installed', 1, X'', 0),
+                    (13, 'migration', 'installed', 1, X'', 0);
                 INSERT INTO users VALUES ('local-user', 'local@example.test', 'created', 'updated');
                 INSERT INTO ch_tags VALUES ('tag-1', 'local-user', 'Focus', '#000000', 0, 'created', 0);
                 INSERT INTO ch_sessions (
@@ -613,7 +631,8 @@ mod tests {
                 INSERT INTO ph_schedule_policies VALUES ('local-user', 31, 540, 1080, 0, 1320, 420, 'updated', 0, 5, 1, 5, 0, NULL);
                 INSERT INTO ph_reminder_events VALUES ('event-1', 'local-user', 'break', 'completed', 'occurred', 'manual');
                 INSERT INTO aa_preferences VALUES ('local-user', 1, 0, 72, 'updated');
-                INSERT INTO aa_activity_samples VALUES ('sample-1', 'local-user', 'code.exe', '2026-08-28T08:00:00Z', '2026-08-28T08:01:00Z');",
+                INSERT INTO aa_activity_samples VALUES ('sample-1', 'local-user', 'code.exe', '2026-08-28T08:00:00Z', '2026-08-28T08:03:00Z');
+                INSERT INTO aa_activity_suggestions VALUES ('suggestion-1', 'local-user', 'sample-1', 'code.exe', '2026-08-28T08:00:00Z', '2026-08-28T08:03:00Z', 'pending', NULL, 'created', 'updated');",
             )
             .unwrap();
         connection
@@ -634,15 +653,28 @@ mod tests {
         drop(database(&source));
 
         let preview = create_backup_at(&source, &destination, preferences()).unwrap();
-        assert_eq!(preview.schema_version, 12);
+        assert_eq!(preview.schema_version, 13);
         assert_eq!(preview.preferences, preferences());
         assert_eq!(preview.counts.core_hour_sessions, 1);
         assert_eq!(preview.counts.core_hour_plans, 1);
         assert_eq!(preview.counts.pause_hydrate_events, 1);
         assert_eq!(preview.counts.activity_assist_samples, 0);
 
+        let legacy_v12_destination = temp_path("backup-v12");
+        fs::copy(&destination, &legacy_v12_destination).unwrap();
+        let legacy_v12 = Connection::open(&legacy_v12_destination).unwrap();
+        legacy_v12
+            .execute("UPDATE em_backup_metadata SET schema_version = 12", [])
+            .unwrap();
+        legacy_v12
+            .execute("DELETE FROM _sqlx_migrations WHERE version = 13", [])
+            .unwrap();
+        legacy_v12.execute("DROP TABLE aa_activity_suggestions", []).unwrap();
+        drop(legacy_v12);
+        assert_eq!(inspect_backup(&legacy_v12_destination).unwrap().schema_version, 12);
+
         let legacy_v11_destination = temp_path("backup-v11");
-        fs::copy(&destination, &legacy_v11_destination).unwrap();
+        fs::copy(&legacy_v12_destination, &legacy_v11_destination).unwrap();
         let legacy_v11 = Connection::open(&legacy_v11_destination).unwrap();
         legacy_v11
             .execute("UPDATE em_backup_metadata SET schema_version = 11", [])
@@ -728,14 +760,14 @@ mod tests {
 
         let backup = Connection::open(&destination).unwrap();
         backup
-            .execute("UPDATE em_backup_metadata SET schema_version = 13", [])
+            .execute("UPDATE em_backup_metadata SET schema_version = 14", [])
             .unwrap();
         drop(backup);
         assert_eq!(inspect_backup(&destination).unwrap_err(), "future-schema");
 
         let backup = Connection::open(&destination).unwrap();
         backup
-            .execute("UPDATE em_backup_metadata SET schema_version = 12", [])
+            .execute("UPDATE em_backup_metadata SET schema_version = 13", [])
             .unwrap();
         backup
             .execute("DELETE FROM _sqlx_migrations WHERE version = 6", [])
@@ -758,6 +790,7 @@ mod tests {
 
         let _ = fs::remove_file(source);
         let _ = fs::remove_file(destination);
+        let _ = fs::remove_file(legacy_v12_destination);
         let _ = fs::remove_file(legacy_v11_destination);
         let _ = fs::remove_file(legacy_v10_destination);
         let _ = fs::remove_file(legacy_v9_destination);

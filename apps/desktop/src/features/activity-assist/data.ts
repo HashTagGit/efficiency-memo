@@ -23,3 +23,35 @@ export function saveActivityAssistPreferences(
 export function clearActivityAssistSamples(userId: string): Promise<ActivityAssistState> {
   return invoke("clear_activity_assist_samples", { userId });
 }
+
+export function dismissActivityAssistSuggestion(
+  userId: string,
+  suggestionId: string,
+): Promise<ActivityAssistState> {
+  return invoke("dismiss_activity_assist_suggestion", {
+    userId,
+    suggestionId,
+    dismissedAt: new Date().toISOString(),
+  });
+}
+
+export function acceptActivityAssistSuggestion(input: {
+  userId: string;
+  suggestionId: string;
+  activity: string;
+  defaultTagId: string | null;
+  startedAt: string;
+  endedAt: string;
+  startLocalDate: string;
+  endLocalDate: string;
+}): Promise<ActivityAssistState> {
+  return invoke("accept_activity_assist_suggestion", {
+    input: {
+      ...input,
+      newSessionId: crypto.randomUUID(),
+      newCheckInId: crypto.randomUUID(),
+      newEntryId: crypto.randomUUID(),
+      acceptedAt: new Date().toISOString(),
+    },
+  });
+}

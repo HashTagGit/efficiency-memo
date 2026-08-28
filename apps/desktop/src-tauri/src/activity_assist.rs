@@ -1,3 +1,4 @@
+use crate::core_hour::{save_session_block_in_transaction, SessionBlockInput};
 use crate::data_control::DB_FILENAME;
 use crate::foreground_application;
 use chrono::{DateTime, Duration, SecondsFormat, Utc};
@@ -9,6 +10,8 @@ const DEFAULT_RETENTION_HOURS: i64 = 72;
 const SAMPLE_CONTINUATION_SECONDS: i64 = 90;
 const RECENT_SAMPLE_LIMIT: i64 = 20;
 const COLLECTION_INTERVAL_SECONDS: u64 = 30;
+const MIN_SUGGESTION_SECONDS: i64 = 120;
+const SUGGESTION_STABILITY_SECONDS: i64 = SAMPLE_CONTINUATION_SECONDS + 1;
 
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -29,10 +32,20 @@ pub(crate) struct ActivitySample {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub(crate) struct ActivitySuggestion {
+    id: String,
+    application_id: String,
+    started_at: String,
+    ended_at: String,
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct ActivityAssistState {
     preferences: ActivityAssistPreferences,
     exclusions: Vec<String>,
     recent_samples: Vec<ActivitySample>,
+    pending_suggestions: Vec<ActivitySuggestion>,
     sample_count: i64,
     collector_available: bool,
 }
@@ -46,6 +59,23 @@ pub(crate) struct SaveActivityAssistInput {
     retention_hours: i64,
     exclusions: Vec<String>,
     updated_at: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct AcceptActivitySuggestionInput {
+    user_id: String,
+    suggestion_id: String,
+    activity: String,
+    default_tag_id: Option<String>,
+    started_at: String,
+    ended_at: String,
+    start_local_date: String,
+    end_local_date: String,
+    new_session_id: String,
+    new_check_in_id: String,
+    new_entry_id: String,
+    accepted_at: String,
 }
 
 fn database(app: &AppHandle) -> Result<Connection, String> {
@@ -163,6 +193,38 @@ fn record_sample(
     Ok(true)
 }
 
+fn generate_suggestions(
+    connection: &Connection,
+    user_id: &str,
+    now: DateTime<chrono::FixedOffset>,
+) -> Result<(), String> {
+    let stable_before = (now - Duration::seconds(SUGGESTION_STABILITY_SECONDS))
+        .with_timezone(&Utc)
+        .to_rfc3339_opts(SecondsFormat::Millis, true);
+    let created_at = now
+        .with_timezone(&Utc)
+        .to_rfc3339_opts(SecondsFormat::Millis, true);
+    connection
+        .execute(
+            "INSERT INTO aa_activity_suggestions (id, user_id, source_sample_id, application_id, started_at, ended_at, status, created_at, updated_at)
+             SELECT 'suggestion:' || s.id, s.user_id, s.id, s.application_id, s.started_at, s.last_seen_at, 'pending', ?3, ?3
+             FROM aa_activity_samples s
+             WHERE s.user_id = ?1
+               AND CAST(strftime('%s', s.last_seen_at) AS INTEGER) - CAST(strftime('%s', s.started_at) AS INTEGER) >= ?4
+               AND julianday(s.last_seen_at) <= julianday(?2)
+               AND NOT EXISTS (SELECT 1 FROM aa_activity_suggestions a WHERE a.source_sample_id = s.id)
+               AND NOT EXISTS (
+                 SELECT 1 FROM ch_sessions c
+                 WHERE c.user_id = s.user_id
+                   AND julianday(c.started_at) < julianday(s.last_seen_at)
+                   AND (c.ended_at IS NULL OR julianday(c.ended_at) > julianday(s.started_at))
+               )",
+            params![user_id, stable_before, created_at, MIN_SUGGESTION_SECONDS],
+        )
+        .map_err(|error| error.to_string())?;
+    Ok(())
+}
+
 fn load_state(connection: &Connection, user_id: &str) -> Result<ActivityAssistState, String> {
     let preferences = load_preferences(connection, user_id)?;
     let exclusions = {
@@ -194,6 +256,24 @@ fn load_state(connection: &Connection, user_id: &str) -> Result<ActivityAssistSt
             .map_err(|error| error.to_string())?;
         values
     };
+    let pending_suggestions = {
+        let mut statement = connection
+            .prepare("SELECT id, application_id, started_at, ended_at FROM aa_activity_suggestions WHERE user_id = ?1 AND status = 'pending' ORDER BY started_at DESC LIMIT ?2")
+            .map_err(|error| error.to_string())?;
+        let values = statement
+            .query_map(params![user_id, RECENT_SAMPLE_LIMIT], |row| {
+                Ok(ActivitySuggestion {
+                    id: row.get(0)?,
+                    application_id: row.get(1)?,
+                    started_at: row.get(2)?,
+                    ended_at: row.get(3)?,
+                })
+            })
+            .map_err(|error| error.to_string())?
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(|error| error.to_string())?;
+        values
+    };
     let sample_count = connection
         .query_row(
             "SELECT COUNT(*) FROM aa_activity_samples WHERE user_id = ?1",
@@ -205,6 +285,7 @@ fn load_state(connection: &Connection, user_id: &str) -> Result<ActivityAssistSt
         preferences,
         exclusions,
         recent_samples,
+        pending_suggestions,
         sample_count,
         collector_available: foreground_application::available(),
     })
@@ -215,7 +296,9 @@ pub(crate) fn load_activity_assist_state(
     user_id: String,
     app: AppHandle,
 ) -> Result<ActivityAssistState, String> {
-    load_state(&database(&app)?, &user_id)
+    let connection = database(&app)?;
+    generate_suggestions(&connection, &user_id, Utc::now().fixed_offset())?;
+    load_state(&connection, &user_id)
 }
 
 #[tauri::command]
@@ -261,6 +344,12 @@ pub(crate) fn save_activity_assist_preferences(
             params![input.user_id, input.enabled],
         )
         .map_err(|error| error.to_string())?;
+    transaction
+        .execute(
+            "DELETE FROM aa_activity_suggestions WHERE user_id = ?1 AND (?2 = 0 OR application_id IN (SELECT application_id FROM aa_exclusions WHERE user_id = ?1))",
+            params![input.user_id, input.enabled],
+        )
+        .map_err(|error| error.to_string())?;
     prune_samples(
         &transaction,
         &input.user_id,
@@ -292,6 +381,7 @@ fn collect_once(observed_at: &str, app: &AppHandle) -> Result<bool, String> {
         preferences.retention_hours,
         observed,
     )?;
+    generate_suggestions(&connection, &user_id, observed)?;
     if !preferences.enabled || preferences.paused {
         return Ok(false);
     }
@@ -308,6 +398,86 @@ fn collect_once(observed_at: &str, app: &AppHandle) -> Result<bool, String> {
         return Ok(false);
     }
     record_sample(&connection, &user_id, &application_id, observed_at)
+}
+
+#[tauri::command]
+pub(crate) fn dismiss_activity_assist_suggestion(
+    user_id: String,
+    suggestion_id: String,
+    dismissed_at: String,
+    app: AppHandle,
+) -> Result<ActivityAssistState, String> {
+    parse_time(&dismissed_at)?;
+    let connection = database(&app)?;
+    let changed = connection
+        .execute(
+            "UPDATE aa_activity_suggestions SET status = 'dismissed', updated_at = ?1 WHERE id = ?2 AND user_id = ?3 AND status = 'pending'",
+            params![dismissed_at, suggestion_id, user_id],
+        )
+        .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("not-found".to_string());
+    }
+    load_state(&connection, &user_id)
+}
+
+#[tauri::command]
+pub(crate) fn accept_activity_assist_suggestion(
+    input: AcceptActivitySuggestionInput,
+    app: AppHandle,
+) -> Result<ActivityAssistState, String> {
+    accept_suggestion(input, &mut database(&app)?)
+}
+
+fn accept_suggestion(
+    input: AcceptActivitySuggestionInput,
+    connection: &mut Connection,
+) -> Result<ActivityAssistState, String> {
+    parse_time(&input.accepted_at)?;
+    connection
+        .execute_batch("PRAGMA foreign_keys = ON;")
+        .map_err(|error| error.to_string())?;
+    let transaction = connection.transaction().map_err(|error| error.to_string())?;
+    let pending: bool = transaction
+        .query_row(
+            "SELECT EXISTS(SELECT 1 FROM aa_activity_suggestions WHERE id = ?1 AND user_id = ?2 AND status = 'pending')",
+            params![input.suggestion_id, input.user_id],
+            |row| row.get(0),
+        )
+        .map_err(|error| error.to_string())?;
+    if !pending {
+        return Err("not-found".to_string());
+    }
+    let session_id = save_session_block_in_transaction(
+        SessionBlockInput {
+            id: None,
+            user_id: input.user_id.clone(),
+            activity: input.activity,
+            default_tag_id: input.default_tag_id,
+            started_at: input.started_at,
+            ended_at: input.ended_at,
+            adjust_duration: false,
+            adjust_tag: false,
+            start_local_date: input.start_local_date,
+            end_local_date: input.end_local_date,
+            new_session_id: input.new_session_id,
+            new_check_in_id: input.new_check_in_id,
+            new_entry_id: input.new_entry_id,
+            source_plan_id: None,
+        },
+        &transaction,
+    )?;
+    let changed = transaction
+        .execute(
+            "UPDATE aa_activity_suggestions SET status = 'accepted', session_id = ?1, updated_at = ?2 WHERE id = ?3 AND user_id = ?4 AND status = 'pending'",
+            params![session_id, input.accepted_at, input.suggestion_id, input.user_id],
+        )
+        .map_err(|error| error.to_string())?;
+    if changed != 1 {
+        return Err("not-found".to_string());
+    }
+    transaction.commit().map_err(|error| error.to_string())?;
+    load_state(connection, &input.user_id)
 }
 
 pub(crate) fn setup(app: AppHandle) {
@@ -335,7 +505,11 @@ pub(crate) fn clear_activity_assist_samples(
 
 #[cfg(test)]
 mod tests {
-    use super::{load_state, record_sample};
+    use super::{
+        accept_suggestion, generate_suggestions, load_state, record_sample,
+        AcceptActivitySuggestionInput,
+    };
+    use chrono::DateTime;
     use rusqlite::Connection;
 
     fn database() -> Connection {
@@ -349,6 +523,18 @@ mod tests {
             .unwrap();
         connection
             .execute_batch(include_str!("../migrations/0012_activity_assist.sql"))
+            .unwrap();
+        connection
+            .execute_batch(include_str!("../migrations/0003_ch_core_hour.sql"))
+            .unwrap();
+        connection
+            .execute_batch(include_str!("../migrations/0004_ch_session_durations.sql"))
+            .unwrap();
+        connection
+            .execute_batch(include_str!("../migrations/0005_ch_session_activity.sql"))
+            .unwrap();
+        connection
+            .execute_batch(include_str!("../migrations/0013_activity_assist_suggestions.sql"))
             .unwrap();
         connection
             .execute(
@@ -408,5 +594,99 @@ mod tests {
         assert_eq!(state.recent_samples[0].application_id, "terminal.exe");
         assert_eq!(state.recent_samples[1].application_id, "code.exe");
         assert_eq!(state.recent_samples[1].last_seen_at, "2026-08-28T08:00:30Z");
+    }
+
+    #[test]
+    fn only_stable_non_overlapping_samples_become_suggestions() {
+        let connection = database();
+        connection
+            .execute(
+                "INSERT INTO aa_activity_samples VALUES ('stable', 'local-user', 'code.exe', '2026-08-28T08:00:00Z', '2026-08-28T08:03:00Z')",
+                [],
+            )
+            .unwrap();
+        connection
+            .execute(
+                "INSERT INTO aa_activity_samples VALUES ('short', 'local-user', 'mail.exe', '2026-08-28T08:10:00Z', '2026-08-28T08:11:00Z')",
+                [],
+            )
+            .unwrap();
+        connection
+            .execute(
+                "INSERT INTO aa_activity_samples VALUES ('continuing', 'local-user', 'terminal.exe', '2026-08-28T08:00:00Z', '2026-08-28T08:03:30Z')",
+                [],
+            )
+            .unwrap();
+        generate_suggestions(
+            &connection,
+            "local-user",
+            DateTime::parse_from_rfc3339("2026-08-28T08:05:00Z").unwrap(),
+        )
+        .unwrap();
+
+        let state = load_state(&connection, "local-user").unwrap();
+        assert_eq!(state.pending_suggestions.len(), 1);
+        assert_eq!(state.pending_suggestions[0].application_id, "code.exe");
+    }
+
+    #[test]
+    fn accepting_a_suggestion_creates_the_session_atomically() {
+        let mut connection = database();
+        connection
+            .execute(
+                "INSERT INTO aa_activity_samples VALUES ('stable', 'local-user', 'code.exe', '2026-08-28T08:00:00Z', '2026-08-28T08:03:00Z')",
+                [],
+            )
+            .unwrap();
+        generate_suggestions(
+            &connection,
+            "local-user",
+            DateTime::parse_from_rfc3339("2026-08-28T08:05:00Z").unwrap(),
+        )
+        .unwrap();
+        let input = || AcceptActivitySuggestionInput {
+            user_id: "local-user".into(),
+            suggestion_id: "suggestion:stable".into(),
+            activity: "Implementation".into(),
+            default_tag_id: None,
+            started_at: "2026-08-28T08:00:00Z".into(),
+            ended_at: "2026-08-28T08:03:00Z".into(),
+            start_local_date: "2026-08-28".into(),
+            end_local_date: "2026-08-28".into(),
+            new_session_id: "accepted-session".into(),
+            new_check_in_id: "accepted-check-in".into(),
+            new_entry_id: "accepted-entry".into(),
+            accepted_at: "2026-08-28T08:05:00Z".into(),
+        };
+
+        connection
+            .execute(
+                "INSERT INTO ch_sessions (id, user_id, started_at, ended_at, interval_minutes, elapsed_seconds, activity, default_tag_id, is_favorite, synced) VALUES ('overlap', 'local-user', '2026-08-28T08:01:00Z', '2026-08-28T08:02:00Z', 30, 60, 'Existing', NULL, 0, 0)",
+                [],
+            )
+            .unwrap();
+        assert_eq!(accept_suggestion(input(), &mut connection).unwrap_err(), "overlap");
+        let status: String = connection
+            .query_row(
+                "SELECT status FROM aa_activity_suggestions WHERE id = 'suggestion:stable'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(status, "pending");
+        connection.execute("DELETE FROM ch_sessions", []).unwrap();
+
+        assert!(accept_suggestion(input(), &mut connection)
+            .unwrap()
+            .pending_suggestions
+            .is_empty());
+        let accepted: (String, String) = connection
+            .query_row(
+                "SELECT status, session_id FROM aa_activity_suggestions WHERE id = 'suggestion:stable'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(accepted, ("accepted".into(), "accepted-session".into()));
     }
 }

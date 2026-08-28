@@ -1,5 +1,5 @@
 use chrono::{DateTime, Duration, Utc};
-use rusqlite::{params, Connection, OptionalExtension};
+use rusqlite::{params, Connection, OptionalExtension, Transaction};
 use serde::Deserialize;
 use tauri::{AppHandle, Manager};
 
@@ -7,20 +7,20 @@ const DB_FILENAME: &str = "efficiency-memo.db";
 
 #[derive(Deserialize)]
 pub(crate) struct SessionBlockInput {
-    id: Option<String>,
-    user_id: String,
-    activity: String,
-    default_tag_id: Option<String>,
-    started_at: String,
-    ended_at: String,
-    adjust_duration: bool,
-    adjust_tag: bool,
-    start_local_date: String,
-    end_local_date: String,
-    new_session_id: String,
-    new_check_in_id: String,
-    new_entry_id: String,
-    source_plan_id: Option<String>,
+    pub(crate) id: Option<String>,
+    pub(crate) user_id: String,
+    pub(crate) activity: String,
+    pub(crate) default_tag_id: Option<String>,
+    pub(crate) started_at: String,
+    pub(crate) ended_at: String,
+    pub(crate) adjust_duration: bool,
+    pub(crate) adjust_tag: bool,
+    pub(crate) start_local_date: String,
+    pub(crate) end_local_date: String,
+    pub(crate) new_session_id: String,
+    pub(crate) new_check_in_id: String,
+    pub(crate) new_entry_id: String,
+    pub(crate) source_plan_id: Option<String>,
 }
 
 fn redistribute_durations(durations: &[i64], target: i64) -> Vec<i64> {
@@ -58,9 +58,9 @@ fn redistribute_durations(durations: &[i64], target: i64) -> Vec<i64> {
     result
 }
 
-fn save_session_block(
+pub(crate) fn save_session_block_in_transaction(
     input: SessionBlockInput,
-    connection: &mut Connection,
+    transaction: &Transaction<'_>,
 ) -> Result<String, String> {
     let started_at = DateTime::parse_from_rfc3339(&input.started_at)
         .map_err(|_| "invalid-range".to_string())?
@@ -78,12 +78,6 @@ fn save_session_block(
         return Err("cross-day".to_string());
     }
 
-    connection
-        .execute_batch("PRAGMA foreign_keys = ON;")
-        .map_err(|error| error.to_string())?;
-    let transaction = connection
-        .transaction()
-        .map_err(|error| error.to_string())?;
     let existing_elapsed = if let Some(session_id) = input.id.as_deref() {
         transaction
             .query_row(
@@ -286,6 +280,20 @@ fn save_session_block(
         }
     }
 
+    Ok(session_id)
+}
+
+fn save_session_block(
+    input: SessionBlockInput,
+    connection: &mut Connection,
+) -> Result<String, String> {
+    connection
+        .execute_batch("PRAGMA foreign_keys = ON;")
+        .map_err(|error| error.to_string())?;
+    let transaction = connection
+        .transaction()
+        .map_err(|error| error.to_string())?;
+    let session_id = save_session_block_in_transaction(input, &transaction)?;
     transaction.commit().map_err(|error| error.to_string())?;
     Ok(session_id)
 }

@@ -2,11 +2,15 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { Alert, Button, EmptyState, PageHeader } from "@memo/ui";
 import { useI18n } from "../../lib/i18n";
 import {
+  acceptActivityAssistSuggestion,
   clearActivityAssistSamples,
+  dismissActivityAssistSuggestion,
   loadActivityAssistState,
   saveActivityAssistPreferences,
 } from "./data";
-import type { ActivityAssistPreferences, ActivityAssistState } from "./types";
+import { useTags } from "../core-hour/hooks/use-tags";
+import type { Tag } from "../core-hour/types";
+import type { ActivityAssistPreferences, ActivityAssistState, ActivitySuggestion } from "./types";
 
 const retentionOptions = [24, 48, 72, 168] as const;
 const defaultPreferences: ActivityAssistPreferences = {
@@ -15,8 +19,101 @@ const defaultPreferences: ActivityAssistPreferences = {
   retentionHours: 72,
 };
 
+function localDateTime(value: string): string {
+  const date = new Date(value);
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+}
+
+function SuggestionReview({
+  suggestion,
+  tags,
+  busy,
+  onAccept,
+  onDismiss,
+}: {
+  suggestion: ActivitySuggestion;
+  tags: Tag[];
+  busy: boolean;
+  onAccept: (values: { activity: string; tagId: string | null; startedAt: string; endedAt: string }) => void;
+  onDismiss: () => void;
+}) {
+  const { t } = useI18n();
+  const [activity, setActivity] = useState(suggestion.applicationId);
+  const [tagId, setTagId] = useState("");
+  const [startedAt, setStartedAt] = useState(() => localDateTime(suggestion.startedAt));
+  const [endedAt, setEndedAt] = useState(() => localDateTime(suggestion.endedAt));
+  const validRange = Boolean(startedAt && endedAt && endedAt > startedAt && startedAt.slice(0, 10) === endedAt.slice(0, 10));
+
+  return (
+    <li className="rounded-md border border-dashed border-accent/50 bg-surface p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-semibold uppercase text-accent">{t("activityAssist.suggestionLabel")}</p>
+          <p className="mt-1 font-mono text-sm text-muted">{suggestion.applicationId}</p>
+        </div>
+        <Button size="sm" variant="ghost" disabled={busy} onClick={onDismiss}>{t("activityAssist.dismissSuggestion")}</Button>
+      </div>
+      <div className="mt-4 grid gap-4 lg:grid-cols-2">
+        <label className="text-sm font-medium text-foreground">
+          {t("activityAssist.activityLabel")}
+          <input
+            value={activity}
+            disabled={busy}
+            onChange={(event) => setActivity(event.target.value)}
+            className="mt-1.5 w-full rounded-md border border-control-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-focus-ring"
+          />
+        </label>
+        <label className="text-sm font-medium text-foreground">
+          {t("activityAssist.tagLabel")}
+          <select
+            value={tagId}
+            disabled={busy}
+            onChange={(event) => setTagId(event.target.value)}
+            className="mt-1.5 h-10 w-full rounded-md border border-control-border bg-background px-3 text-foreground focus:outline-none focus:ring-2 focus:ring-focus-ring"
+          >
+            <option value="">{t("activityAssist.noTag")}</option>
+            {tags.map((tag) => <option key={tag.id} value={tag.id}>{tag.name}</option>)}
+          </select>
+        </label>
+        <label className="text-sm font-medium text-foreground">
+          {t("activityAssist.startedAt")}
+          <input
+            type="datetime-local"
+            value={startedAt}
+            disabled={busy}
+            onChange={(event) => setStartedAt(event.target.value)}
+            className="mt-1.5 w-full rounded-md border border-control-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-focus-ring"
+          />
+        </label>
+        <label className="text-sm font-medium text-foreground">
+          {t("activityAssist.endedAt")}
+          <input
+            type="datetime-local"
+            value={endedAt}
+            disabled={busy}
+            onChange={(event) => setEndedAt(event.target.value)}
+            className="mt-1.5 w-full rounded-md border border-control-border bg-background px-3 py-2 text-foreground focus:outline-none focus:ring-2 focus:ring-focus-ring"
+          />
+        </label>
+      </div>
+      {!validRange && <p className="mt-3 text-sm text-danger" role="alert">{t("activityAssist.invalidRange")}</p>}
+      <div className="mt-4 flex justify-end">
+        <Button
+          size="sm"
+          isLoading={busy}
+          disabled={!activity.trim() || !validRange}
+          onClick={() => onAccept({ activity: activity.trim(), tagId: tagId || null, startedAt, endedAt })}
+        >
+          {t("activityAssist.acceptSuggestion")}
+        </Button>
+      </div>
+    </li>
+  );
+}
+
 export default function ActivityAssistPage({ userId }: { userId: string }) {
   const { locale, t } = useI18n();
+  const { tags } = useTags();
   const [state, setState] = useState<ActivityAssistState | null>(null);
   const [preferences, setPreferences] = useState(defaultPreferences);
   const [exclusions, setExclusions] = useState<string[]>([]);
@@ -27,6 +124,7 @@ export default function ActivityAssistPage({ userId }: { userId: string }) {
   const [operationError, setOperationError] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [busySuggestion, setBusySuggestion] = useState<string | null>(null);
   const requestRef = useRef(0);
   const dirtyRef = useRef(dirty);
   dirtyRef.current = dirty;
@@ -104,6 +202,42 @@ export default function ActivityAssistPage({ userId }: { userId: string }) {
     }
   }
 
+  async function acceptSuggestion(
+    suggestion: ActivitySuggestion,
+    values: { activity: string; tagId: string | null; startedAt: string; endedAt: string },
+  ) {
+    setBusySuggestion(suggestion.id);
+    setOperationError(false);
+    try {
+      setState(await acceptActivityAssistSuggestion({
+        userId,
+        suggestionId: suggestion.id,
+        activity: values.activity,
+        defaultTagId: values.tagId,
+        startedAt: new Date(values.startedAt).toISOString(),
+        endedAt: new Date(values.endedAt).toISOString(),
+        startLocalDate: values.startedAt.slice(0, 10),
+        endLocalDate: values.endedAt.slice(0, 10),
+      }));
+    } catch {
+      setOperationError(true);
+    } finally {
+      setBusySuggestion(null);
+    }
+  }
+
+  async function dismissSuggestion(suggestionId: string) {
+    setBusySuggestion(suggestionId);
+    setOperationError(false);
+    try {
+      setState(await dismissActivityAssistSuggestion(userId, suggestionId));
+    } catch {
+      setOperationError(true);
+    } finally {
+      setBusySuggestion(null);
+    }
+  }
+
   return (
     <div className="mx-auto max-w-5xl space-y-7" data-testid="activity-assist-page">
       <PageHeader title={t("activityAssist.title")} subtitle={t("activityAssist.subtitle")} />
@@ -128,6 +262,29 @@ export default function ActivityAssistPage({ userId }: { userId: string }) {
               {t("activityAssist.unavailableDescription")}
             </Alert>
           )}
+
+          <section className="space-y-4" aria-labelledby="activity-assist-review-heading">
+            <div>
+              <h2 id="activity-assist-review-heading" className="text-base font-semibold text-foreground">{t("activityAssist.reviewTitle")}</h2>
+              <p className="mt-1 text-sm text-muted">{t("activityAssist.reviewHint")}</p>
+            </div>
+            {state.pendingSuggestions.length === 0 ? (
+              <EmptyState className="py-8" title={t("activityAssist.noSuggestions")} description={t("activityAssist.noSuggestionsDescription")} />
+            ) : (
+              <ul className="space-y-3">
+                {state.pendingSuggestions.map((suggestion) => (
+                  <SuggestionReview
+                    key={suggestion.id}
+                    suggestion={suggestion}
+                    tags={tags.filter((tag) => !tag.is_archived)}
+                    busy={busySuggestion === suggestion.id}
+                    onAccept={(values) => void acceptSuggestion(suggestion, values)}
+                    onDismiss={() => void dismissSuggestion(suggestion.id)}
+                  />
+                ))}
+              </ul>
+            )}
+          </section>
 
           <section className="space-y-5" aria-labelledby="activity-assist-settings-heading">
             <div>
