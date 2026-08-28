@@ -5,7 +5,7 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 ## Shipped foundation
 
 - Local profile, SQLite persistence, bilingual shell, and System/Light/Dark appearance.
-- Ember, Grove, Tide, and enhanced-contrast Clarity palettes using shared semantic tokens.
+- Ember, Grove, Tide, enhanced-contrast Clarity, and evergreen/coral Canopy palettes using shared semantic tokens.
 - Bilingual Charger Reminder list, create/edit form, device detail, localized estimate states, and direct card navigation.
 - CoreHour sessions, check-ins, tags, daily goals, Today, Timeline, and Insights.
 - CoreHour planned blocks with separate day/week plan-versus-actual timelines and explicit conversion.
@@ -37,8 +37,9 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 
 - Replace remaining component-local status hues with semantic tokens.
 - Add only consumed device, chart-series, selected, disabled, and forced-colors roles.
-- Audit the same state vocabulary across all four palettes and both modes: rest, hover, pressed, selected, focused, disabled, loading, success, and error.
+- Audit the same state vocabulary across all five palettes and both modes: rest, hover, pressed, selected, focused, disabled, loading, success, and error.
 - Finish product-wide first-use, no-results, completed, loading, unavailable, not-found, and stale-data-safe recoverable-error states.
+- Keep the five curated palettes stable while validation continues; add no sixth palette or arbitrary color picker without usage evidence.
 
 **Exit gate:** shared primitives contain no hardcoded product/status hue; keyboard focus and interaction state remain distinguishable without color alone.
 
@@ -67,16 +68,26 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 
 **Exit gate:** actions do not duplicate state paths, and dismiss/snooze survives restart.
 
-### Phase 4 — optional product-form experiments
+### Phase 4 — feasible planning and Work Rhythm
 
+- Compare planned focus minutes with the current daily target and a configurable local work window.
+- Offer explicit defer or skip actions when the plan is overloaded; never delete, move, or schedule work automatically.
+- Add small focus-block templates that copy into a plan only on command; recurrence waits for repeated manual use.
+- Add a local Work Rhythm summary with three descriptive facts and one comparison period across focus, plan accuracy, context changes, and recovery.
+- Carry the adjustment saved in Daily or Weekly Review into the next planning surface as visible context.
+
+**Exit gate:** capacity feedback changes a later plan without creating an auto-scheduler, opaque productivity score, or moral judgment.
+
+### Phase 5 — optional trust and product-form experiments
+
+- Add one bounded Activity Assist undo or previewed same-label batch action; never auto-confirm evidence.
 - Read-only local `.ics` import before any OAuth or write-back.
 - Optional motion-safe companion presentation for recovery/hydration, disabled by default.
-- A coral/evergreen fifth palette only after the Phase 0 state matrix is complete and contrast-audited.
 - Validate Linux `.deb` and AppImage behavior on GNOME Wayland, Plasma Wayland, and X11; unsupported sessions remain explicit.
 
 Each experiment must be removable without migrating confirmed sessions, plans, reminders, or device data.
 
-### Phase 5 — sustainability validation
+### Phase 6 — sustainability validation
 
 - Test supporter funding that unlocks no core feature.
 - Consider a paid signed/supported distribution only when release maintenance provides demonstrated value.
