@@ -36,6 +36,7 @@ const emptyCounts: DataCounts = {
   activityAssistSamples: 0,
   activityAssistRules: 0,
   dailyReviews: 0,
+  weeklyReviews: 0,
 };
 
 function backupFilename(): string {

@@ -5,21 +5,13 @@ import { useI18n } from "../../../lib/i18n";
 import { useSession } from "../hooks/use-session";
 import { useCoreHourTimer } from "../runtime";
 import {
-  REVIEW_OUTCOMES,
   loadDailyReview,
   saveDailyReview,
   type DailyReviewState,
   type ReviewOutcome,
 } from "../daily-review";
-
-function ReviewMetric({ label, value, tone }: { label: string; value: string; tone: string }) {
-  return (
-    <div className={`min-h-24 border-t-2 bg-surface px-4 py-3 ${tone}`}>
-      <dt className="text-xs leading-snug text-muted">{label}</dt>
-      <dd className="mt-3 text-2xl font-semibold tabular-nums text-foreground">{value}</dd>
-    </div>
-  );
-}
+import { ReviewMetric, ReviewOutcomeSelector } from "../components/review-components";
+import { ReviewNavigation } from "../components/review-navigation";
 
 export default function DailyReviewPage({ userId }: { userId: string }) {
   const { locale, t } = useI18n();
@@ -101,7 +93,9 @@ export default function DailyReviewPage({ userId }: { userId: string }) {
         endedAt: state.endedAt,
         existingId: state.review?.id,
       });
-      setState({ ...state, review, currentGoalMinutes: review.nextGoalMinutes });
+      setState((current) => current?.localDate === review.localDate
+        ? { ...current, review, currentGoalMinutes: review.nextGoalMinutes }
+        : current);
       setOutcome(review.outcome);
       setNextGoalMinutes(review.nextGoalMinutes);
       setSaved(true);
@@ -126,11 +120,12 @@ export default function DailyReviewPage({ userId }: { userId: string }) {
           </div>
         )}
       />
+      <ReviewNavigation />
 
       {loadError && (
         <Alert variant="error" title={t("dailyReview.loadErrorTitle")}>
           <p>{t(state ? "dailyReview.refreshErrorDescription" : "dailyReview.loadErrorDescription")}</p>
-          <Button className="mt-3" size="sm" variant="secondary" onClick={() => void load()}>{t("coreHour.retry")}</Button>
+          <Button className="mt-3" size="sm" variant="secondary" disabled={saving || loading} onClick={() => void load()}>{t("coreHour.retry")}</Button>
         </Alert>
       )}
       {saveError && <Alert variant="error">{t("dailyReview.saveError")}</Alert>}
@@ -194,22 +189,7 @@ export default function DailyReviewPage({ userId }: { userId: string }) {
 
           <section className="border-t border-border pt-6" aria-labelledby="daily-review-outcome-heading">
             <h2 id="daily-review-outcome-heading" className="text-base font-semibold text-foreground">{t("dailyReview.outcome")}</h2>
-            <div className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-4" role="radiogroup" aria-label={t("dailyReview.outcome")}>
-              {REVIEW_OUTCOMES.map((value) => (
-                <label key={value} className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-md border px-3 py-2 text-sm font-medium ${outcome === value ? "border-accent bg-accent/10 text-foreground" : "border-control-border bg-surface text-muted hover:bg-surface-strong hover:text-foreground"}`}>
-                  <input
-                    type="radio"
-                    name="daily-review-outcome"
-                    value={value}
-                    checked={outcome === value}
-                    disabled={saving}
-                    onChange={() => { setOutcome(value); setSaved(false); }}
-                    className="h-4 w-4 accent-[var(--accent)] focus:ring-2 focus:ring-focus-ring"
-                  />
-                  {t(`dailyReview.outcome.${value}`)}
-                </label>
-              ))}
-            </div>
+            <ReviewOutcomeSelector label={t("dailyReview.outcome")} value={outcome} disabled={saving} onChange={(value) => { setOutcome(value); setSaved(false); }} />
           </section>
 
           <section className="border-t border-border pt-6" aria-labelledby="daily-review-next-heading">
@@ -230,7 +210,7 @@ export default function DailyReviewPage({ userId }: { userId: string }) {
           </section>
 
           <div className="flex flex-wrap items-center gap-3 border-t border-border pt-5">
-            <Button isLoading={saving} disabled={blockers || !outcome || !goalValid} onClick={() => void save()}>{t(state.review ? "dailyReview.update" : "dailyReview.complete")}</Button>
+            <Button isLoading={saving} disabled={loading || blockers || !outcome || !goalValid} onClick={() => void save()}>{t(state.review ? "dailyReview.update" : "dailyReview.complete")}</Button>
             {state.review && !saved && <span className="text-sm text-muted">{t("dailyReview.previouslySaved")}</span>}
           </div>
         </>

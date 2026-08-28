@@ -6,7 +6,6 @@ import { useSession } from "../hooks/use-session";
 import type { TimerState } from "../hooks/use-timer";
 import HistoryPage from "./history-page";
 import InsightsPage from "./insights-page";
-import DailyReviewPage from "./daily-review-page";
 import SettingsPage from "./settings-page";
 import TagsPage from "./tags-page";
 import {
@@ -19,6 +18,9 @@ import { Button, EmptyState } from "@memo/ui";
 import { UncertainTimeReview } from "../components/uncertain-time-review";
 import { useCoreHourLoadState, useCoreHourTimer } from "../runtime";
 import ActivityAssistPage from "../../activity-assist/activity-assist-page";
+
+const DailyReviewPage = React.lazy(() => import("./daily-review-page"));
+const WeeklyReviewPage = React.lazy(() => import("./weekly-review-page"));
 
 export function CoreHourHome({ timer }: { timer: TimerState }) {
   const [intervalMinutes, setIntervalMinutes] = useState(30);
@@ -154,7 +156,8 @@ function CoreHourWorkspace({ userId }: { userId: string }) {
         <Route index element={<CoreHourHome timer={timer} />} />
         <Route path="history" element={<HistoryPage userId={userId} />} />
         <Route path="insights" element={<InsightsPage userId={userId} />} />
-        <Route path="review" element={<DailyReviewPage userId={userId} />} />
+        <Route path="review" element={<React.Suspense fallback={<p className="py-16 text-center text-sm text-muted" role="status">{t("dailyReview.loading")}</p>}><DailyReviewPage userId={userId} /></React.Suspense>} />
+        <Route path="review/week" element={<React.Suspense fallback={<p className="py-16 text-center text-sm text-muted" role="status">{t("weeklyReview.loading")}</p>}><WeeklyReviewPage userId={userId} /></React.Suspense>} />
         <Route path="assist" element={<ActivityAssistPage userId={userId} />} />
         <Route path="tags" element={<TagsPage userId={userId} />} />
         <Route path="settings" element={<SettingsPage />} />

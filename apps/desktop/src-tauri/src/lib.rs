@@ -9,10 +9,12 @@ mod daily_review;
 mod desktop_companion;
 mod foreground_application;
 mod pause_hydrate;
+mod review_time;
 mod sidecar;
 mod sync;
 mod system_idle;
 mod system_interruption;
+mod weekly_review;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -107,6 +109,12 @@ pub fn run() {
             sql: include_str!("../migrations/0015_ch_daily_reviews.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 16,
+            description: "create CoreHour weekly reviews",
+            sql: include_str!("../migrations/0016_ch_weekly_reviews.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
@@ -159,6 +167,8 @@ pub fn run() {
             activity_assist::delete_activity_assist_rule,
             daily_review::load_daily_review,
             daily_review::save_daily_review,
+            weekly_review::load_weekly_review,
+            weekly_review::save_weekly_review,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

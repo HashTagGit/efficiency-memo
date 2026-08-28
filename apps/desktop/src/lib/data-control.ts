@@ -22,6 +22,7 @@ export interface DataCounts {
   activityAssistSamples: number;
   activityAssistRules: number;
   dailyReviews: number;
+  weeklyReviews: number;
 }
 
 export interface BackupPreview {

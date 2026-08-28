@@ -10,6 +10,7 @@ export const chManifest: ToolManifest = {
     "/tools/core-hour/history",
     "/tools/core-hour/tags",
     "/tools/core-hour/review",
+    "/tools/core-hour/review/week",
     "/tools/core-hour/settings",
   ],
   enabled: true,

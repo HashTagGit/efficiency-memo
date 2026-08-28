@@ -93,8 +93,12 @@ _Avoid_: History retention, backup period
 A user-completed closeout for one local date that records one bounded outcome and one subsequent focus target.
 _Avoid_: Journal, daily report, AI summary
 
+**Weekly Review**:
+A user-completed closeout for one local Monday-to-Sunday range that records one bounded outcome and one subsequent focus target.
+_Avoid_: Weekly report, productivity score, AI summary
+
 **Review Outcome**:
-The user's selected description of how planned focus matched the day: on track, overcommitted, underplanned, or interrupted.
+The user's selected description of how planned focus matched a Daily Review or Weekly Review period: on track, overcommitted, underplanned, or interrupted.
 _Avoid_: Productivity score, mood
 
 **Next Focus Target**:

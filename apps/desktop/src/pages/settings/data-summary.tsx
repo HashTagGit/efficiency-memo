@@ -13,10 +13,11 @@ export function DataSummary({ counts }: { counts: DataCounts }) {
     { label: t("dataPrivacy.activityAssistSamples"), value: counts.activityAssistSamples, color: "border-suggested text-suggested" },
     { label: t("dataPrivacy.activityAssistRules"), value: counts.activityAssistRules, color: "border-privacy text-privacy" },
     { label: t("dataPrivacy.dailyReviews"), value: counts.dailyReviews, color: "border-focus text-focus" },
+    { label: t("dataPrivacy.weeklyReviews"), value: counts.weeklyReviews, color: "border-actual text-actual" },
   ];
 
   return (
-    <dl className="grid gap-px overflow-hidden rounded-md border border-border bg-border sm:grid-cols-2 lg:grid-cols-4">
+    <dl className="grid gap-px overflow-hidden rounded-md border border-border bg-border sm:grid-cols-2 lg:grid-cols-3">
       {metrics.map((metric) => (
         <div
           key={metric.label}

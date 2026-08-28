@@ -1,5 +1,8 @@
 use crate::data_control::DB_FILENAME;
-use chrono::{DateTime, NaiveDate, NaiveTime, SecondsFormat, Utc};
+use crate::review_time::{
+    interval_overlap_milliseconds, prorated_elapsed_seconds, validated_local_range,
+};
+use chrono::{DateTime, SecondsFormat, Utc};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
@@ -68,34 +71,14 @@ fn database(app: &AppHandle) -> Result<Connection, String> {
 }
 
 fn day_bounds(input: &DailyReviewQuery) -> Result<(DateTime<Utc>, DateTime<Utc>), String> {
-    let local_date = NaiveDate::parse_from_str(&input.local_date, "%Y-%m-%d")
-        .map_err(|_| "invalid-date".to_string())?;
-    let started_at = DateTime::parse_from_rfc3339(&input.started_at)
-        .map_err(|_| "invalid-date".to_string())?;
-    let ended_at = DateTime::parse_from_rfc3339(&input.ended_at)
-        .map_err(|_| "invalid-date".to_string())?;
-    let next_date = local_date.succ_opt().ok_or_else(|| "invalid-date".to_string())?;
-    let duration_seconds = (ended_at - started_at).num_seconds();
-    if started_at.date_naive() != local_date
-        || ended_at.date_naive() != next_date
-        || started_at.time() != NaiveTime::MIN
-        || ended_at.time() != NaiveTime::MIN
-        || !(22 * 3600..=26 * 3600).contains(&duration_seconds)
-    {
-        return Err("invalid-date".to_string());
-    }
-    Ok((started_at.with_timezone(&Utc), ended_at.with_timezone(&Utc)))
-}
-
-fn overlap_milliseconds(
-    started_at: DateTime<Utc>,
-    ended_at: DateTime<Utc>,
-    day_started_at: DateTime<Utc>,
-    day_ended_at: DateTime<Utc>,
-) -> i64 {
-    let start = started_at.timestamp_millis().max(day_started_at.timestamp_millis());
-    let end = ended_at.timestamp_millis().min(day_ended_at.timestamp_millis());
-    (end - start).max(0)
+    validated_local_range(
+        &input.local_date,
+        &input.started_at,
+        &input.ended_at,
+        1,
+        22,
+        26,
+    )
 }
 
 fn load_state(connection: &Connection, input: &DailyReviewQuery) -> Result<DailyReviewState, String> {
@@ -116,14 +99,10 @@ fn load_state(connection: &Connection, input: &DailyReviewQuery) -> Result<Daily
         values
     };
     let planned_minutes = plans.iter().try_fold(0_i64, |total, (start, end, _)| {
-        let start = DateTime::parse_from_rfc3339(start)
-            .map_err(|_| "invalid-date".to_string())?
-            .with_timezone(&Utc);
-        let end = DateTime::parse_from_rfc3339(end)
-            .map_err(|_| "invalid-date".to_string())?
-            .with_timezone(&Utc);
         Ok::<_, String>(
-            total + overlap_milliseconds(start, end, day_started_at, day_ended_at) / 60_000,
+            total
+                + interval_overlap_milliseconds(start, end, day_started_at, day_ended_at)?
+                    / 60_000,
         )
     })?;
     let sessions: Vec<(String, String, i64)> = {
@@ -140,15 +119,16 @@ fn load_state(connection: &Connection, input: &DailyReviewQuery) -> Result<Daily
         values
     };
     let actual_seconds = sessions.iter().try_fold(0_i64, |total, (start, end, elapsed)| {
-        let start = DateTime::parse_from_rfc3339(start)
-            .map_err(|_| "invalid-date".to_string())?
-            .with_timezone(&Utc);
-        let end = DateTime::parse_from_rfc3339(end)
-            .map_err(|_| "invalid-date".to_string())?
-            .with_timezone(&Utc);
-        let wall_milliseconds = (end - start).num_milliseconds().max(1);
-        let overlap = overlap_milliseconds(start, end, day_started_at, day_ended_at);
-        Ok::<_, String>(total + (*elapsed as f64 * overlap as f64 / wall_milliseconds as f64).round() as i64)
+        Ok::<_, String>(
+            total
+                + prorated_elapsed_seconds(
+                    start,
+                    end,
+                    *elapsed,
+                    day_started_at,
+                    day_ended_at,
+                )?,
+        )
     })?;
     let completed_plan_count = plans.iter().filter(|(_, _, status)| status == "completed").count() as i64;
     let skipped_plan_count = plans.iter().filter(|(_, _, status)| status == "skipped").count() as i64;
