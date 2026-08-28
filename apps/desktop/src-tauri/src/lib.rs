@@ -2,9 +2,11 @@
 
 use tauri_plugin_sql::{Migration, MigrationKind};
 
+mod activity_assist;
 mod core_hour;
 mod data_control;
 mod desktop_companion;
+mod foreground_application;
 mod pause_hydrate;
 mod sidecar;
 mod sync;
@@ -80,6 +82,12 @@ pub fn run() {
             sql: include_str!("../migrations/0011_pause_hydrate_deferral_status.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 12,
+            description: "create activity assist privacy tables",
+            sql: include_str!("../migrations/0012_activity_assist.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
@@ -100,6 +108,7 @@ pub fn run() {
                 eprintln!("WARN: Failed to apply pending import: {e}");
             }
             desktop_companion::setup(app)?;
+            activity_assist::setup(app.handle().clone());
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -122,6 +131,9 @@ pub fn run() {
             pause_hydrate::claim_pause_hydrate_reminders,
             pause_hydrate::act_on_pause_hydrate_reminder,
             pause_hydrate::complete_natural_break,
+            activity_assist::load_activity_assist_state,
+            activity_assist::save_activity_assist_preferences,
+            activity_assist::clear_activity_assist_samples,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
