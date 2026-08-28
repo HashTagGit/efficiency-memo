@@ -4,7 +4,7 @@ A local-first desktop toolkit for deliberate focus and healthier work rhythms. I
 
 ## About
 
-EfficiencyMemo is a pnpm monorepo with independent tools behind one desktop workspace. CoreHour records and reviews focus time; Pause & Hydrate provides local break and hydration reminders. Charger Reminder is disabled; WebDAV sync code is retained but outside the current product scope.
+EfficiencyMemo is a pnpm monorepo with independent tools behind one desktop workspace. CoreHour records and reviews focus time; Pause & Hydrate provides local break and hydration reminders. WebDAV sync code is retained but outside the current product scope.
 
 ## Features
 
@@ -123,7 +123,7 @@ Key design choices:
 - **Appearance preferences** — System/light/dark mode and Ember/Grove/Tide palettes are persisted locally; the workspace shell retains a quick mode toggle.
 - **Data control** — Portable .ememo files are validated SQLite snapshots with stable appearance preferences; restores are staged and applied before the next database connection opens.
 - **Native notifications** — `tauri-plugin-notification` handles due CoreHour check-ins and Pause & Hydrate reminders.
-- **Deferred code** — Charger Reminder is retained but disabled. WebDAV sync is not part of the current product scope.
+- **Local archive** — retired experiments may be kept under the ignored root `bak/` directory and are not part of the product or active repository tree. WebDAV sync is not part of the current product scope.
 
 ### Shared packages
 

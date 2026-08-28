@@ -24,7 +24,7 @@ Plan -> Focus -> Recover -> Review -> Adjust the next plan
              \-> Activity suggestion -> Explicit confirmation -/
 ```
 
-The repository now implements the foundations that earlier competitor reviews recommended: semantic module and interaction colors, explicit local Activity Assist rules, guided daily/weekly reviews, a bounded cross-module Attention Feed, and transition-triggered device notifications. It also has five curated palettes with independent light/dark/system modes; CoreHour plan-versus-actual and Insights; mature Pause & Hydrate deferral; tray commands; local backup/restore/reset; and Chinese/English UI. The next release should make planning capacity visible instead of adding another timer or a general task manager.
+The repository now implements the foundations that earlier competitor reviews recommended: semantic module and interaction colors, explicit local Activity Assist rules, guided daily/weekly reviews, and a bounded cross-module Attention Feed. It also has five curated palettes with independent light/dark/system modes; CoreHour plan-versus-actual and Insights; mature Pause & Hydrate deferral; tray commands; local backup/restore/reset; and Chinese/English UI. The next release should make planning capacity visible instead of adding another timer or a general task manager.
 
 Immediate priorities:
 
@@ -36,7 +36,7 @@ Immediate priorities:
 
 ## Current EfficiencyMemo baseline
 
-The following is **Current**, based on the repository at `a92380d`:
+The following is **Current** for the post-Charger-retirement repository state reviewed on 2026-08-28:
 
 | Area | Current capability | Evidence |
 |---|---|---|
@@ -46,7 +46,6 @@ The following is **Current**, based on the repository at `a92380d`:
 | Activity Assist | Off by default; foreground executable only; pause, exclusions, short retention, raw inspection/deletion; stable suggestions; edit, dismiss, atomic explicit acceptance into Actual Sessions, and explicit app-to-activity/tag rules | [`activity_assist.rs`](../../apps/desktop/src-tauri/src/activity_assist.rs), [`activity-assist-page.tsx`](../../apps/desktop/src/features/activity-assist/activity-assist-page.tsx) |
 | Pause & Hydrate | Separate recovery/hydration cadence; work and quiet hours; native notifications; focus deferral; DND/system-interruption handling; natural idle rest where supported; local event history | [`pause-hydrate`](../../apps/desktop/src/features/pause-hydrate), [`ROADMAP.md`](../ROADMAP.md) |
 | Desktop operations | Maximum-five-item Attention Feed with owner/action deep links, stale-safe retry, tray state/actions, global show/hide, and focus commands | [`dashboard`](../../apps/desktop/src/pages/dashboard), [`CONTEXT.md`](../CONTEXT.md), [`ROADMAP.md`](../ROADMAP.md) |
-| Charger Reminder | Devices, atomic Full Charge Records, estimated due state, transition-triggered native notifications, persisted once-per-due delivery, and one-day Charge Snooze | [`charger-reminder`](../../apps/desktop/src/features/charger-reminder), [`charger_reminder.rs`](../../apps/desktop/src-tauri/src/charger_reminder.rs) |
 | Trust and portability | Local profile without sign-in; SQLite; privacy controls; portable backup preview/restore; scoped export/reset; WebDAV configuration | [`CONTEXT.md`](../CONTEXT.md), [`data-privacy-page.tsx`](../../apps/desktop/src/pages/settings/data-privacy-page.tsx) |
 | Localization | English and Simplified Chinese across the shell and current tools | [`i18n.tsx`](../../apps/desktop/src/lib/i18n.tsx) |
 
@@ -99,7 +98,7 @@ Rize makes suggestion review and correction part of setup; ActivityWatch exposes
 
 ### 3. Desktop products win through an operational edge surface
 
-Toggl, RescueTime, Stretchly, and PawPal use the tray, menu bar, notifications, overlays, or shortcuts as primary operating surfaces. Akiflow's mobile Daily Dashboard separately shows current/next Live Activity and a feed. EfficiencyMemo now coordinates its tray, native notifications, and bounded Attention Feed across focus, reviews, recovery, Activity Assist, and charging; the next value should come from better planning constraints rather than another edge surface. [RescueTime Assistant](https://help.rescuetime.com/article/413-the-rescuetime-assistant), [Akiflow Daily Dashboard](https://product.akiflow.com/en/help/articles/7855441/daily-dashboard), [PawPal repository](https://github.com/zebangeth/PawPal)
+Toggl, RescueTime, Stretchly, and PawPal use the tray, menu bar, notifications, overlays, or shortcuts as primary operating surfaces. Akiflow's mobile Daily Dashboard separately shows current/next Live Activity and a feed. EfficiencyMemo now coordinates its tray, native notifications, and bounded Attention Feed across focus, reviews, recovery, and Activity Assist; the next value should come from better planning constraints rather than another edge surface. [RescueTime Assistant](https://help.rescuetime.com/article/413-the-rescuetime-assistant), [Akiflow Daily Dashboard](https://product.akiflow.com/en/help/articles/7855441/daily-dashboard), [PawPal repository](https://github.com/zebangeth/PawPal)
 
 ### 4. Color works when it encodes role, ownership, and state
 
@@ -174,10 +173,10 @@ A palette changes visual character. It must not change what warning, success, pl
 | Neutral | `canvas`, `surface`, `surface-strong`, `text`, `text-muted`, `border`, `control-border`, `disabled` | Hierarchy and readable structure; most of the interface remains neutral |
 | Global action | `accent`, `on-accent`, `accent-hover`, `accent-pressed`, `accent-subtle`, `accent-subtle-border`, `focus-ring` | Primary commands and selected navigation, consistent across modules |
 | Status triplets | `info/success/warning/danger` each with `text`, `container`, and `border` | Alerts and validation; replaces hardcoded Tailwind emerald/amber values |
-| Domain triplets | `focus/planned/actual/suggested/recovery/hydration/privacy/device` each with `text`, `container`, and `border` where consumed | Small markers, timeline edges, icons, chart keys, and bounded callouts |
+| Domain triplets | `focus/planned/actual/suggested/recovery/hydration/privacy` each with `text`, `container`, and `border` where consumed | Small markers, timeline edges, icons, chart keys, and bounded callouts |
 | Data | `chart-1` through `chart-6`, plus user-owned tag colors | Stable multi-series charts without borrowing action or status colors |
 
-Do not create all possible token combinations upfront. Add the triplets needed by current alerts, timelines, Now items, charts, and Charger states; add another only when a real component consumes it.
+Do not create all possible token combinations upfront. Add the triplets needed by current alerts, timelines, Now items, and charts; add another only when a real component consumes it.
 
 ### Interaction state contract
 
@@ -201,7 +200,6 @@ Use color as a locator, not a page wash:
 | CoreHour focus | timer accent, active edge, leading chart series | clock/play icon and Running/Paused text |
 | Planned / actual / suggested | timeline edge and legend | dashed / solid / dotted edge plus explicit label |
 | Recovery / hydration | reminder marker and history icon | movement / droplet icon and text |
-| Charger Reminder | battery/device marker and due state | battery icon, due label, and state-specific action |
 | Privacy/data | collection/backup marker | shield/database icon and scope text |
 
 Primary buttons remain the global palette accent. A hydration button should not automatically become blue, and a destructive action should never borrow a module color.
@@ -216,7 +214,7 @@ All ten palette/mode combinations still require ongoing keyboard, forced-colors,
 
 ### Delivered foundation and remaining Phase 0 validation
 
-At the `a92380d` baseline, the repository has delivered five curated palettes, core semantic module/status/interaction roles, reusable Activity Assist app rules, guided reviews, the bounded Now Attention Feed, and Charger Reminder's persisted native due-notification loop. Phases 1 through 3 are shipped; Phase 0 remains an audit-and-completion phase rather than a new theme phase.
+At the post-Phase-3 retirement baseline, the repository has delivered five curated palettes, core semantic module/status/interaction roles, reusable Activity Assist app rules, guided reviews, and the bounded Now Attention Feed. Phases 1 through 3 are shipped; Phase 0 remains an audit-and-completion phase rather than a new theme phase.
 
 Remaining validation:
 
@@ -224,13 +222,12 @@ Remaining validation:
 - visually audit every current palette in both modes, including keyboard focus, reduced motion, and forced colors;
 - fix defects in the shipped flows before broadening their models.
 
-### Phase 3: cross-module attention and reminder completion (shipped)
+### Phase 3: cross-module attention completion (shipped)
 
 Delivered:
 
 - Now attention feed with no more than five actionable items;
-- deep links to daily/weekly review, Activity Assist, Pause & Hydrate, and Charger owning surfaces;
-- native Charger due notification with persisted once-per-due delivery, one-day snooze, and atomic Full Charge Record actions in the owning workflow;
+- deep links to daily/weekly review, Activity Assist, and Pause & Hydrate owning surfaces;
 - stale-data-safe error and retry behavior per section.
 
 Exit evidence:
@@ -264,7 +261,7 @@ Run separately measurable experiments:
 2. **Local calendar bridge:** read-only `.ics` import, meeting overlays, and explicit event-to-plan copying.
 3. **Companion presentation:** optional repo-owned motion/character layer for recovery and hydration prompts, disabled by default and reduced-motion safe.
 
-Do not combine these experiments into one release. Each must be removable without migrating confirmed session, plan, reminder, or device data.
+Do not combine these experiments into one release. Each must be removable without migrating confirmed session, plan, or reminder data.
 
 ### Phase 6: sustainability validation
 

@@ -83,11 +83,11 @@ describe('ToolManifest type', () => {
 
   it('accepts valid ToolManifest with all fields', () => {
     const manifest: ToolManifest = {
-      id: 'charger-reminder',
-      name: 'Charger Reminder',
-      icon: '🔋',
-      description: 'Track device battery levels and get reminders',
-      routes: ['/dashboard/charger-reminder', '/dashboard/charger-reminder/:id'],
+      id: 'core-hour',
+      name: 'CoreHour',
+      icon: 'clock',
+      description: 'Plan, focus, and review local work sessions',
+      routes: ['/tools/core-hour', '/tools/core-hour/history'],
       enabled: true,
     };
     expectTypeOf(manifest).toEqualTypeOf<ToolManifest>();

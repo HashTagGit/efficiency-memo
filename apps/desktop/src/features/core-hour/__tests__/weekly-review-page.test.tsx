@@ -30,7 +30,6 @@ const state: WeeklyReviewState = {
   breakCount: 4,
   hydrationCount: 6,
   dailyReviewCount: 3,
-  deviceAttentionCount: 1,
   currentGoalMinutes: 120,
   review: null,
 };

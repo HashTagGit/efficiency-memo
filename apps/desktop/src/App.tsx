@@ -8,15 +8,8 @@ import { DataPrivacyPage } from "./pages/settings/data-privacy-page";
 import { useI18n } from "./lib/i18n";
 import { DesktopCompanionBridge } from "./components/desktop-companion-bridge";
 import { ReviewReminderBridge } from "./components/review-reminder-bridge";
-import { ChargerNotificationBridge } from "./components/charger-notification-bridge";
 
 // Lazy-load tool pages
-const ChargerReminderPage = lazy(() =>
-  import("./features/charger-reminder/pages/charger-reminder-routes").then((m) => ({
-    default: m.default ?? (() => null),
-  }))
-);
-
 const CoreHourPage = lazy(() =>
   import("./features/core-hour/pages/dashboard-page").then((m) => ({
     default: m.default ?? (() => null),
@@ -43,7 +36,6 @@ function App() {
     <BrowserRouter>
       <DesktopCompanionBridge />
       <ReviewReminderBridge />
-      <ChargerNotificationBridge />
       <Routes>
         <Route path="/sign-in" element={<Navigate to="/dashboard" replace />} />
 
@@ -54,14 +46,6 @@ function App() {
               <Routes>
                 <Route path="/" element={<Navigate to="/dashboard" replace />} />
                 <Route path="/dashboard" element={<DashboardPage />} />
-                <Route
-                  path="/tools/charger-reminder/*"
-                  element={
-                    <Suspense fallback={<ToolFallback />}>
-                      <ChargerReminderPage />
-                    </Suspense>
-                  }
-                />
                 <Route
                   path="/tools/core-hour/*"
                   element={

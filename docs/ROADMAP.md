@@ -6,7 +6,6 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 
 - Local profile, SQLite persistence, bilingual shell, and System/Light/Dark appearance.
 - Ember, Grove, Tide, enhanced-contrast Clarity, and evergreen/coral Canopy palettes using shared semantic tokens.
-- Bilingual Charger Reminder list, create/edit form, device detail, localized estimate states, and direct card navigation.
 - CoreHour sessions, check-ins, tags, daily goals, Today, Timeline, and Insights.
 - CoreHour planned blocks with separate day/week plan-versus-actual timelines and explicit conversion.
 - CoreHour direct plan move/resize plus selected-week and current-week plan-versus-actual review.
@@ -20,16 +19,15 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 - Native macOS Natural Rest idle detection through the current login session's CoreGraphics event state.
 - Capability-gated Linux Natural Rest through Mutter on GNOME Wayland and XScreenSaver on native X11; unsupported Wayland sessions remain disabled.
 - Windows system-interruption deferral with persisted blocked state, recovery grace, staggered reminders, and suspend-gap protection.
-- Operational Now home with current focus, next plan, reminder status, device attention, and compact full-tool navigation.
+- Operational Now home with current focus, next plan, reminder status, and compact full-tool navigation.
 - Dedicated control-border and keyboard-focus roles across every palette and mode, consumed by shared primitives and native desktop controls.
 - Windows-first Activity Assist collection foundation with opt-in foreground executable sampling, collection pause, exclusions, short retention, inspection, and deletion.
 - Activity Assist stable suggestions with edit, dismiss, and atomic explicit acceptance into confirmed CoreHour sessions.
 - Explicit application mapping rules that prefill later suggestions, remain editable/deletable, appear in portable/readable exports, and surface pending review on Now.
 - Guided Daily Review with plan-versus-actual and recovery facts, open-item guards, one bounded outcome, and an atomically applied next focus target.
-- Weekly Review with capacity, longest-block, session-fragmentation, recovery, daily-review coverage, and current device-attention facts plus the same bounded target adjustment.
+- Weekly Review with capacity, longest-block, session-fragmentation, recovery, daily-review coverage, and the same bounded target adjustment.
 - Optional daily and weekly Review Reminders with persisted once-per-period delivery, active-focus deferral, shared quiet hours, and supported system DND handling.
-- Transition-triggered native Charger Reminder notifications with persisted once-per-due delivery plus one-day snooze and Full Charge Record actions in the owning device workflow.
-- Module locator colors for CoreHour, Pause & Hydrate, Charger Reminder, and Settings, while primary actions remain governed by the selected palette.
+- Module locator colors for CoreHour, Pause & Hydrate, and Settings, while primary actions remain governed by the selected palette.
 - Semantic Alert containers plus explicit button pressed and disabled reactions without component-level product hues.
 
 ## Delivery roadmap
@@ -37,7 +35,7 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 ### Phase 0 — semantic UI completion (current)
 
 - Replace remaining component-local status hues with semantic tokens.
-- Add only consumed device, chart-series, selected, disabled, and forced-colors roles.
+- Add only consumed chart-series, selected, disabled, and forced-colors roles.
 - Audit the same state vocabulary across all five palettes and both modes: rest, hover, pressed, selected, focused, disabled, loading, success, and error.
 - Finish product-wide first-use, no-results, completed, loading, unavailable, not-found, and stale-data-safe recoverable-error states.
 - Keep the five curated palettes stable while validation continues; add no sixth palette or arbitrary color picker without usage evidence.
@@ -56,16 +54,15 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 ### Phase 2 — guided review and adjustment (shipped)
 
 - Shipped: optional end-of-day closeout for pending suggestions/uncertain time, plan-versus-actual, recovery/hydration facts, one outcome, and one next adjustment.
-- Shipped: weekly reset for capacity, longest focus blocks, session fragmentation, recovery completion, daily-review coverage, device attention, and goal adjustment.
+- Shipped: weekly reset for capacity, longest focus blocks, session fragmentation, recovery completion, daily-review coverage, and goal adjustment.
 - Shipped: optional review reminders that respect active focus, shared quiet hours, and supported system interruption state.
 
 **Exit gate:** a saved adjustment changes a later plan or goal. Stop if the workflow becomes a passive report that users open without acting on it.
 
-### Phase 3 — cross-module attention and reminder completion (shipped)
+### Phase 3 — cross-module attention completion (shipped)
 
 - Shipped: a maximum-five-item Now attention feed with one owner and one next action per item.
-- Shipped: coalesced pending reviews, suggestions, uncertain time, due recovery/hydration, and device attention with deep links to the owning workflow.
-- Shipped: transition-triggered native Charger Reminder notifications with persisted deduplication; one-day snooze and Full Charge Record actions reuse the owning device workflow.
+- Shipped: coalesced pending reviews, suggestions, uncertain time, and due recovery/hydration with deep links to the owning workflow.
 
 **Exit gate:** actions do not duplicate state paths, and dismiss/snooze survives restart.
 
@@ -86,7 +83,7 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 - Optional motion-safe companion presentation for recovery/hydration, disabled by default.
 - Validate Linux `.deb` and AppImage behavior on GNOME Wayland, Plasma Wayland, and X11; unsupported sessions remain explicit.
 
-Each experiment must be removable without migrating confirmed sessions, plans, reminders, or device data.
+Each experiment must be removable without migrating confirmed sessions, plans, or reminders.
 
 ### Phase 6 — sustainability validation
 

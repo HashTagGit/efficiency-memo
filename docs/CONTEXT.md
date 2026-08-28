@@ -6,22 +6,11 @@ A domain glossary for EfficiencyMemo. Use it as a shared vocabulary when discuss
 
 - **Desktop Surface** — The Tauri v2 application (`apps/desktop/`); the project's sole deployable surface.
 - **CoreHour** — The local focus workflow for session timing, periodic check-ins, plans, tags, timelines, and review.
-- **Charger Reminder** — The local device workflow for recording full charges and estimating when battery-powered devices need attention.
 - **Shared Package** — Cross-cutting code in `packages/shared/` (types and constants) and `packages/ui/` (React + Tailwind components); consumed by the desktop surface.
 - **Tool Registry** — The feature-manifest registry that exposes the enabled local tools to the shell and Now surface.
 - **Local Profile** — The single SQLite user selected or created automatically at startup; there is no sign-in step.
 - **SQLite Storage** — Local database accessed via `tauri-plugin-sql`; migrations live in `src-tauri/migrations/`.
 - **Archived Surface** — The original `apps/web/` Next.js + Supabase web app, removed in v0.1.0-desktop; available in git history if needed.
-
-## Charger Reminder
-
-**Full Charge Record**:
-A user-confirmed record that one device reached full charge at a specific time; it resets that device's estimate.
-_Avoid_: Automatic charge detection, battery reading
-
-**Charge Snooze**:
-A one-day deferral of the current due prompt that leaves the device estimate unchanged.
-_Avoid_: Full Charge Record, reminder dismissal
 
 ## Now
 

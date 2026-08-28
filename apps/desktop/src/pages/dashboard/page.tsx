@@ -12,14 +12,6 @@ import { loadDashboardNow, type DashboardNowData } from "./dashboard-data";
 
 function ToolIcon({ name }: { name: string }) {
   const iconMap: Record<string, React.ReactNode> = {
-    "Charger Reminder": (
-      <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <rect width="16" height="10" x="4" y="6" rx="2" />
-        <line x1="8" x2="8" y1="6" y2="4" />
-        <line x1="16" x2="16" y1="6" y2="4" />
-        <line x1="12" x2="12" y1="14" y2="14" />
-      </svg>
-    ),
     "CoreHour": (
       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="10" />
@@ -254,20 +246,6 @@ export function DashboardPage() {
       : pauseLoadError
         ? t("dashboard.reminderStale", { detail: currentReminderDescription })
         : currentReminderDescription;
-  const deviceValue = dataLoading && !nowData
-    ? t("dashboard.loading")
-    : dataError && !nowData
-      ? t("dashboard.unavailable")
-      : String(nowData?.deviceAttentionCount ?? 0);
-  const deviceDescription = !nowData && dataLoading
-    ? t("dashboard.deviceLoadingHint")
-    : !nowData && dataError
-      ? t("dashboard.deviceUnavailableHint")
-      : !nowData || nowData.deviceCount === 0
-        ? t("dashboard.noDevices")
-        : nowData.deviceAttentionCount > 0
-          ? t("dashboard.deviceAttention", { count: nowData.deviceAttentionCount })
-          : t("dashboard.devicesOnSchedule", { count: nowData.deviceCount });
   const attentionItems: AttentionItem[] = [];
   if (timer.uncertainInterval) {
     attentionItems.push({
@@ -320,18 +298,6 @@ export function DashboardPage() {
       route: "/tools/core-hour/assist",
     });
   }
-  const deviceAttentionCount = nowData?.deviceAttentionCount ?? 0;
-  if (deviceAttentionCount > 0) {
-    attentionItems.push({
-      id: "devices",
-      owner: t("chargerReminder.title"),
-      title: t("dashboard.devices"),
-      description: t("dashboard.attentionDeviceDescription", { count: deviceAttentionCount }),
-      tone: "border-warning text-warning",
-      actionLabel: t("dashboard.openDevices"),
-      route: "/tools/charger-reminder",
-    });
-  }
   const attentionLoading = coreLoading || pauseLoading || dataLoading;
   const attentionUnavailable = coreLoadError || pauseLoadError || dataError;
   const attentionStatusLabel = attentionLoading
@@ -372,7 +338,7 @@ export function DashboardPage() {
         onRetry={attentionUnavailable && !attentionLoading ? () => { void retryAttention(); } : undefined}
       />
 
-      <section className="grid gap-3 sm:grid-cols-2" data-testid="dashboard-now-grid" aria-label={t("dashboard.nowSummary")}>
+      <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" data-testid="dashboard-now-grid" aria-label={t("dashboard.nowSummary")}>
         <SummaryPanel
           icon={<ToolIcon name="CoreHour" />}
           title={t("dashboard.focus")}
@@ -399,15 +365,6 @@ export function DashboardPage() {
           tone="border-recovery text-recovery"
           actionLabel={t("dashboard.openReminders")}
           onAction={() => navigate("/tools/pause-hydrate")}
-        />
-        <SummaryPanel
-          icon={<ToolIcon name="Charger Reminder" />}
-          title={t("dashboard.devices")}
-          value={deviceValue}
-          description={deviceDescription}
-          tone="border-warning text-warning"
-          actionLabel={t("dashboard.openDevices")}
-          onAction={() => navigate("/tools/charger-reminder")}
         />
       </section>
 

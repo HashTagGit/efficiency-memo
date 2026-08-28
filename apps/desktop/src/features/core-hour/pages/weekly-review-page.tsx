@@ -113,7 +113,6 @@ export default function WeeklyReviewPage({ userId }: { userId: string }) {
             <ReviewMetric label={t("dailyReview.breaks")} value={String(state.breakCount)} tone="border-recovery" />
             <ReviewMetric label={t("dailyReview.hydration")} value={String(state.hydrationCount)} tone="border-hydration" />
             <ReviewMetric label={t("weeklyReview.planCompletion")} value={`${state.completedPlanCount}/${state.planCount}`} tone="border-privacy" />
-            <ReviewMetric label={t("weeklyReview.deviceAttention")} value={String(state.deviceAttentionCount)} tone="border-warning" />
           </dl>
           <p className="mt-3 text-sm text-muted">{t("dailyReview.planStatus", { total: state.planCount, completed: state.completedPlanCount, skipped: state.skippedPlanCount, pending: state.pendingPlanCount })}</p>
         </section>

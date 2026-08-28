@@ -10,15 +10,8 @@ export interface DashboardPlanSummary {
 
 export interface DashboardNowData {
   nextPlan: DashboardPlanSummary | null;
-  deviceCount: number;
-  deviceAttentionCount: number;
   pendingSuggestionCount: number;
   dueReviewKind: "daily" | "weekly" | null;
-}
-
-interface DeviceCountRow {
-  device_count: number | string;
-  attention_count: number | string | null;
 }
 
 interface SuggestionCountRow {
@@ -65,14 +58,10 @@ export async function loadDashboardNow(userId: string, now = new Date()): Promis
   const clock = localReviewClock(now);
   const day = localDayRange(now);
   const week = localWeekRange(now);
-  const [plans, deviceRows, suggestionRows, reviewRows] = await Promise.all([
+  const [plans, suggestionRows, reviewRows] = await Promise.all([
     dbSelect<DashboardPlanSummary>(
       "SELECT id, title, started_at, ended_at FROM ch_plans WHERE user_id = $1 AND status = 'planned' AND ended_at > $2 AND started_at < $3 ORDER BY started_at LIMIT 1",
       [userId, now.toISOString(), dayEnd.toISOString()],
-    ),
-    dbSelect<DeviceCountRow>(
-      "SELECT COUNT(*) AS device_count, SUM(CASE WHEN (n.snoozed_until IS NULL OR julianday(n.snoozed_until) <= julianday($2)) AND (s.status IS NULL OR s.status <> 'tracking' OR (s.reminder_due_at IS NOT NULL AND julianday(s.reminder_due_at) <= julianday($2))) THEN 1 ELSE 0 END) AS attention_count FROM cr_devices d LEFT JOIN cr_computed_reminder_states s ON s.device_id = d.id LEFT JOIN cr_notification_states n ON n.device_id = d.id WHERE d.user_id = $1",
-      [userId, now.toISOString()],
     ),
     dbSelect<SuggestionCountRow>(
       "SELECT COUNT(*) AS pending_count FROM aa_activity_suggestions WHERE user_id = $1 AND status = 'pending'",
@@ -102,11 +91,8 @@ export async function loadDashboardNow(userId: string, now = new Date()): Promis
       ],
     ),
   ]);
-  const counts = deviceRows[0];
   return {
     nextPlan: plans[0] ?? null,
-    deviceCount: Number(counts?.device_count ?? 0),
-    deviceAttentionCount: Number(counts?.attention_count ?? 0),
     pendingSuggestionCount: Number(suggestionRows[0]?.pending_count ?? 0),
     dueReviewKind: reviewRows[0] ? deriveDueReviewKind(clock, {
       dailyMinute: Number(reviewRows[0].daily_minute),

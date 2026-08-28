@@ -6,12 +6,12 @@ describe('Card', () => {
   it('renders title and description', () => {
     render(
       <Card
-        title="Battery Tracker"
-        description="Track your device battery levels"
+        title="CoreHour"
+        description="Plan and review focus time"
       />
     );
-    expect(screen.getByText('Battery Tracker')).toBeInTheDocument();
-    expect(screen.getByText('Track your device battery levels')).toBeInTheDocument();
+    expect(screen.getByText('CoreHour')).toBeInTheDocument();
+    expect(screen.getByText('Plan and review focus time')).toBeInTheDocument();
   });
 
   it('renders icon when provided', () => {
@@ -19,7 +19,7 @@ describe('Card', () => {
       <Card
         title="With Icon"
         description="Has an icon"
-        icon={<span data-testid="card-icon">🔋</span>}
+        icon={<span data-testid="card-icon">CH</span>}
       />
     );
     expect(screen.getByTestId('card-icon')).toBeInTheDocument();
@@ -43,11 +43,11 @@ describe('Card', () => {
       <Card
         title="Linked"
         description="Goes somewhere"
-        href="/tools/battery"
+        href="/tools/core-hour"
       />
     );
     const link = screen.getByRole('link');
-    expect(link).toHaveAttribute('href', '/tools/battery');
+    expect(link).toHaveAttribute('href', '/tools/core-hour');
   });
 
   it('has hover transition classes', () => {

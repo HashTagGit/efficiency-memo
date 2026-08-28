@@ -3,7 +3,6 @@
 use tauri_plugin_sql::{Migration, MigrationKind};
 
 mod activity_assist;
-mod charger_reminder;
 mod core_hour;
 mod data_control;
 mod daily_review;
@@ -174,7 +173,6 @@ pub fn run() {
             pause_hydrate::act_on_pause_hydrate_reminder,
             pause_hydrate::complete_natural_break,
             activity_assist::load_activity_assist_state,
-            charger_reminder::record_charger_full_charge,
             activity_assist::save_activity_assist_preferences,
             activity_assist::clear_activity_assist_samples,
             activity_assist::dismiss_activity_assist_suggestion,

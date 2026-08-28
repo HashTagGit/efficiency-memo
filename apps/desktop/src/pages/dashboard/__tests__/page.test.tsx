@@ -97,8 +97,6 @@ describe("Now dashboard", () => {
         started_at: start.toISOString(),
         ended_at: end.toISOString(),
       },
-      deviceCount: 2,
-      deviceAttentionCount: 1,
       pendingSuggestionCount: 1,
       dueReviewKind: "weekly",
     });
@@ -116,10 +114,9 @@ describe("Now dashboard", () => {
     expect(screen.getByText("Write brief")).toBeTruthy();
     expect(await screen.findByText("Review roadmap")).toBeTruthy();
     expect(screen.getByText("Movement break needs your attention.")).toBeTruthy();
-    expect(screen.getByText("Devices needing attention: 1")).toBeTruthy();
     expect(screen.getByText("Pending review: 1")).toBeTruthy();
     expect(screen.getByText("Rest and drink water are due")).toBeTruthy();
-    expect(screen.getAllByTestId("dashboard-attention-item")).toHaveLength(5);
+    expect(screen.getAllByTestId("dashboard-attention-item")).toHaveLength(4);
     expect(screen.getByRole("button", { name: "Review time" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Open weekly review" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Review suggestions" })).toBeTruthy();
@@ -152,8 +149,6 @@ describe("Now dashboard", () => {
     hookState.hydrationPending = false;
     vi.mocked(loadDashboardNow).mockResolvedValue({
       nextPlan: null,
-      deviceCount: 0,
-      deviceAttentionCount: 0,
       pendingSuggestionCount: 0,
       dueReviewKind: null,
     });

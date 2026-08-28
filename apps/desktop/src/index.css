@@ -363,7 +363,6 @@
 }
 
 .tool-accent-focus { --module-accent: var(--focus); }
-.tool-accent-actual { --module-accent: var(--actual); }
 .tool-accent-hydration { --module-accent: var(--hydration); }
 .tool-accent-privacy { --module-accent: var(--privacy); }
 

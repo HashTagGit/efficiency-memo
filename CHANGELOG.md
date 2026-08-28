@@ -9,7 +9,7 @@ All notable changes to this project will be documented in this file.
 - Ember, Grove, and Tide now expose consistent focus, planned, actual, recovery, hydration, privacy, and suggestion color roles in both light and dark modes.
 - Global Settings now opens a dedicated appearance and language workspace instead of the deferred WebDAV sync page.
 - The desktop shell, CoreHour, and Pause & Hydrate now support persisted English and Simplified Chinese translations.
-- CoreHour and Pause & Hydrate are active product workflows. Charger Reminder is disabled; WebDAV sync is out of scope.
+- CoreHour and Pause & Hydrate are active product workflows. Charger Reminder has been retired to a local ignored archive; WebDAV sync is out of scope.
 - Documentation now describes the native Tauri window as the supported entry point; the Vite server is not a standalone application.
 - The desktop app now opens with an automatic local profile instead of showing sign-in and sign-out controls.
 - The desktop workspace now supports persisted light and dark themes with reorganized navigation and consistent action styling.

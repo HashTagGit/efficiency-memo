@@ -18,7 +18,6 @@ function getActiveToolId(pathname: string): string {
 
 const toolAccentClasses: Record<string, string> = {
   "core-hour": "tool-accent-focus",
-  "charger-reminder": "tool-accent-actual",
   "pause-hydrate": "tool-accent-hydration",
   settings: "tool-accent-privacy",
 };

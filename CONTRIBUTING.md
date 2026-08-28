@@ -43,7 +43,7 @@ EfficiencyMemo/
 
 ## CoreHour Scope
 
-Current work belongs in `apps/desktop/src/features/core-hour/`. Keep the user workflow local: session timer, check-ins, tags, settings, and day history. Do not reactivate or remove Charger Reminder or WebDAV sync code without an explicit product decision.
+Keep the user workflow local: session timer, check-ins, plans, reviews, recovery reminders, tags, and settings. Charger Reminder is retired to the ignored local `bak/` archive; do not restore it without an explicit product decision. WebDAV sync remains outside the current product scope.
 
 ## Code Conventions
 

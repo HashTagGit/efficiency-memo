@@ -1,7 +1,7 @@
 # AGENTS.md
 
 ## Purpose
-EfficiencyMemo is a pnpm monorepo that hosts a unified tool gallery for daily productivity. It bundles independent feature tools (currently Charger-Reminder and CoreHour) behind a deployable surface:
+EfficiencyMemo is a pnpm monorepo that hosts a unified tool gallery for daily productivity. It bundles CoreHour and Pause & Hydrate behind a deployable surface:
 
 - **Desktop app (`apps/desktop/`)** — Tauri v2 + local SQLite + local auth + WebDAV sync. Recommended for personal, offline-first use. No cloud account required.
 

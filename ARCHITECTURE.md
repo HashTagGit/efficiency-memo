@@ -37,7 +37,6 @@ The desktop app lives in `apps/desktop/` and is the recommended deployable surfa
 - Tauri plugin-sql opens `sqlite:efficiency-memo.db` in the OS app-data directory.
 - 7 SQLite DDL migrations in `src-tauri/migrations/`.
 - `lib/db.ts` wraps `Database.load()` with `dbSelect()`/`dbExecute()` helpers.
-- `DevicePersistenceContract` in `features/charger-reminder/db-tauri.ts` (8 CRUD methods).
 - `DbResult` interface in `features/core-hour/db-tauri.ts`.
 
 ### Local Profile
@@ -73,7 +72,7 @@ The desktop app lives in `apps/desktop/` and is the recommended deployable surfa
 ### Tool Sharing
 
 - Desktop consumes `packages/shared/` and `packages/ui/` via `workspace:*`.
-- CoreHour and Pause & Hydrate manifests are enabled. Charger Reminder is retained but disabled; WebDAV sync code is outside the current product focus.
+- CoreHour and Pause & Hydrate manifests are enabled. Retired experiments live only in the ignored local `bak/` archive; WebDAV sync code is outside the current product focus.
 - React Router handles SPA routing (`BrowserRouter` with `<Routes>`).
 
 ### Appearance

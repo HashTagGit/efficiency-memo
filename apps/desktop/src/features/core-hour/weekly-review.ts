@@ -27,14 +27,13 @@ export interface WeeklyReviewState {
   breakCount: number;
   hydrationCount: number;
   dailyReviewCount: number;
-  deviceAttentionCount: number;
   currentGoalMinutes: number;
   review: WeeklyReviewRecord | null;
 }
 
 export function loadWeeklyReview(userId: string, date = new Date()): Promise<WeeklyReviewState> {
   return invoke("load_weekly_review", {
-    input: { userId, ...localWeekRange(date), observedAt: new Date().toISOString() },
+    input: { userId, ...localWeekRange(date) },
   });
 }
 

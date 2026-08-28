@@ -3,7 +3,6 @@
  * Each feature's index.ts calls registerTool on import.
  */
 export async function discoverTools(): Promise<void> {
-  await import("../../features/charger-reminder/index");
   await import("../../features/core-hour/index");
   await import("../../features/pause-hydrate/index");
 }

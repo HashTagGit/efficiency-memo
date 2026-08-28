@@ -2,7 +2,7 @@ use crate::data_control::DB_FILENAME;
 use crate::review_time::{
     interval_overlap_milliseconds, prorated_elapsed_seconds, validated_local_range,
 };
-use chrono::{DateTime, Datelike, Days, NaiveDate, SecondsFormat, Utc, Weekday};
+use chrono::{Datelike, Days, NaiveDate, SecondsFormat, Weekday};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
@@ -16,7 +16,6 @@ pub(crate) struct WeeklyReviewQuery {
     week_started_on: String,
     started_at: String,
     ended_at: String,
-    observed_at: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -61,7 +60,6 @@ pub(crate) struct WeeklyReviewState {
     break_count: i64,
     hydration_count: i64,
     daily_review_count: i64,
-    device_attention_count: i64,
     current_goal_minutes: i64,
     review: Option<WeeklyReviewRecord>,
 }
@@ -95,10 +93,6 @@ fn load_state(connection: &Connection, input: &WeeklyReviewQuery) -> Result<Week
     let (week_started_at, week_ended_at) = week_bounds(input)?;
     let started_at = week_started_at.to_rfc3339_opts(SecondsFormat::Millis, true);
     let ended_at = week_ended_at.to_rfc3339_opts(SecondsFormat::Millis, true);
-    let observed_at = DateTime::parse_from_rfc3339(&input.observed_at)
-        .map_err(|_| "invalid-date".to_string())?
-        .with_timezone(&Utc)
-        .to_rfc3339_opts(SecondsFormat::Millis, true);
     let plans: Vec<(String, String, String)> = {
         let mut statement = connection
             .prepare("SELECT started_at, ended_at, status FROM ch_plans WHERE user_id = ?1 AND started_at < ?3 AND ended_at > ?2")
@@ -166,13 +160,6 @@ fn load_state(connection: &Connection, input: &WeeklyReviewQuery) -> Result<Week
             |row| row.get(0),
         )
         .map_err(|error| error.to_string())?;
-    let device_attention_count = connection
-        .query_row(
-            "SELECT COALESCE(SUM(CASE WHEN s.status IS NULL OR s.status <> 'tracking' OR (s.reminder_due_at IS NOT NULL AND julianday(s.reminder_due_at) <= julianday(?2)) THEN 1 ELSE 0 END), 0) FROM cr_devices d LEFT JOIN cr_computed_reminder_states s ON s.device_id = d.id WHERE d.user_id = ?1",
-            params![input.user_id, observed_at],
-            |row| row.get(0),
-        )
-        .map_err(|error| error.to_string())?;
     let current_goal_minutes = connection
         .query_row(
             "SELECT value FROM ch_settings WHERE key = 'daily_focus_goal_minutes'",
@@ -217,7 +204,6 @@ fn load_state(connection: &Connection, input: &WeeklyReviewQuery) -> Result<Week
         break_count: reminder_counts.0,
         hydration_count: reminder_counts.1,
         daily_review_count,
-        device_attention_count,
         current_goal_minutes,
         review,
     })
@@ -232,7 +218,6 @@ fn save_review(
         week_started_on: input.week_started_on.clone(),
         started_at: input.started_at.clone(),
         ended_at: input.ended_at.clone(),
-        observed_at: input.saved_at.clone(),
     })
     .map_err(|_| "invalid-review".to_string())?;
     if !matches!(input.outcome.as_str(), "on-track" | "overcommitted" | "underplanned" | "interrupted")
@@ -322,7 +307,6 @@ mod tests {
         let connection = Connection::open_in_memory().unwrap();
         for migration in [
             include_str!("../migrations/0001_cr_device_reminder.sql"),
-            include_str!("../migrations/0002_cr_seed_presets.sql"),
             include_str!("../migrations/0003_ch_core_hour.sql"),
             include_str!("../migrations/0004_ch_session_durations.sql"),
             include_str!("../migrations/0005_ch_session_activity.sql"),
@@ -358,8 +342,7 @@ mod tests {
                  INSERT INTO ch_daily_reviews VALUES ('daily-3', 'local-user', '2026-08-30', 'on-track', 90, 'created', 'updated');
                  INSERT INTO aa_activity_samples VALUES ('sample-1', 'local-user', 'code.exe', '2026-08-27T12:00:00Z', '2026-08-27T12:03:00Z');
                  INSERT INTO aa_activity_suggestions VALUES ('suggestion-1', 'local-user', 'sample-1', 'code.exe', '2026-08-27T12:00:00Z', '2026-08-27T12:03:00Z', 'pending', NULL, 'created', 'updated');
-                 INSERT INTO cr_devices (id, user_id, name, device_type, capacity_mah, notes, threshold_percent, created_at, updated_at) VALUES ('device-1', 'local-user', 'Mouse', 'wireless-mouse', NULL, NULL, 20, 'created', 'updated');
-                 INSERT INTO cr_computed_reminder_states (id, device_id, heuristic_version, estimated_battery_percent, estimated_days_until_threshold, reminder_due_at, status, basis, last_charge_event_id, computed_at, created_at, updated_at) VALUES ('state-1', 'device-1', 'v1', 40, 2, '2026-08-29T12:00:00Z', 'tracking', 'basis', NULL, '2026-08-20T12:00:00Z', 'created', 'updated');",
+                 ",
             )
             .unwrap();
         let query = WeeklyReviewQuery {
@@ -367,7 +350,6 @@ mod tests {
             week_started_on: "2026-08-24".into(),
             started_at: "2026-08-24T00:00:00Z".into(),
             ended_at: "2026-08-31T00:00:00Z".into(),
-            observed_at: "2026-08-30T18:00:00Z".into(),
         };
         let state = load_state(&connection, &query).unwrap();
         assert_eq!((state.planned_minutes, state.actual_minutes), (120, 120));
@@ -375,7 +357,6 @@ mod tests {
         assert_eq!((state.break_count, state.hydration_count), (1, 1));
         assert_eq!(state.daily_review_count, 3);
         assert_eq!(state.pending_suggestion_count, 1);
-        assert_eq!(state.device_attention_count, 1);
         let offset_week = load_state(
             &connection,
             &WeeklyReviewQuery {
@@ -383,7 +364,6 @@ mod tests {
                 week_started_on: "2026-08-24".into(),
                 started_at: "2026-08-24T00:00:00+08:00".into(),
                 ended_at: "2026-08-31T00:00:00+08:00".into(),
-                observed_at: "2026-08-30T18:00:00Z".into(),
             },
         )
         .unwrap();
@@ -396,7 +376,6 @@ mod tests {
                 week_started_on: "2026-08-25".into(),
                 started_at: "2026-08-25T00:00:00Z".into(),
                 ended_at: "2026-09-01T00:00:00Z".into(),
-                observed_at: "2026-08-30T18:00:00Z".into(),
             },
         )
         .is_err());

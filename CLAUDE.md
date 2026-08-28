@@ -40,7 +40,7 @@ Packages are linked via `workspace:*` in `apps/desktop/package.json`.
 
 ## What Is Out of Scope — Do Not Change Without an Explicit Product Decision
 
-- **Charger Reminder**: code is retained in `features/charger-reminder/` but the tool is disabled in the Tool Registry. Do not re-enable.
+- **Charger Reminder**: retired from the product; a local-only copy may exist under the ignored root `bak/` archive. Do not restore or re-enable.
 - **WebDAV sync**: code is retained in `pages/settings/sync/` but is not part of the current product. Do not wire it up.
 
 ## Domain Vocabulary
@@ -51,7 +51,7 @@ Canonical glossary: [`docs/CONTEXT.md`](docs/CONTEXT.md). Use its terms in code,
 |---|---|
 | **CoreHour** | The active product workflow (timing + check-ins) |
 | **Desktop Surface** | The Tauri app — the only deployable surface |
-| **Deferred Code** | Charger Reminder + WebDAV sync — retained but disabled |
+| **Deferred Code** | WebDAV sync — retained but outside the current product scope |
 | **Local Profile** | Single local SQLite user selected or created automatically at startup |
 | **SQLite Storage** | Local DB via `tauri-plugin-sql`; path is OS app-data dir |
 
@@ -89,7 +89,7 @@ Architecture decisions live in [`docs/adr/`](docs/adr/). Create an ADR only when
 ## AI Agent Workflow Rules
 
 - **不得在没有测试的情况下修改 `features/` 下的逻辑文件。** 每次改动 feature 逻辑，必须同步更新或新增对应的 `__tests__/` 测试，并在提交前通过 `pnpm test`。
-- **不得修改 Deferred Code**（`features/charger-reminder/`、`pages/settings/sync/`）除非有明确的产品决策记录在 ADR 中。修改前必须先创建 ADR。
+- **不得恢复本地 `bak/` 归档或修改 Deferred Code**（`pages/settings/sync/`）除非有明确的产品决策记录在 ADR 中。修改前必须先创建 ADR。
 - **不得引入新的第三方依赖**而不说明原因。新依赖须在 PR 描述中列出名称、版本、用途。
 - **每次改动组件后**，运行 `pnpm --filter @memo/ui test` 确认全绿再提交。
 
@@ -99,7 +99,7 @@ Architecture decisions live in [`docs/adr/`](docs/adr/). Create an ADR only when
 
 | 功能 | 解锁前提 |
 |---|---|
-| Charger Reminder | 在 `docs/adr/` 新建 ADR，明确产品目标和 UI 接入方案，获得用户确认 |
+| 归档功能恢复 | 在 `docs/adr/` 新建 ADR，明确产品目标和 UI 接入方案，获得用户确认 |
 | WebDAV Sync | 同上，需额外明确多设备冲突解决策略 |
 
 ### Token 使用规则
