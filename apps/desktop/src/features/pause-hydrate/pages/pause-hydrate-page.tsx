@@ -632,7 +632,7 @@ export default function PauseHydratePage() {
         {state.todayEvents.length === 0 ? (
           <p className="py-8 text-sm text-muted">{t("pauseHydrate.noActivity")}</p>
         ) : (
-          <ul className="mt-3 max-h-96 divide-y divide-border overflow-y-auto border-t border-border pr-1">
+          <ul className="scrollbar-hidden mt-3 max-h-96 divide-y divide-border overflow-y-auto border-t border-border pr-1">
             {state.todayEvents.map((event) => (
               <li key={event.id} className="grid grid-cols-[5.5rem_minmax(0,1fr)_auto] items-center gap-3 py-3 text-sm">
                 <time className="tabular-nums text-muted" dateTime={event.occurredAt}>{time.format(new Date(event.occurredAt))}</time>

@@ -127,7 +127,7 @@ export function Sidebar({
         </button>
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-2 py-4" aria-label="Workspace">
+      <nav className="scrollbar-hidden flex-1 overflow-y-auto px-2 py-4" aria-label="Workspace">
         {!isCollapsed && <p className="px-3 pb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">{labels.tools}</p>}
         <ul className="space-y-1">
           {tools.filter((tool) => tool.id !== 'settings').map((tool) => {
