@@ -14,6 +14,7 @@ const emptyDraft: DraftPreferences = {
 
 interface ScheduleDraft {
   activeWeekdays: number[];
+  chinaCalendar2026: boolean;
   workStart: string;
   workEnd: string;
   quietEnabled: boolean;
@@ -26,6 +27,16 @@ interface ScheduleDraft {
 }
 
 const WEEKDAYS = [0, 1, 2, 3, 4, 5, 6] as const;
+
+const WEEKDAY_TONES = [
+  "weekday-tone-0",
+  "weekday-tone-1",
+  "weekday-tone-2",
+  "weekday-tone-3",
+  "weekday-tone-4",
+  "weekday-tone-5",
+  "weekday-tone-6",
+] as const;
 
 const timeInputClass =
   "mt-1.5 h-10 w-full min-w-0 rounded-md border border-control-border bg-background px-3 tabular-nums text-foreground focus:outline-none focus:ring-2 focus:ring-focus-ring disabled:opacity-50";
@@ -41,6 +52,7 @@ function timeToMinutes(value: string): number {
 
 const emptySchedule: ScheduleDraft = {
   activeWeekdays: [...DEFAULT_SCHEDULE_POLICY.activeWeekdays],
+  chinaCalendar2026: DEFAULT_SCHEDULE_POLICY.chinaCalendar2026,
   workStart: minutesToTime(DEFAULT_SCHEDULE_POLICY.workStartMinute),
   workEnd: minutesToTime(DEFAULT_SCHEDULE_POLICY.workEndMinute),
   quietEnabled: DEFAULT_SCHEDULE_POLICY.quietEnabled,
@@ -97,6 +109,7 @@ export default function PauseHydratePage() {
     });
     setSchedule({
       activeWeekdays: [...state.schedulePolicy.activeWeekdays],
+      chinaCalendar2026: state.schedulePolicy.chinaCalendar2026,
       workStart: minutesToTime(state.schedulePolicy.workStartMinute),
       workEnd: minutesToTime(state.schedulePolicy.workEndMinute),
       quietEnabled: state.schedulePolicy.quietEnabled,
@@ -157,6 +170,7 @@ export default function PauseHydratePage() {
         REMINDER_KINDS.map((kind) => ({ kind, ...draft[kind] })),
         {
           activeWeekdays: schedule.activeWeekdays,
+          chinaCalendar2026: schedule.chinaCalendar2026,
           workStartMinute,
           workEndMinute,
           quietEnabled: schedule.quietEnabled,
@@ -331,17 +345,30 @@ export default function PauseHydratePage() {
               return (
                 <Button
                   key={day}
-                  variant={active ? "primary" : "ghost"}
+                  variant="ghost"
                   size="sm"
                   aria-pressed={active}
                   aria-label={t(`pauseHydrate.weekday${day}`)}
-                  className="min-w-12 flex-1 sm:flex-none"
+                  className={`weekday-day-button ${WEEKDAY_TONES[day]} min-w-12 flex-1 sm:flex-none`}
+                  data-active={active}
                   onClick={() => toggleWeekday(day)}
                 >
                   {t(`pauseHydrate.weekdayShort${day}`)}
                 </Button>
               );
             })}
+          </div>
+          <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
+            <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <input
+                type="checkbox"
+                checked={schedule.chinaCalendar2026}
+                onChange={(event) => updateSchedule({ chinaCalendar2026: event.target.checked })}
+                className="h-4 w-4 rounded border border-control-border accent-[var(--accent)] focus:ring-2 focus:ring-focus-ring"
+              />
+              {t("pauseHydrate.chinaCalendar2026")}
+            </label>
+            <p className="max-w-xl text-xs leading-relaxed text-muted">{t("pauseHydrate.chinaCalendar2026Hint")}</p>
           </div>
         </fieldset>
 

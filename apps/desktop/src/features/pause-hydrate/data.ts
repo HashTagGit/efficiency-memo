@@ -19,6 +19,7 @@ import {
 
 export const DEFAULT_SCHEDULE_POLICY: SchedulePolicy = {
   activeWeekdays: [0, 1, 2, 3, 4],
+  chinaCalendar2026: true,
   workStartMinute: 9 * 60,
   workEndMinute: 18 * 60,
   quietEnabled: false,
@@ -52,6 +53,7 @@ interface SchedulePolicyRow {
   deferral_grace_minutes: number;
   system_deferred: number;
   system_deferral_until: string | null;
+  china_calendar_2026?: number;
 }
 
 function weekdayMask(activeWeekdays: number[]): number {
@@ -63,6 +65,9 @@ function mapSchedulePolicy(row: SchedulePolicyRow | undefined): SchedulePolicy {
   return {
     activeWeekdays: Array.from({ length: 7 }, (_, weekday) => weekday)
       .filter((weekday) => (row.active_weekdays_mask & (1 << weekday)) !== 0),
+    chinaCalendar2026: row.china_calendar_2026 === undefined
+      ? DEFAULT_SCHEDULE_POLICY.chinaCalendar2026
+      : row.china_calendar_2026 === 1,
     workStartMinute: Number(row.work_start_minute),
     workEndMinute: Number(row.work_end_minute),
     quietEnabled: Boolean(row.quiet_enabled),
@@ -117,7 +122,7 @@ export async function loadPauseHydrateState(
   now = new Date(),
 ): Promise<PauseHydrateState> {
   await ensureReminderRows(userId, now);
-  const [reminderRows, countRows, eventRows, activeRows, policyRows] = await Promise.all([
+  const [reminderRows, countRows, eventRows, activeRows, policyRows, calendarRows] = await Promise.all([
     dbSelect<ReminderRow>(
       "SELECT kind, enabled, interval_minutes, next_due_at, pending_at, muted_until FROM ph_reminders WHERE user_id = $1 ORDER BY kind",
       [userId],
@@ -138,6 +143,9 @@ export async function loadPauseHydrateState(
       "SELECT active_weekdays_mask, work_start_minute, work_end_minute, quiet_enabled, quiet_start_minute, quiet_end_minute, natural_break_enabled, natural_break_minutes, system_deferral_enabled, deferral_grace_minutes, system_deferred, system_deferral_until FROM ph_schedule_policies WHERE user_id = $1",
       [userId],
     ),
+    dbSelect<{ value: string }>(
+      "SELECT value FROM ch_settings WHERE key = 'pause_hydrate.china_calendar_2026'",
+    ),
   ]);
   const reminders = Object.fromEntries(reminderRows.map((row) => [row.kind, mapReminder(row)])) as Record<ReminderKind, ReminderState>;
   const completedToday = { break: 0, hydration: 0 };
@@ -156,7 +164,12 @@ export async function loadPauseHydrateState(
     coreHourActive: Boolean(activeRows[0]?.active),
     systemDeferred: Boolean(policyRows[0]?.system_deferred),
     systemDeferralUntil: policyRows[0]?.system_deferral_until ?? null,
-    schedulePolicy: mapSchedulePolicy(policyRows[0]),
+    schedulePolicy: mapSchedulePolicy({
+      ...policyRows[0],
+      china_calendar_2026: calendarRows[0]?.value === undefined
+        ? undefined
+        : calendarRows[0].value === "1" ? 1 : 0,
+    }),
   };
 }
 
@@ -172,6 +185,7 @@ export async function saveReminderPreferences(
       updated_at: now.toISOString(),
       policy: {
         active_weekdays_mask: weekdayMask(policy.activeWeekdays),
+        china_calendar_2026: policy.chinaCalendar2026,
         work_start_minute: policy.workStartMinute,
         work_end_minute: policy.workEndMinute,
         quiet_enabled: policy.quietEnabled,
@@ -235,10 +249,18 @@ export async function markNewPendingReminders(
   return invoke<ReminderKind[]>("claim_pause_hydrate_reminders", {
     userId,
     now: now.toISOString(),
+    localDate: isoLocalDate(now),
     weekday,
     minuteOfDay: now.getHours() * 60 + now.getMinutes(),
     notificationsAllowed,
   });
+}
+
+function isoLocalDate(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 export async function completeNaturalBreak(
@@ -257,5 +279,6 @@ export async function completeNaturalBreak(
       weekday,
       minute_of_day: now.getHours() * 60 + now.getMinutes(),
     },
+    localDate: isoLocalDate(now),
   });
 }

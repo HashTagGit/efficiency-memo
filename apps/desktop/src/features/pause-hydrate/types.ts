@@ -7,6 +7,7 @@ export type ReminderNotificationPermission = NotificationPermission | "unknown" 
 
 export interface SchedulePolicy {
   activeWeekdays: number[];
+  chinaCalendar2026: boolean;
   workStartMinute: number;
   workEndMinute: number;
   quietEnabled: boolean;

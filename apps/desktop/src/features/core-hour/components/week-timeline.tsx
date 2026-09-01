@@ -13,6 +13,7 @@ import {
   InteractivePlanBlock,
   type PlanPointerPosition,
 } from "./interactive-plan-block";
+import { TimelineTimeJump } from "./day-timeline";
 
 const HOUR_HEIGHT = 48;
 
@@ -105,8 +106,15 @@ export function WeekTimeline({ days, sessions, plans, onAddPlan, onEditPlan, onU
 
   return (
     <section aria-label={t("coreHour.weekTimeline")}>
+      <div className="mb-2 flex justify-end">
+        <TimelineTimeJump
+          scrollRef={scrollRef}
+          hourHeight={HOUR_HEIGHT}
+          startMinute={bounds.startMinute}
+        />
+      </div>
       <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
-        <div ref={scrollRef} className="max-h-[34rem] overflow-auto">
+        <div ref={scrollRef} className="scrollbar-hidden max-h-[34rem] overflow-auto">
           <div className="min-w-[56rem]">
             <div className="sticky top-0 z-30 grid grid-cols-[3.5rem_repeat(7,minmax(0,1fr))] border-b border-border bg-surface">
               <div aria-hidden="true" />

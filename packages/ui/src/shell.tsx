@@ -146,8 +146,8 @@ export function Shell({
           </button>}
         </header>
 
-        {/* Page Content */}
-        <main className="flex-1 overflow-auto p-4">
+        {/* Page Content — scrollbar chrome is hidden, scrolling stays available */}
+        <main className="scrollbar-hidden flex-1 overflow-auto p-4">
           {children}
         </main>
       </div>

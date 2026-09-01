@@ -438,6 +438,13 @@
 html {
   color-scheme: dark;
   --module-accent: var(--accent);
+  --weekday-0: var(--info);
+  --weekday-1: var(--success);
+  --weekday-2: var(--warning);
+  --weekday-3: var(--hydration);
+  --weekday-4: var(--recovery);
+  --weekday-5: var(--privacy);
+  --weekday-6: var(--danger);
   --accent-pressed: color-mix(in srgb, var(--accent) 76%, var(--foreground));
   --info-container: color-mix(in srgb, var(--info) 12%, transparent);
   --info-border: color-mix(in srgb, var(--info) 34%, transparent);
@@ -467,6 +474,45 @@ body {
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; }
 }
+
+/* ─────────────────────────────────────────────────────────────
+   Scroll utilities
+   Hides the scrollbar chrome while keeping the element scrollable
+   by wheel, touch, keyboard, and programmatic scrolling.
+   ───────────────────────────────────────────────────────────── */
+
+@utility scrollbar-hidden {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* legacy Edge */
+
+  &::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+}
+
+.weekday-day-button {
+  border: 1px solid color-mix(in srgb, var(--weekday-accent) 48%, var(--control-border));
+  color: var(--weekday-accent);
+}
+
+.weekday-day-button:hover {
+  background-color: color-mix(in srgb, var(--weekday-accent) 12%, var(--surface));
+}
+
+.weekday-day-button[data-active="true"] {
+  background-color: color-mix(in srgb, var(--weekday-accent) 20%, var(--surface));
+  box-shadow: inset 0 -2px 0 var(--weekday-accent);
+  font-weight: 700;
+}
+
+.weekday-tone-0 { --weekday-accent: var(--weekday-0); }
+.weekday-tone-1 { --weekday-accent: var(--weekday-1); }
+.weekday-tone-2 { --weekday-accent: var(--weekday-2); }
+.weekday-tone-3 { --weekday-accent: var(--weekday-3); }
+.weekday-tone-4 { --weekday-accent: var(--weekday-4); }
+.weekday-tone-5 { --weekday-accent: var(--weekday-5); }
+.weekday-tone-6 { --weekday-accent: var(--weekday-6); }
 
 /* Interactive transitions */
 a,

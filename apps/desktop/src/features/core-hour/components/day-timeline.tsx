@@ -16,6 +16,65 @@ import {
 
 const HOUR_HEIGHT = 64;
 
+/** Compact anchors offered by the time-jump control. */
+const JUMP_HOURS = [0, 6, 12, 18] as const;
+
+function prefersReducedMotion(): boolean {
+  return typeof window !== "undefined"
+    && typeof window.matchMedia === "function"
+    && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+interface TimelineTimeJumpProps {
+  /** The scrollable timeline viewport to move. */
+  scrollRef: React.RefObject<HTMLDivElement | null>;
+  hourHeight: number;
+  startMinute: number;
+  className?: string;
+}
+
+/**
+ * Compact keyboard-accessible control that scrolls a timeline viewport to a fixed hour.
+ * Shared by DayTimeline and WeekTimeline so both views behave identically.
+ */
+export function TimelineTimeJump({ scrollRef, hourHeight, startMinute, className }: TimelineTimeJumpProps) {
+  const { t } = useI18n();
+
+  function jumpToHour(hour: number) {
+    const container = scrollRef.current;
+    if (!container) return;
+    const top = Math.max(0, (hour * 60 - startMinute) / 60 * hourHeight);
+    if (typeof container.scrollTo === "function") {
+      container.scrollTo({ top, behavior: prefersReducedMotion() ? "auto" : "smooth" });
+      return;
+    }
+    container.scrollTop = top;
+  }
+
+  return (
+    <div
+      role="group"
+      aria-label={t("timeline.jumpToTime")}
+      className={"flex items-center gap-1 " + (className ?? "")}
+    >
+      {JUMP_HOURS.map((hour) => {
+        const label = String(hour).padStart(2, "0") + ":00";
+        return (
+          <button
+            key={hour}
+            type="button"
+            onClick={() => jumpToHour(hour)}
+            aria-label={t("timeline.jumpToTimeNamed", { time: label })}
+            className="rounded-md border border-control-border px-1.5 py-0.5 text-[11px] font-medium tabular-nums text-muted hover:bg-surface-strong hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 interface DayTimelineProps {
   date: string;
   sessions: TodaySession[];
@@ -90,14 +149,20 @@ export function DayTimeline({ date, sessions, plans, onAddPlan, onEditPlan, onUp
 
   return (
     <section aria-labelledby="timeline-heading">
-      <div className="mb-3">
+      <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <div>
           <h2 id="timeline-heading" className="text-base font-semibold text-foreground">{t("timeline.title")}</h2>
           <p className="mt-1 text-sm text-muted">{t("coreHour.planTimelineHint")}</p>
         </div>
+        <TimelineTimeJump
+          scrollRef={scrollRef}
+          hourHeight={HOUR_HEIGHT}
+          startMinute={bounds.startMinute}
+          className="shrink-0"
+        />
       </div>
       <div className="overflow-hidden rounded-xl border border-border bg-surface shadow-sm">
-        <div ref={scrollRef} className="max-h-[34rem] overflow-auto">
+        <div ref={scrollRef} className="scrollbar-hidden max-h-[34rem] overflow-auto">
           <div ref={canvasRef} className="relative min-w-[28rem]" style={{ height: canvasHeight }}>
             {hours.map((hour, index) => (
               <div

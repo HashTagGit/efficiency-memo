@@ -1,5 +1,5 @@
 use crate::local_schedule::minute_in_window;
-use chrono::{DateTime, Duration, SecondsFormat, Utc};
+use chrono::{DateTime, Duration, NaiveDate, SecondsFormat, Utc};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::Deserialize;
 use tauri::{AppHandle, Manager};
@@ -17,6 +17,8 @@ pub(crate) struct ReminderPreferenceInput {
 #[derive(Clone, Debug, Deserialize)]
 pub(crate) struct SchedulePolicyInput {
     active_weekdays_mask: i64,
+    #[serde(default = "default_china_calendar_2026")]
+    china_calendar_2026: bool,
     work_start_minute: i64,
     work_end_minute: i64,
     quiet_enabled: bool,
@@ -36,6 +38,7 @@ impl Default for SchedulePolicyInput {
     fn default() -> Self {
         Self {
             active_weekdays_mask: 31,
+            china_calendar_2026: true,
             work_start_minute: 540,
             work_end_minute: 1080,
             quiet_enabled: false,
@@ -49,6 +52,10 @@ impl Default for SchedulePolicyInput {
             system_deferral_until: None,
         }
     }
+}
+
+fn default_china_calendar_2026() -> bool {
+    true
 }
 
 #[derive(Deserialize)]
@@ -97,11 +104,40 @@ fn valid_policy(policy: &SchedulePolicyInput) -> bool {
         && (1..=30).contains(&policy.deferral_grace_minutes)
 }
 
-fn schedule_allows(policy: &SchedulePolicyInput, weekday: i64, minute_of_day: i64) -> bool {
+const CHINA_HOLIDAYS_2026: &[&str] = &[
+    "2026-01-01", "2026-01-02", "2026-01-03",
+    "2026-02-15", "2026-02-16", "2026-02-17", "2026-02-18", "2026-02-19",
+    "2026-02-20", "2026-02-21", "2026-02-22", "2026-02-23",
+    "2026-04-04", "2026-04-05", "2026-04-06",
+    "2026-05-01", "2026-05-02", "2026-05-03", "2026-05-04", "2026-05-05",
+    "2026-06-19", "2026-06-20", "2026-06-21",
+    "2026-09-25", "2026-09-26", "2026-09-27",
+    "2026-10-01", "2026-10-02", "2026-10-03", "2026-10-04", "2026-10-05",
+    "2026-10-06", "2026-10-07",
+];
+
+const CHINA_WORKDAYS_2026: &[&str] = &[
+    "2026-01-04", "2026-02-14", "2026-02-28", "2026-05-09", "2026-09-20", "2026-10-10",
+];
+
+fn schedule_allows(
+    policy: &SchedulePolicyInput,
+    local_date: &str,
+    weekday: i64,
+    minute_of_day: i64,
+) -> bool {
     if !(0..=6).contains(&weekday) || !(0..=1439).contains(&minute_of_day) {
         return false;
     }
-    let active_day = policy.active_weekdays_mask & (1 << weekday) != 0;
+    let holiday_calendar_active = policy.china_calendar_2026 && local_date.starts_with("2026-");
+    if holiday_calendar_active && CHINA_HOLIDAYS_2026.contains(&local_date) {
+        return false;
+    }
+    let active_day = if holiday_calendar_active && CHINA_WORKDAYS_2026.contains(&local_date) {
+        true
+    } else {
+        policy.active_weekdays_mask & (1 << weekday) != 0
+    };
     let working = minute_in_window(
         minute_of_day,
         policy.work_start_minute,
@@ -117,6 +153,16 @@ fn schedule_allows(policy: &SchedulePolicyInput, weekday: i64, minute_of_day: i6
 }
 
 fn load_policy(connection: &Connection, user_id: &str) -> Result<SchedulePolicyInput, String> {
+    let china_calendar_2026 = connection
+        .query_row(
+            "SELECT value FROM ch_settings WHERE key = 'pause_hydrate.china_calendar_2026'",
+            [],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(|error| error.to_string())?
+        .map(|value| value == "1")
+        .unwrap_or(true);
     connection
         .query_row(
             "SELECT active_weekdays_mask, work_start_minute, work_end_minute, quiet_enabled, quiet_start_minute, quiet_end_minute, natural_break_enabled, natural_break_minutes, system_deferral_enabled, deferral_grace_minutes, system_deferred, system_deferral_until FROM ph_schedule_policies WHERE user_id = ?1",
@@ -124,6 +170,7 @@ fn load_policy(connection: &Connection, user_id: &str) -> Result<SchedulePolicyI
             |row| {
                 Ok(SchedulePolicyInput {
                     active_weekdays_mask: row.get(0)?,
+                    china_calendar_2026,
                     work_start_minute: row.get(1)?,
                     work_end_minute: row.get(2)?,
                     quiet_enabled: row.get(3)?,
@@ -202,6 +249,12 @@ fn save_preferences(input: SavePreferencesInput, connection: &mut Connection) ->
             ],
         )
         .map_err(|error| error.to_string())?;
+    transaction
+        .execute(
+            "INSERT INTO ch_settings (key, value) VALUES ('pause_hydrate.china_calendar_2026', ?1) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            [if input.policy.china_calendar_2026 { "1" } else { "0" }],
+        )
+        .map_err(|error| error.to_string())?;
     transaction.commit().map_err(|error| error.to_string())?;
     Ok(newly_enabled)
 }
@@ -231,6 +284,7 @@ fn end_system_deferral(
     user_id: &str,
     now: DateTime<chrono::FixedOffset>,
     policy: &SchedulePolicyInput,
+    local_date: &str,
     weekday: i64,
     minute_of_day: i64,
 ) -> Result<bool, String> {
@@ -257,7 +311,7 @@ fn end_system_deferral(
     };
     for index in 0..candidates.len() {
         let due_minute = minute_of_day + grace_minutes + index as i64 * 5;
-        if due_minute >= 1440 || !schedule_allows(policy, weekday, due_minute) {
+        if due_minute >= 1440 || !schedule_allows(policy, local_date, weekday, due_minute) {
             return Ok(false);
         }
     }
@@ -282,14 +336,18 @@ fn end_system_deferral(
     Ok(true)
 }
 
-fn claim_pending(
+fn claim_pending_at_date(
     user_id: &str,
     now: &str,
+    local_date: &str,
     weekday: i64,
     minute_of_day: i64,
     notifications_allowed: Option<bool>,
     connection: &mut Connection,
 ) -> Result<Vec<String>, String> {
+    if NaiveDate::parse_from_str(local_date, "%Y-%m-%d").is_err() {
+        return Err("invalid-local-time".to_string());
+    }
     if !(0..=6).contains(&weekday) || !(0..=1439).contains(&minute_of_day) {
         return Err("invalid-local-time".to_string());
     }
@@ -312,7 +370,7 @@ fn claim_pending(
                 return Ok(Vec::new());
             }
             Some(true) if policy.system_deferred => {
-                if active || !schedule_allows(&policy, weekday, minute_of_day) {
+                if active || !schedule_allows(&policy, local_date, weekday, minute_of_day) {
                     transaction.commit().map_err(|error| error.to_string())?;
                     return Ok(Vec::new());
                 }
@@ -321,6 +379,7 @@ fn claim_pending(
                     user_id,
                     parsed_now,
                     &policy,
+                    local_date,
                     weekday,
                     minute_of_day,
                 )? {
@@ -349,7 +408,7 @@ fn claim_pending(
             )
             .map_err(|error| error.to_string())?;
     }
-    if !schedule_allows(&policy, weekday, minute_of_day) {
+    if !schedule_allows(&policy, local_date, weekday, minute_of_day) {
         transaction.commit().map_err(|error| error.to_string())?;
         return Ok(Vec::new());
     }
@@ -384,6 +443,30 @@ fn claim_pending(
     Ok(claimed)
 }
 
+#[cfg(test)]
+fn claim_pending(
+    user_id: &str,
+    now: &str,
+    weekday: i64,
+    minute_of_day: i64,
+    notifications_allowed: Option<bool>,
+    connection: &mut Connection,
+) -> Result<Vec<String>, String> {
+    let local_date = DateTime::parse_from_rfc3339(now)
+        .map_err(|_| "invalid-local-time".to_string())?
+        .date_naive()
+        .to_string();
+    claim_pending_at_date(
+        user_id,
+        now,
+        &local_date,
+        weekday,
+        minute_of_day,
+        notifications_allowed,
+        connection,
+    )
+}
+
 fn apply_action(input: ReminderActionInput, connection: &mut Connection) -> Result<(), String> {
     if !valid_kind(&input.kind) || !matches!(input.action.as_str(), "completed" | "snoozed" | "muted") {
         return Err("invalid-action".to_string());
@@ -408,10 +491,14 @@ fn apply_action(input: ReminderActionInput, connection: &mut Connection) -> Resu
     Ok(())
 }
 
-fn complete_natural_break_record(
+fn complete_natural_break_record_at_date(
     input: NaturalBreakInput,
+    local_date: &str,
     connection: &mut Connection,
 ) -> Result<bool, String> {
+    if NaiveDate::parse_from_str(local_date, "%Y-%m-%d").is_err() {
+        return Err("invalid-natural-break".to_string());
+    }
     if input.event_id.trim().is_empty()
         || !(0..=6).contains(&input.weekday)
         || !(0..=1439).contains(&input.minute_of_day)
@@ -428,7 +515,7 @@ fn complete_natural_break_record(
         .map_err(|_| "invalid-policy".to_string())?
         * 60;
     if !policy.natural_break_enabled
-        || !schedule_allows(&policy, input.weekday, input.minute_of_day)
+        || !schedule_allows(&policy, local_date, input.weekday, input.minute_of_day)
         || input.idle_seconds < threshold_seconds
         || occurred.signed_duration_since(idle_started).num_seconds()
             < i64::try_from(threshold_seconds).map_err(|_| "invalid-natural-break".to_string())?
@@ -495,6 +582,18 @@ fn complete_natural_break_record(
     Ok(true)
 }
 
+#[cfg(test)]
+fn complete_natural_break_record(
+    input: NaturalBreakInput,
+    connection: &mut Connection,
+) -> Result<bool, String> {
+    let local_date = DateTime::parse_from_rfc3339(&input.occurred_at)
+        .map_err(|_| "invalid-natural-break".to_string())?
+        .date_naive()
+        .to_string();
+    complete_natural_break_record_at_date(input, &local_date, connection)
+}
+
 fn connection(app: &AppHandle) -> Result<Connection, String> {
     let path = app
         .path()
@@ -513,14 +612,16 @@ pub(crate) fn save_pause_hydrate_preferences(input: SavePreferencesInput, app: A
 pub(crate) fn claim_pause_hydrate_reminders(
     user_id: String,
     now: String,
+    local_date: String,
     weekday: i64,
     minute_of_day: i64,
     notifications_allowed: Option<bool>,
     app: AppHandle,
 ) -> Result<Vec<String>, String> {
-    claim_pending(
+    claim_pending_at_date(
         &user_id,
         &now,
+        &local_date,
         weekday,
         minute_of_day,
         notifications_allowed,
@@ -534,14 +635,14 @@ pub(crate) fn act_on_pause_hydrate_reminder(input: ReminderActionInput, app: App
 }
 
 #[tauri::command]
-pub(crate) fn complete_natural_break(input: NaturalBreakInput, app: AppHandle) -> Result<bool, String> {
-    complete_natural_break_record(input, &mut connection(&app)?)
+pub(crate) fn complete_natural_break(input: NaturalBreakInput, local_date: String, app: AppHandle) -> Result<bool, String> {
+    complete_natural_break_record_at_date(input, &local_date, &mut connection(&app)?)
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
-        apply_action, claim_pending, complete_natural_break_record, save_preferences,
+        apply_action, claim_pending, claim_pending_at_date, complete_natural_break_record, save_preferences,
         NaturalBreakInput, ReminderActionInput, ReminderPreferenceInput, SavePreferencesInput,
         SchedulePolicyInput,
     };
@@ -553,6 +654,7 @@ mod tests {
             .execute_batch(
                 "
                 CREATE TABLE ch_sessions (user_id TEXT NOT NULL, ended_at TEXT);
+                CREATE TABLE ch_settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
                 CREATE TABLE ph_reminders (
                     user_id TEXT NOT NULL, kind TEXT NOT NULL, enabled INTEGER NOT NULL,
                     interval_minutes INTEGER NOT NULL, next_due_at TEXT, pending_at TEXT,
@@ -672,6 +774,39 @@ mod tests {
         assert_eq!(
             claim_pending("local-user", "2026-08-27T10:01:00Z", 3, 601, None, &mut connection)
                 .unwrap(),
+            vec!["break"]
+        );
+    }
+
+    #[test]
+    fn china_calendar_overrides_holidays_and_make_up_workdays() {
+        let mut connection = database();
+        connection
+            .execute(
+                "INSERT INTO ph_reminders VALUES (?1, 'break', 1, 60, ?2, NULL, NULL, ?2)",
+                params!["local-user", "2026-10-01T01:00:00Z"],
+            )
+            .unwrap();
+        connection
+            .execute(
+                "INSERT INTO ph_schedule_policies (user_id, active_weekdays_mask, work_start_minute, work_end_minute, quiet_enabled, quiet_start_minute, quiet_end_minute, updated_at) VALUES (?1, 31, 540, 1080, 0, 1320, 420, ?2)",
+                params!["local-user", "2026-10-01T01:00:00Z"],
+            )
+            .unwrap();
+
+        assert!(claim_pending_at_date(
+            "local-user", "2026-10-01T10:00:00Z", "2026-10-01", 3, 600, None, &mut connection,
+        )
+        .unwrap()
+        .is_empty());
+        connection
+            .execute("UPDATE ph_reminders SET next_due_at = '2026-01-04T01:00:00Z', pending_at = NULL", [])
+            .unwrap();
+        assert_eq!(
+            claim_pending_at_date(
+                "local-user", "2026-01-04T10:00:00Z", "2026-01-04", 6, 600, None, &mut connection,
+            )
+            .unwrap(),
             vec!["break"]
         );
     }
