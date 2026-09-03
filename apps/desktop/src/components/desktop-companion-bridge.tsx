@@ -8,7 +8,7 @@ import { requestCheckInNotifications } from "../features/core-hour/notifications
 import { loadCheckInInterval } from "../features/core-hour/settings";
 import { loadLatestActivity } from "../features/core-hour/today-data";
 import { usePauseHydrate } from "../features/pause-hydrate/context";
-import { nextDueAt } from "../features/pause-hydrate/reminder-logic";
+import { nextDueAt, reminderAllowedAt } from "../features/pause-hydrate/reminder-logic";
 import type { ReminderState } from "../features/pause-hydrate/types";
 import { getCurrentUser } from "../lib/auth";
 import { useI18n } from "../lib/i18n";
@@ -163,9 +163,12 @@ export function DesktopCompanionBridge() {
     const deferralFloor = pauseHydrate.systemDeferralUntil && new Date(pauseHydrate.systemDeferralUntil) > now
       ? new Date(pauseHydrate.systemDeferralUntil)
       : now;
-    const next = deferred && due <= deferralFloor
+    const validDue = Number.isFinite(due.getTime()) && reminderAllowedAt(pauseHydrate.schedulePolicy, due)
+      ? due
+      : null;
+    const next = !validDue || deferred && validDue <= deferralFloor
       ? nextDueAt(deferralFloor, reminder.intervalMinutes, pauseHydrate.schedulePolicy)
-      : due;
+      : validDue;
     if (pauseHydrate.coreHourActive && next <= now) {
       return t("pauseHydrate.waitingForFocus");
     }

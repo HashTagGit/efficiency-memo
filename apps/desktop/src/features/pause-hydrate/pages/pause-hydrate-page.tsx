@@ -4,7 +4,7 @@ import { useI18n } from "../../../lib/i18n";
 import { usePauseHydrate } from "../context";
 import { DEFAULT_SCHEDULE_POLICY } from "../data";
 import { dbExecute, dbSelect } from "../../../lib/db";
-import { BUILTIN_CHINA_CALENDAR_2026, DEFAULT_WEEKDAY_SCHEDULES, nextDueAt } from "../reminder-logic";
+import { BUILTIN_CHINA_CALENDAR_2026, DEFAULT_WEEKDAY_SCHEDULES, nextDueAt, reminderAllowedAt } from "../reminder-logic";
 import { parseHolidayCalendar } from "../calendar";
 import {
   REMINDER_KINDS,
@@ -319,13 +319,18 @@ export default function PauseHydratePage() {
     const now = new Date();
     const deferred = schedule.systemDeferralEnabled
       && (state?.systemDeferred || systemInterruption?.notificationsAllowed === false);
-    const storedNext = reminder.nextDueAt ? new Date(reminder.nextDueAt) : null;
+    const storedNext = reminder.nextDueAt && Number.isFinite(new Date(reminder.nextDueAt).getTime())
+      ? new Date(reminder.nextDueAt)
+      : null;
+    const validStoredNext = storedNext && reminderAllowedAt(state.schedulePolicy, storedNext)
+      ? storedNext
+      : null;
     const deferralFloor = state?.systemDeferralUntil && new Date(state.systemDeferralUntil) > now
       ? new Date(state.systemDeferralUntil)
       : now;
-    const next = deferred && (!storedNext || storedNext <= deferralFloor)
+    const next = (!validStoredNext || deferred && validStoredNext <= deferralFloor)
       ? nextDueAt(deferralFloor, reminder.intervalMinutes, state.schedulePolicy)
-      : storedNext;
+      : validStoredNext;
     if (state?.coreHourActive && next && next <= now) {
       return t("pauseHydrate.waitingForFocus");
     }

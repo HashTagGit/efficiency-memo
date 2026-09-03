@@ -5,6 +5,7 @@ import {
   DEFAULT_INTERVALS,
   DEFAULT_WEEKDAY_SCHEDULES,
   nextDueAt,
+  reminderAllowedAt,
   normalizeReminderInterval,
   tomorrowStart,
 } from "./reminder-logic";
@@ -68,6 +69,10 @@ interface SettingRow {
 
 function weekdayMask(activeWeekdays: number[]): number {
   return activeWeekdays.reduce((mask, weekday) => mask | (1 << weekday), 0);
+}
+
+function timezoneOffsetMinutes(date: Date): number {
+  return -date.getTimezoneOffset();
 }
 
 function parseSchedules(value: string | undefined, row: SchedulePolicyRow | undefined): WeekdaySchedule[] {
@@ -227,6 +232,7 @@ export async function saveReminderPreferences(
         weekday_schedules: policy.weekdaySchedules,
         calendar_enabled: policy.calendarEnabled,
         calendar_year: policy.calendarYear,
+        timezone_offset_minutes: timezoneOffsetMinutes(now),
         work_start_minute: policy.weekdaySchedules[0]?.workWindows[0]?.startMinute ?? 540,
         work_end_minute: policy.weekdaySchedules[0]?.workWindows[0]?.endMinute ?? 1080,
         quiet_enabled: policy.weekdaySchedules.some((schedule) => schedule.quietWindows.length > 0),
@@ -277,6 +283,7 @@ export async function actOnReminder(
       occurred_at: now.toISOString(),
       next_due_at: next.toISOString(),
       muted_until: action === "muted" ? tomorrowStart(now).toISOString() : null,
+      timezone_offset_minutes: timezoneOffsetMinutes(now),
     },
   });
 }
@@ -287,6 +294,19 @@ export async function markNewPendingReminders(
   notificationsAllowed: boolean | null = null,
 ): Promise<ReminderKind[]> {
   await ensureReminderRows(userId, now);
+  const state = await loadPauseHydrateState(userId, now);
+  const schedule = state.schedulePolicy;
+  for (const kind of REMINDER_KINDS) {
+    const reminder = state.reminders[kind];
+    if (!reminder?.enabled || !reminder.nextDueAt) continue;
+    const stored = new Date(reminder.nextDueAt);
+    if (Number.isFinite(stored.getTime()) && !reminderAllowedAt(schedule, stored)) {
+      await dbExecute(
+        "UPDATE ph_reminders SET next_due_at = $1, updated_at = $2 WHERE user_id = $3 AND kind = $4 AND next_due_at = $5",
+        [nextDueAt(now, reminder.intervalMinutes, schedule).toISOString(), now.toISOString(), userId, kind, reminder.nextDueAt],
+      );
+    }
+  }
   const weekday = (now.getDay() + 6) % 7;
   return invoke<ReminderKind[]>("claim_pause_hydrate_reminders", {
     userId,
@@ -320,6 +340,7 @@ export async function completeNaturalBreak(
       idle_seconds: Math.max(0, Math.floor(idleSeconds)),
       weekday,
       minute_of_day: now.getHours() * 60 + now.getMinutes(),
+      timezone_offset_minutes: timezoneOffsetMinutes(now),
     },
     localDate: isoLocalDate(now),
   });

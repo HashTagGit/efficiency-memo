@@ -1,5 +1,5 @@
 use crate::local_schedule::minute_in_window;
-use chrono::{DateTime, Datelike, Duration, NaiveDate, SecondsFormat, Timelike, Utc};
+use chrono::{DateTime, Datelike, Duration, FixedOffset, NaiveDate, SecondsFormat, Timelike, Utc};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
@@ -51,6 +51,8 @@ pub(crate) struct SchedulePolicyInput {
     weekday_schedules: Vec<WeekdaySchedule>,
     #[serde(default)]
     calendar_year: i64,
+    #[serde(default)]
+    timezone_offset_minutes: i64,
     #[serde(default = "default_calendar_enabled")]
     calendar_enabled: bool,
     #[serde(skip)]
@@ -76,6 +78,7 @@ impl Default for SchedulePolicyInput {
             active_weekdays_mask: 31,
             weekday_schedules: default_weekday_schedules(),
             calendar_year: 0,
+            timezone_offset_minutes: 0,
             calendar_enabled: true,
             calendar: None,
             work_start_minute: 540,
@@ -114,6 +117,8 @@ pub(crate) struct ReminderActionInput {
     occurred_at: String,
     next_due_at: String,
     muted_until: Option<String>,
+    #[serde(default)]
+    timezone_offset_minutes: i64,
 }
 
 #[derive(Deserialize)]
@@ -125,6 +130,8 @@ pub(crate) struct NaturalBreakInput {
     idle_seconds: u64,
     weekday: i64,
     minute_of_day: i64,
+    #[serde(default)]
+    timezone_offset_minutes: i64,
 }
 
 fn valid_kind(kind: &str) -> bool {
@@ -145,6 +152,7 @@ fn valid_policy(policy: &SchedulePolicyInput) -> bool {
             valid_windows(&schedule.work_windows) && valid_windows(&schedule.quiet_windows)
         })
         && (policy.calendar_year == 0 || (2000..=9999).contains(&policy.calendar_year))
+        && (-840..=840).contains(&policy.timezone_offset_minutes)
         && (0..=1438).contains(&policy.work_start_minute)
         && (1..=1439).contains(&policy.work_end_minute)
         && policy.work_start_minute < policy.work_end_minute
@@ -155,12 +163,19 @@ fn valid_policy(policy: &SchedulePolicyInput) -> bool {
         && (1..=30).contains(&policy.deferral_grace_minutes)
 }
 
-fn normalize_due_at(policy: &SchedulePolicyInput, due: DateTime<chrono::FixedOffset>) -> DateTime<chrono::FixedOffset> {
+fn normalize_due_at(
+    policy: &SchedulePolicyInput,
+    due: DateTime<chrono::FixedOffset>,
+    timezone_offset_minutes: i64,
+) -> DateTime<chrono::FixedOffset> {
+    let timezone = FixedOffset::east_opt((timezone_offset_minutes * 60) as i32)
+        .unwrap_or_else(|| *due.offset());
     for offset in 0..=14 * 24 * 60 {
         let candidate = due + Duration::minutes(offset);
-        let local_date = candidate.date_naive().to_string();
-        let weekday = candidate.weekday().num_days_from_monday() as i64;
-        let minute = (candidate.hour() * 60 + candidate.minute()) as i64;
+        let local = candidate.with_timezone(&timezone);
+        let local_date = local.date_naive().to_string();
+        let weekday = local.weekday().num_days_from_monday() as i64;
+        let minute = (local.hour() * 60 + local.minute()) as i64;
         if schedule_allows(policy, &local_date, weekday, minute) {
             return candidate;
         }
@@ -330,6 +345,16 @@ fn load_policy(connection: &Connection, user_id: &str) -> Result<SchedulePolicyI
                 .map(|value| value == "1")
         })
         .unwrap_or(true);
+    let timezone_offset_minutes = connection
+        .query_row(
+            "SELECT value FROM ch_settings WHERE key = 'pause_hydrate.timezone_offset_minutes'",
+            [],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(|error| error.to_string())?
+        .and_then(|value| value.parse::<i64>().ok())
+        .unwrap_or(0);
     let weekday_schedules = connection
         .query_row(
             "SELECT value FROM ch_settings WHERE key = 'pause_hydrate.weekday_schedules'",
@@ -361,6 +386,7 @@ fn load_policy(connection: &Connection, user_id: &str) -> Result<SchedulePolicyI
                     weekday_schedules,
                     calendar_year,
                     calendar_enabled,
+                    timezone_offset_minutes,
                     calendar,
                     work_start_minute: row.get(1)?,
                     work_end_minute: row.get(2)?,
@@ -458,6 +484,12 @@ fn save_preferences(input: SavePreferencesInput, connection: &mut Connection) ->
             [input.policy.calendar_year.to_string()],
         )
         .map_err(|error| error.to_string())?;
+    transaction
+        .execute(
+            "INSERT INTO ch_settings (key, value) VALUES ('pause_hydrate.timezone_offset_minutes', ?1) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            [input.policy.timezone_offset_minutes.to_string()],
+        )
+        .map_err(|error| error.to_string())?;
     let policy = load_policy(&transaction, &input.user_id)?;
     let due_rows: Vec<(String, String)> = transaction
         .prepare("SELECT kind, next_due_at FROM ph_reminders WHERE user_id = ?1 AND enabled = 1 AND next_due_at IS NOT NULL")
@@ -468,7 +500,7 @@ fn save_preferences(input: SavePreferencesInput, connection: &mut Connection) ->
         .map_err(|error| error.to_string())?;
     for (kind, due) in due_rows {
         let parsed = DateTime::parse_from_rfc3339(&due).map_err(|_| "invalid-reminder".to_string())?;
-        let normalized = normalize_due_at(&policy, parsed)
+        let normalized = normalize_due_at(&policy, parsed, policy.timezone_offset_minutes)
             .with_timezone(&Utc)
             .to_rfc3339_opts(SecondsFormat::Millis, true);
         transaction
@@ -696,10 +728,14 @@ fn apply_action(input: ReminderActionInput, connection: &mut Connection) -> Resu
     }
     let transaction = connection.transaction().map_err(|error| error.to_string())?;
     let policy = load_policy(&transaction, &input.user_id)?;
+    if !(-840..=840).contains(&input.timezone_offset_minutes) {
+        return Err("invalid-action".to_string());
+    }
     let next_due_at = normalize_due_at(
         &policy,
         DateTime::parse_from_rfc3339(&input.next_due_at)
             .map_err(|_| "invalid-action".to_string())?,
+        input.timezone_offset_minutes,
     )
     .with_timezone(&Utc)
     .to_rfc3339_opts(SecondsFormat::Millis, true);
@@ -733,6 +769,7 @@ fn complete_natural_break_record_at_date(
     if input.event_id.trim().is_empty()
         || !(0..=6).contains(&input.weekday)
         || !(0..=1439).contains(&input.minute_of_day)
+        || !(-840..=840).contains(&input.timezone_offset_minutes)
     {
         return Err("invalid-natural-break".to_string());
     }
@@ -791,7 +828,11 @@ fn complete_natural_break_record_at_date(
     let occurred_at = occurred
         .with_timezone(&Utc)
         .to_rfc3339_opts(SecondsFormat::Millis, true);
-    let next_due_at = normalize_due_at(&policy, occurred + Duration::minutes(interval_minutes))
+    let next_due_at = normalize_due_at(
+        &policy,
+        occurred + Duration::minutes(interval_minutes),
+        input.timezone_offset_minutes,
+    )
         .with_timezone(&Utc)
         .to_rfc3339_opts(SecondsFormat::Millis, true);
     let changed = transaction
@@ -1052,8 +1093,21 @@ mod tests {
             end_minute: 780,
         }];
         let due = DateTime::parse_from_rfc3339("2026-08-27T11:30:00+08:00").unwrap();
-        let normalized = normalize_due_at(&policy, due);
+        let normalized = normalize_due_at(&policy, due, 480);
         assert_eq!(normalized.format("%H:%M").to_string(), "13:00");
+    }
+
+    #[test]
+    fn next_due_keeps_local_time_when_timestamp_is_utc() {
+        let mut policy = SchedulePolicyInput::default();
+        policy.active_weekdays_mask = 8;
+        policy.weekday_schedules[3].work_windows = vec![ReminderWindow {
+            start_minute: 570,
+            end_minute: 1050,
+        }];
+        let due = DateTime::parse_from_rfc3339("2026-09-03T06:48:00Z").unwrap();
+        let normalized = normalize_due_at(&policy, due, 480);
+        assert_eq!(normalized.to_rfc3339(), "2026-09-03T06:48:00+00:00");
     }
 
     #[test]
@@ -1230,6 +1284,7 @@ mod tests {
             idle_seconds: 360,
             weekday: 3,
             minute_of_day: 600,
+            timezone_offset_minutes: 0,
         };
         connection
             .execute(
@@ -1283,6 +1338,7 @@ mod tests {
                 occurred_at: "2026-08-27T10:05:00Z".into(),
                 next_due_at: "2026-08-27T11:05:00Z".into(),
                 muted_until: None,
+                timezone_offset_minutes: 0,
             },
             &mut connection,
         )
