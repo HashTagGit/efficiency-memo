@@ -296,11 +296,18 @@ export async function markNewPendingReminders(
   await ensureReminderRows(userId, now);
   const state = await loadPauseHydrateState(userId, now);
   const schedule = state.schedulePolicy;
+  const storedDueTimes = REMINDER_KINDS
+    .map((kind) => state.reminders[kind])
+    .filter((reminder) => reminder.enabled && reminder.nextDueAt)
+    .map((reminder) => reminder.nextDueAt);
+  const collidedDueTime = storedDueTimes.length === REMINDER_KINDS.length
+    && new Set(storedDueTimes).size === 1;
   for (const kind of REMINDER_KINDS) {
     const reminder = state.reminders[kind];
     if (!reminder?.enabled || !reminder.nextDueAt) continue;
     const stored = new Date(reminder.nextDueAt);
-    if (Number.isFinite(stored.getTime()) && !reminderAllowedAt(schedule, stored)) {
+    // Legacy builds normalized both reminders to one shared work-window boundary.
+    if (Number.isFinite(stored.getTime()) && (collidedDueTime || !reminderAllowedAt(schedule, stored))) {
       await dbExecute(
         "UPDATE ph_reminders SET next_due_at = $1, updated_at = $2 WHERE user_id = $3 AND kind = $4 AND next_due_at = $5",
         [nextDueAt(now, reminder.intervalMinutes, schedule).toISOString(), now.toISOString(), userId, kind, reminder.nextDueAt],

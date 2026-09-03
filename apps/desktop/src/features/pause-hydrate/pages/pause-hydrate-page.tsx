@@ -322,7 +322,14 @@ export default function PauseHydratePage() {
     const storedNext = reminder.nextDueAt && Number.isFinite(new Date(reminder.nextDueAt).getTime())
       ? new Date(reminder.nextDueAt)
       : null;
-    const validStoredNext = storedNext && reminderAllowedAt(state.schedulePolicy, storedNext)
+    const otherReminder = state.reminders[kind === "break" ? "hydration" : "break"];
+    const collidedDueTime = Boolean(
+      storedNext
+      && otherReminder.enabled
+      && otherReminder.nextDueAt === reminder.nextDueAt
+      && otherReminder.intervalMinutes !== reminder.intervalMinutes,
+    );
+    const validStoredNext = storedNext && !collidedDueTime && reminderAllowedAt(state.schedulePolicy, storedNext)
       ? storedNext
       : null;
     const deferralFloor = state?.systemDeferralUntil && new Date(state.systemDeferralUntil) > now

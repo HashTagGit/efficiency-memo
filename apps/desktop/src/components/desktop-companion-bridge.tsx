@@ -166,9 +166,16 @@ export function DesktopCompanionBridge() {
     const validDue = Number.isFinite(due.getTime()) && reminderAllowedAt(pauseHydrate.schedulePolicy, due)
       ? due
       : null;
-    const next = !validDue || deferred && validDue <= deferralFloor
+    const otherReminder = pauseHydrate.reminders[reminder.kind === "break" ? "hydration" : "break"];
+    const collidedDueTime = otherReminder?.enabled
+      && otherReminder.nextDueAt === reminder.nextDueAt
+      && otherReminder.intervalMinutes !== reminder.intervalMinutes;
+    const usableDue = validDue && !collidedDueTime
+      ? validDue
+      : null;
+    const next = !usableDue || deferred && usableDue <= deferralFloor
       ? nextDueAt(deferralFloor, reminder.intervalMinutes, pauseHydrate.schedulePolicy)
-      : validDue;
+      : usableDue;
     if (pauseHydrate.coreHourActive && next <= now) {
       return t("pauseHydrate.waitingForFocus");
     }
