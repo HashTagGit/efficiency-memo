@@ -65,7 +65,6 @@ vi.mock("../../../features/pause-hydrate/context", () => ({
       coreHourActive: hookState.coreHourActive,
       systemDeferred: false,
       systemDeferralUntil: null,
-      dueRepairComplete: true,
       schedulePolicy: {
         activeWeekdays: [0, 1, 2, 3, 4, 5, 6],
         weekdaySchedules: Array.from({ length: 7 }, () => ({

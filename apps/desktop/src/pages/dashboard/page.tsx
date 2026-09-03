@@ -212,7 +212,6 @@ export function DashboardPage() {
       reminderNow,
       other,
       blockedUntil,
-      pauseState.dueRepairComplete ?? true,
     );
   };
   const nextReminderEntry = (["break", "hydration"] as const)

@@ -4,9 +4,11 @@ import {
   BUILTIN_CHINA_CALENDAR_2026,
   DEFAULT_INTERVALS,
   DEFAULT_WEEKDAY_SCHEDULES,
+  effectiveReminderDueAt,
+  nextDistinctDueAt,
   nextDueAt,
   reminderAllowedAt,
-  hasLegacyDueCollision,
+  hasDueCollision,
   normalizeReminderInterval,
   scheduleHasAvailableTime,
   tomorrowStart,
@@ -215,7 +217,6 @@ export async function loadPauseHydrateState(
     coreHourActive: Boolean(activeRows[0]?.active),
     systemDeferred: Boolean(policyRows[0]?.system_deferred),
     systemDeferralUntil: policyRows[0]?.system_deferral_until ?? null,
-    dueRepairComplete: settings.some((setting) => setting.key === "pause_hydrate.due_repair_version" && setting.value === "1"),
     schedulePolicy: mapSchedulePolicy(policyRows[0], settings),
   };
 }
@@ -226,6 +227,35 @@ export async function saveReminderPreferences(
   policy: SchedulePolicy,
   now = new Date(),
 ): Promise<boolean> {
+  const preparedPreferences = preferences.map((preference) => {
+    const interval = normalizeReminderInterval(preference.kind, preference.intervalMinutes);
+    return {
+      kind: preference.kind,
+      enabled: preference.enabled,
+      interval_minutes: interval,
+      next_due_at: preference.enabled ? nextDueAt(now, interval, policy).toISOString() : null,
+    };
+  });
+  const breakPreference = preparedPreferences.find((preference) => preference.kind === "break");
+  const hydrationPreference = preparedPreferences.find((preference) => preference.kind === "hydration");
+  if (breakPreference?.enabled && hydrationPreference?.enabled
+    && breakPreference.next_due_at === hydrationPreference.next_due_at
+    && breakPreference.next_due_at) {
+    const breakReminder = {
+      kind: "break" as const,
+      enabled: true,
+      intervalMinutes: breakPreference.interval_minutes,
+      nextDueAt: breakPreference.next_due_at,
+    };
+    const hydrationReminder = {
+      kind: "hydration" as const,
+      enabled: true,
+      intervalMinutes: hydrationPreference.interval_minutes,
+      nextDueAt: hydrationPreference.next_due_at,
+    };
+    breakPreference.next_due_at = nextDistinctDueAt(breakReminder, hydrationReminder, now, policy).toISOString();
+    hydrationPreference.next_due_at = nextDistinctDueAt(hydrationReminder, breakReminder, now, policy).toISOString();
+  }
   return invoke<boolean>("save_pause_hydrate_preferences", {
     input: {
       user_id: userId,
@@ -246,15 +276,7 @@ export async function saveReminderPreferences(
         system_deferral_enabled: policy.systemDeferralEnabled,
         deferral_grace_minutes: policy.deferralGraceMinutes,
       },
-      preferences: preferences.map((preference) => {
-        const interval = normalizeReminderInterval(preference.kind, preference.intervalMinutes);
-        return {
-          kind: preference.kind,
-          enabled: preference.enabled,
-          interval_minutes: interval,
-          next_due_at: preference.enabled ? nextDueAt(now, interval, policy).toISOString() : null,
-        };
-      }),
+      preferences: preparedPreferences,
     },
   });
 }
@@ -299,29 +321,24 @@ export async function markNewPendingReminders(
   await ensureReminderRows(userId, now);
   const state = await loadPauseHydrateState(userId, now);
   const schedule = state.schedulePolicy;
-  const [repairRow] = await dbSelect<{ value: string }>(
-    "SELECT value FROM ch_settings WHERE key = 'pause_hydrate.due_repair_version'",
-  );
-  const repairComplete = repairRow?.value === "1";
-  const collidedDueTime = hasLegacyDueCollision(state.reminders, repairComplete);
+  const collidedDueTime = hasDueCollision(state.reminders);
   const scheduleAvailable = scheduleHasAvailableTime(schedule);
   for (const kind of REMINDER_KINDS) {
     const reminder = state.reminders[kind];
     if (!reminder?.enabled || !reminder.nextDueAt) continue;
     const stored = new Date(reminder.nextDueAt);
-    // Legacy builds normalized different-interval reminders to one shared boundary.
-    if (scheduleAvailable && Number.isFinite(stored.getTime())
-      && (collidedDueTime || !reminderAllowedAt(schedule, stored))) {
+    // Reconcile different-interval reminders that landed on one shared boundary.
+    const otherReminder = state.reminders[kind === "break" ? "hydration" : "break"];
+    const needsRepair = collidedDueTime || !reminderAllowedAt(schedule, stored);
+    const next = scheduleAvailable && Number.isFinite(stored.getTime()) && needsRepair
+      ? effectiveReminderDueAt(reminder, schedule, now, otherReminder)
+      : null;
+    if (next && next.toISOString() !== reminder.nextDueAt) {
       await dbExecute(
         "UPDATE ph_reminders SET next_due_at = $1, updated_at = $2 WHERE user_id = $3 AND kind = $4 AND next_due_at = $5",
-        [nextDueAt(now, reminder.intervalMinutes, schedule).toISOString(), now.toISOString(), userId, kind, reminder.nextDueAt],
+        [next.toISOString(), now.toISOString(), userId, kind, reminder.nextDueAt],
       );
     }
-  }
-  if (!repairComplete) {
-    await dbExecute(
-      "INSERT INTO ch_settings (key, value) VALUES ('pause_hydrate.due_repair_version', '1') ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-    );
   }
   const weekday = (now.getDay() + 6) % 7;
   return invoke<ReminderKind[]>("claim_pause_hydrate_reminders", {

@@ -58,7 +58,6 @@ export interface PauseHydrateState {
   coreHourActive: boolean;
   systemDeferred: boolean;
   systemDeferralUntil: string | null;
-  dueRepairComplete?: boolean;
   schedulePolicy: SchedulePolicy;
 }
 

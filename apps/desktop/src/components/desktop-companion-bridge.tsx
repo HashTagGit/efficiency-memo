@@ -169,7 +169,6 @@ export function DesktopCompanionBridge() {
       now,
       otherReminder,
       deferred ? deferralFloor : null,
-      pauseHydrate.dueRepairComplete ?? true,
     );
     if (!next) return t("pauseHydrate.off");
     if (pauseHydrate.coreHourActive && next <= now) {

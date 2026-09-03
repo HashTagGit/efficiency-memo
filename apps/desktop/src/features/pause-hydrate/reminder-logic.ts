@@ -112,24 +112,44 @@ export function nextDueAt(now: Date, intervalMinutes: number, policy?: ScheduleP
   return candidate;
 }
 
+type ReminderLike = Pick<ReminderState, "enabled" | "intervalMinutes" | "nextDueAt"> & Partial<Pick<ReminderState, "kind">>;
+
+export function nextDistinctDueAt(
+  reminder: ReminderLike,
+  otherReminder: ReminderLike,
+  floor: Date,
+  policy: SchedulePolicy,
+): Date {
+  const reminderComesFirst = reminder.kind && otherReminder.kind
+    ? reminder.kind === "break"
+    : reminder.intervalMinutes <= otherReminder.intervalMinutes;
+  const firstDue = nextDueAt(
+    floor,
+    reminderComesFirst ? reminder.intervalMinutes : otherReminder.intervalMinutes,
+    policy,
+  );
+  return reminderComesFirst ? firstDue : nextDueAt(firstDue, reminder.intervalMinutes, policy);
+}
+
 export function effectiveReminderDueAt(
-  reminder: Pick<ReminderState, "enabled" | "intervalMinutes" | "nextDueAt">,
+  reminder: ReminderLike,
   policy: SchedulePolicy,
   now = new Date(),
-  otherReminder?: Pick<ReminderState, "enabled" | "intervalMinutes" | "nextDueAt">,
+  otherReminder?: ReminderLike,
   blockedUntil?: Date | null,
-  repairComplete = true,
 ): Date | null {
   if (!reminder.enabled || !scheduleHasAvailableTime(policy)) return null;
   const stored = reminder.nextDueAt ? new Date(reminder.nextDueAt) : null;
   const collision = Boolean(
-    !repairComplete
-      && stored
+    stored
       && otherReminder?.enabled
       && otherReminder.nextDueAt === reminder.nextDueAt
       && otherReminder.intervalMinutes !== reminder.intervalMinutes,
   );
   const floor = blockedUntil && blockedUntil > now ? blockedUntil : now;
+  if (collision && otherReminder) {
+    return nextDistinctDueAt(reminder, otherReminder, floor, policy);
+  }
   if (stored && Number.isFinite(stored.getTime()) && !collision && reminderAllowedAt(policy, stored)
     && (!blockedUntil || stored > blockedUntil)) {
     return stored;
@@ -137,14 +157,12 @@ export function effectiveReminderDueAt(
   return nextDueAt(floor, reminder.intervalMinutes, policy);
 }
 
-export function hasLegacyDueCollision(
-  reminders: Record<ReminderKind, Pick<ReminderState, "enabled" | "intervalMinutes" | "nextDueAt">>,
-  repairComplete: boolean,
+export function hasDueCollision(
+  reminders: Record<ReminderKind, ReminderLike>,
 ): boolean {
   const movement = reminders.break;
   const hydration = reminders.hydration;
-  return !repairComplete
-    && movement.enabled
+  return movement.enabled
     && hydration.enabled
     && movement.nextDueAt !== null
     && movement.nextDueAt === hydration.nextDueAt

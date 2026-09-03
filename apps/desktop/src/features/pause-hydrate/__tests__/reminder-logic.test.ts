@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   effectiveReminderDueAt,
-  hasLegacyDueCollision,
+  hasDueCollision,
   nextDueAt,
   normalizeReminderInterval,
   reminderAllowedAt,
@@ -89,17 +89,52 @@ describe("Pause & Hydrate reminder logic", () => {
     expect(reminderAllowedAt(policy, new Date("2026-01-04T10:00:00+08:00"))).toBe(false);
   });
 
-  it("repairs a differing-interval collision only once", () => {
+  it("detects differing-interval collisions", () => {
     const reminders = {
       break: { enabled: true, intervalMinutes: 60, nextDueAt: "2026-09-03T12:00:00Z" },
       hydration: { enabled: true, intervalMinutes: 45, nextDueAt: "2026-09-03T12:00:00Z" },
     };
-    expect(hasLegacyDueCollision(reminders, false)).toBe(true);
-    expect(hasLegacyDueCollision(reminders, true)).toBe(false);
-    expect(hasLegacyDueCollision({
+    expect(hasDueCollision(reminders)).toBe(true);
+    expect(hasDueCollision({
       ...reminders,
       hydration: { ...reminders.hydration, intervalMinutes: 60 },
-    }, false)).toBe(false);
+    })).toBe(false);
+  });
+
+  it("staggers differing intervals when both fall on the next work window", () => {
+    const policy = {
+      activeWeekdays: [3, 4],
+      weekdaySchedules: Array.from({ length: 7 }, () => ({
+        workWindows: [{ startMinute: 570, endMinute: 1050 }],
+        quietWindows: [],
+      })),
+      calendarEnabled: false,
+      calendarYear: 0,
+      calendarAvailable: false,
+      calendarData: null,
+      naturalBreakEnabled: false,
+      naturalBreakMinutes: 5,
+      systemDeferralEnabled: true,
+      deferralGraceMinutes: 5,
+    };
+    const now = new Date("2026-09-03T18:00:00+08:00");
+    const stored = "2026-09-03T18:00:00+08:00";
+    const breakNext = effectiveReminderDueAt(
+      { kind: "break", enabled: true, intervalMinutes: 60, nextDueAt: stored },
+      policy,
+      now,
+      { kind: "hydration", enabled: true, intervalMinutes: 45, nextDueAt: stored },
+      null,
+    );
+    const hydrationNext = effectiveReminderDueAt(
+      { kind: "hydration", enabled: true, intervalMinutes: 45, nextDueAt: stored },
+      policy,
+      now,
+      { kind: "break", enabled: true, intervalMinutes: 60, nextDueAt: stored },
+      null,
+    );
+    expect(breakNext?.toISOString()).toBe("2026-09-04T01:30:00.000Z");
+    expect(hydrationNext?.toISOString()).toBe("2026-09-04T02:15:00.000Z");
   });
 
   it("applies an overnight quiet window from its start day into the next day", () => {

@@ -338,7 +338,6 @@ export default function PauseHydratePage() {
       now,
       otherReminder,
       deferred ? deferralFloor : null,
-      state.dueRepairComplete ?? true,
     );
     if (state?.coreHourActive && next && next <= now) {
       return t("pauseHydrate.waitingForFocus");
