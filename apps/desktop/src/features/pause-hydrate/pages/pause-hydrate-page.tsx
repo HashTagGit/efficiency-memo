@@ -3,7 +3,17 @@ import { Alert, Button, EmptyState, PageHeader } from "@memo/ui";
 import { useI18n } from "../../../lib/i18n";
 import { usePauseHydrate } from "../context";
 import { DEFAULT_SCHEDULE_POLICY } from "../data";
-import { REMINDER_KINDS, type ReminderAction, type ReminderKind } from "../types";
+import { dbExecute, dbSelect } from "../../../lib/db";
+import { BUILTIN_CHINA_CALENDAR_2026, DEFAULT_WEEKDAY_SCHEDULES } from "../reminder-logic";
+import { parseHolidayCalendar } from "../calendar";
+import {
+  REMINDER_KINDS,
+  type HolidayCalendar,
+  type ReminderAction,
+  type ReminderKind,
+  type ReminderWindow,
+  type WeekdaySchedule,
+} from "../types";
 
 type DraftPreferences = Record<ReminderKind, { enabled: boolean; intervalMinutes: number }>;
 
@@ -14,12 +24,10 @@ const emptyDraft: DraftPreferences = {
 
 interface ScheduleDraft {
   activeWeekdays: number[];
-  chinaCalendar2026: boolean;
-  workStart: string;
-  workEnd: string;
-  quietEnabled: boolean;
-  quietStart: string;
-  quietEnd: string;
+  weekdaySchedules: WeekdaySchedule[];
+  calendarEnabled: boolean;
+  calendarYear: number;
+  calendarData: HolidayCalendar | null;
   naturalBreakEnabled: boolean;
   naturalBreakMinutes: number;
   systemDeferralEnabled: boolean;
@@ -50,14 +58,25 @@ function timeToMinutes(value: string): number {
   return Number.isFinite(hours) && Number.isFinite(minutes) ? hours * 60 + minutes : Number.NaN;
 }
 
+function validWindow(window: ReminderWindow, allowOvernight: boolean): boolean {
+  return Number.isInteger(window.startMinute)
+    && Number.isInteger(window.endMinute)
+    && window.startMinute >= 0
+    && window.startMinute <= 1439
+    && window.endMinute >= 0
+    && window.endMinute <= 1439
+    && (allowOvernight ? window.startMinute !== window.endMinute : window.startMinute < window.endMinute);
+}
+
 const emptySchedule: ScheduleDraft = {
   activeWeekdays: [...DEFAULT_SCHEDULE_POLICY.activeWeekdays],
-  chinaCalendar2026: DEFAULT_SCHEDULE_POLICY.chinaCalendar2026,
-  workStart: minutesToTime(DEFAULT_SCHEDULE_POLICY.workStartMinute),
-  workEnd: minutesToTime(DEFAULT_SCHEDULE_POLICY.workEndMinute),
-  quietEnabled: DEFAULT_SCHEDULE_POLICY.quietEnabled,
-  quietStart: minutesToTime(DEFAULT_SCHEDULE_POLICY.quietStartMinute),
-  quietEnd: minutesToTime(DEFAULT_SCHEDULE_POLICY.quietEndMinute),
+  weekdaySchedules: DEFAULT_WEEKDAY_SCHEDULES.map((schedule) => ({
+    workWindows: schedule.workWindows.map((window) => ({ ...window })),
+    quietWindows: schedule.quietWindows.map((window) => ({ ...window })),
+  })),
+  calendarEnabled: DEFAULT_SCHEDULE_POLICY.calendarEnabled,
+  calendarYear: DEFAULT_SCHEDULE_POLICY.calendarYear,
+  calendarData: DEFAULT_SCHEDULE_POLICY.calendarData,
   naturalBreakEnabled: DEFAULT_SCHEDULE_POLICY.naturalBreakEnabled,
   naturalBreakMinutes: DEFAULT_SCHEDULE_POLICY.naturalBreakMinutes,
   systemDeferralEnabled: DEFAULT_SCHEDULE_POLICY.systemDeferralEnabled,
@@ -80,6 +99,8 @@ export default function PauseHydratePage() {
   } = usePauseHydrate();
   const [draft, setDraft] = useState<DraftPreferences>(emptyDraft);
   const [schedule, setSchedule] = useState<ScheduleDraft>(emptySchedule);
+  const [selectedDay, setSelectedDay] = useState(0);
+  const [calendarError, setCalendarError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [dirty, setDirty] = useState(false);
@@ -109,12 +130,13 @@ export default function PauseHydratePage() {
     });
     setSchedule({
       activeWeekdays: [...state.schedulePolicy.activeWeekdays],
-      chinaCalendar2026: state.schedulePolicy.chinaCalendar2026,
-      workStart: minutesToTime(state.schedulePolicy.workStartMinute),
-      workEnd: minutesToTime(state.schedulePolicy.workEndMinute),
-      quietEnabled: state.schedulePolicy.quietEnabled,
-      quietStart: minutesToTime(state.schedulePolicy.quietStartMinute),
-      quietEnd: minutesToTime(state.schedulePolicy.quietEndMinute),
+      weekdaySchedules: state.schedulePolicy.weekdaySchedules.map((day) => ({
+        workWindows: day.workWindows.map((window) => ({ ...window })),
+        quietWindows: day.quietWindows.map((window) => ({ ...window })),
+      })),
+      calendarEnabled: state.schedulePolicy.calendarEnabled,
+      calendarYear: state.schedulePolicy.calendarYear,
+      calendarData: state.schedulePolicy.calendarData,
       naturalBreakEnabled: state.schedulePolicy.naturalBreakEnabled,
       naturalBreakMinutes: state.schedulePolicy.naturalBreakMinutes,
       systemDeferralEnabled: state.schedulePolicy.systemDeferralEnabled,
@@ -122,14 +144,9 @@ export default function PauseHydratePage() {
     });
   }, [dirty, state]);
 
-  const workStartMinute = timeToMinutes(schedule.workStart);
-  const workEndMinute = timeToMinutes(schedule.workEnd);
-  const quietStartMinute = timeToMinutes(schedule.quietStart);
-  const quietEndMinute = timeToMinutes(schedule.quietEnd);
-  const workInvalid = !Number.isFinite(workStartMinute) || !Number.isFinite(workEndMinute) || workStartMinute >= workEndMinute;
-  const quietInvalid = !Number.isFinite(quietStartMinute)
-    || !Number.isFinite(quietEndMinute)
-    || quietStartMinute === quietEndMinute;
+  const selectedSchedule = schedule.weekdaySchedules[selectedDay] ?? DEFAULT_WEEKDAY_SCHEDULES[selectedDay];
+  const workInvalid = schedule.weekdaySchedules.some((day) => day.workWindows.some((window) => !validWindow(window, false)));
+  const quietInvalid = schedule.weekdaySchedules.some((day) => day.quietWindows.some((window) => !validWindow(window, true)));
   const naturalBreakInvalid = !Number.isInteger(schedule.naturalBreakMinutes)
     || schedule.naturalBreakMinutes < 2
     || schedule.naturalBreakMinutes > 30;
@@ -151,6 +168,63 @@ export default function PauseHydratePage() {
     setOperationError(null);
   }
 
+  function updateWindows(kind: "workWindows" | "quietWindows", windows: ReminderWindow[]) {
+    setSchedule((current) => ({
+      ...current,
+      weekdaySchedules: current.weekdaySchedules.map((day, index) => index === selectedDay ? { ...day, [kind]: windows } : day),
+    }));
+    setDirty(true);
+    setSaved(false);
+    setOperationError(null);
+  }
+
+  function changeWindow(kind: "workWindows" | "quietWindows", index: number, field: "startMinute" | "endMinute", value: string) {
+    const windows = selectedSchedule[kind].map((window, windowIndex) => windowIndex === index
+      ? { ...window, [field]: timeToMinutes(value) }
+      : window);
+    updateWindows(kind, windows);
+  }
+
+  function addWindow(kind: "workWindows" | "quietWindows") {
+    updateWindows(kind, [...selectedSchedule[kind], kind === "workWindows"
+      ? { startMinute: 540, endMinute: 1080 }
+      : { startMinute: 720, endMinute: 780 }]);
+  }
+
+  function removeWindow(kind: "workWindows" | "quietWindows", index: number) {
+    updateWindows(kind, selectedSchedule[kind].filter((_, windowIndex) => windowIndex !== index));
+  }
+
+  async function handleCalendarYearChange(year: number) {
+    if (!Number.isInteger(year) || year < 2000 || year > 9999) return;
+    setCalendarError(null);
+    let calendarData: HolidayCalendar | null = year === 2026 ? BUILTIN_CHINA_CALENDAR_2026 : null;
+    try {
+      const [row] = await dbSelect<{ value: string }>("SELECT value FROM ch_settings WHERE key = $1", [`pause_hydrate.calendar.${year}`]);
+      if (row) calendarData = parseHolidayCalendar(row.value, year);
+    } catch {
+      calendarData = null;
+    }
+    updateSchedule({ calendarYear: year, calendarData });
+  }
+
+  async function handleCalendarImport(file: File | undefined) {
+    if (!file) return;
+    setCalendarError(null);
+    try {
+      const calendarData = parseHolidayCalendar(await file.text(), schedule.calendarYear);
+      await dbExecute(
+        "INSERT INTO ch_settings (key, value) VALUES ($1, $2) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+        [`pause_hydrate.calendar.${calendarData.year}`, JSON.stringify(calendarData)],
+      );
+      updateSchedule({ calendarData, calendarYear: calendarData.year });
+    } catch (error) {
+      setCalendarError(error instanceof Error && error.message === "invalid-calendar-year"
+        ? t("pauseHydrate.calendarImportYearMismatch")
+        : t("pauseHydrate.calendarImportInvalid"));
+    }
+  }
+
   function toggleWeekday(day: number) {
     const active = schedule.activeWeekdays.includes(day);
     if (active && schedule.activeWeekdays.length === 1) return;
@@ -170,12 +244,11 @@ export default function PauseHydratePage() {
         REMINDER_KINDS.map((kind) => ({ kind, ...draft[kind] })),
         {
           activeWeekdays: schedule.activeWeekdays,
-          chinaCalendar2026: schedule.chinaCalendar2026,
-          workStartMinute,
-          workEndMinute,
-          quietEnabled: schedule.quietEnabled,
-          quietStartMinute,
-          quietEndMinute,
+          weekdaySchedules: schedule.weekdaySchedules,
+          calendarEnabled: schedule.calendarEnabled,
+          calendarYear: schedule.calendarYear,
+          calendarAvailable: schedule.calendarData?.year === schedule.calendarYear,
+          calendarData: schedule.calendarData,
           naturalBreakEnabled: schedule.naturalBreakEnabled,
           naturalBreakMinutes: schedule.naturalBreakMinutes,
           systemDeferralEnabled: schedule.systemDeferralEnabled,
@@ -351,7 +424,7 @@ export default function PauseHydratePage() {
                   aria-label={t(`pauseHydrate.weekday${day}`)}
                   className={`weekday-day-button ${WEEKDAY_TONES[day]} min-w-12 flex-1 sm:flex-none`}
                   data-active={active}
-                  onClick={() => toggleWeekday(day)}
+                  onClick={() => { setSelectedDay(day); toggleWeekday(day); }}
                 >
                   {t(`pauseHydrate.weekdayShort${day}`)}
                 </Button>
@@ -360,82 +433,79 @@ export default function PauseHydratePage() {
           </div>
           <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
             <label className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <input
-                type="checkbox"
-                checked={schedule.chinaCalendar2026}
-                onChange={(event) => updateSchedule({ chinaCalendar2026: event.target.checked })}
-                className="h-4 w-4 rounded border border-control-border accent-[var(--accent)] focus:ring-2 focus:ring-focus-ring"
-              />
-              {t("pauseHydrate.chinaCalendar2026")}
+              {t("pauseHydrate.editDay")}
+              <select
+                value={selectedDay}
+                onChange={(event) => setSelectedDay(Number(event.target.value))}
+                className="h-9 rounded-md border border-control-border bg-background px-2 text-foreground focus:outline-none focus:ring-2 focus:ring-focus-ring"
+              >
+                {WEEKDAYS.map((day) => <option key={day} value={day}>{t(`pauseHydrate.weekday${day}`)}</option>)}
+              </select>
             </label>
-            <p className="max-w-xl text-xs leading-relaxed text-muted">{t("pauseHydrate.chinaCalendar2026Hint")}</p>
+            <div className="flex flex-wrap items-center gap-3 text-xs text-muted">
+              <label className="inline-flex items-center gap-2 font-medium text-foreground">
+                <input
+                  type="checkbox"
+                  checked={schedule.calendarEnabled}
+                  onChange={(event) => updateSchedule({ calendarEnabled: event.target.checked })}
+                  className="h-4 w-4 rounded border border-control-border accent-[var(--accent)] focus:ring-2 focus:ring-focus-ring"
+                />
+                {t("pauseHydrate.calendarEnabled")}
+              </label>
+              <label className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-control-border px-3 py-1.5 font-medium text-foreground hover:bg-surface-strong">
+                <input
+                  type="file"
+                  accept=".ics,.json,text/calendar,application/json"
+                  className="sr-only"
+                  onChange={(event) => { void handleCalendarImport(event.target.files?.[0]); event.currentTarget.value = ""; }}
+                />
+                {t("pauseHydrate.calendarImport")}
+              </label>
+              <span>{t(schedule.calendarData ? "pauseHydrate.calendarReady" : "pauseHydrate.calendarImportRequired", { year: schedule.calendarYear })}</span>
+              <input
+                type="number"
+                min={2000}
+                max={9999}
+                value={schedule.calendarYear}
+                aria-label={t("pauseHydrate.calendarYear")}
+                onChange={(event) => { void handleCalendarYearChange(Number(event.target.value)); }}
+                className="h-9 w-24 rounded-md border border-control-border bg-background px-2 text-foreground focus:outline-none focus:ring-2 focus:ring-focus-ring"
+              />
+            </div>
           </div>
+          {calendarError && <p className="mt-2 text-xs text-danger" role="alert">{calendarError}</p>}
         </fieldset>
 
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           <fieldset className="min-w-0">
             <legend className="text-sm font-medium text-foreground">{t("pauseHydrate.workHours")}</legend>
-            <div className="mt-2 grid grid-cols-2 gap-3">
-              <label className="text-xs text-muted">
-                {t("pauseHydrate.workStart")}
-                <input
-                  type="time"
-                  value={schedule.workStart}
-                  aria-invalid={workInvalid}
-                  onChange={(event) => updateSchedule({ workStart: event.target.value })}
-                  className={timeInputClass}
-                />
-              </label>
-              <label className="text-xs text-muted">
-                {t("pauseHydrate.workEnd")}
-                <input
-                  type="time"
-                  value={schedule.workEnd}
-                  aria-invalid={workInvalid}
-                  onChange={(event) => updateSchedule({ workEnd: event.target.value })}
-                  className={timeInputClass}
-                />
-              </label>
+            <p className="mt-1 text-xs text-muted">{t("pauseHydrate.dayScheduleHint", { day: t(`pauseHydrate.weekday${selectedDay}`) })}</p>
+            <div className="mt-2 space-y-2">
+              {selectedSchedule.workWindows.map((window, index) => (
+                <div key={`${index}-${window.startMinute}-${window.endMinute}`} className="grid grid-cols-[1fr_1fr_auto] items-end gap-2">
+                  <label className="text-xs text-muted">{t("pauseHydrate.workStart")}<input type="time" value={minutesToTime(window.startMinute)} aria-invalid={workInvalid} onChange={(event) => changeWindow("workWindows", index, "startMinute", event.target.value)} className={timeInputClass} /></label>
+                  <label className="text-xs text-muted">{t("pauseHydrate.workEnd")}<input type="time" value={minutesToTime(window.endMinute)} aria-invalid={workInvalid} onChange={(event) => changeWindow("workWindows", index, "endMinute", event.target.value)} className={timeInputClass} /></label>
+                  <Button variant="ghost" size="icon" aria-label={t("pauseHydrate.removeWindow")} onClick={() => removeWindow("workWindows", index)}>×</Button>
+                </div>
+              ))}
             </div>
+            <Button variant="ghost" size="sm" className="mt-2" onClick={() => addWindow("workWindows")}>+ {t("pauseHydrate.addWindow")}</Button>
             <p className="mt-2 text-xs text-danger" aria-live="polite">{workInvalid ? t("pauseHydrate.workHoursInvalid") : ""}</p>
           </fieldset>
 
           <fieldset className="min-w-0">
             <legend className="text-sm font-medium text-foreground">{t("pauseHydrate.quietHours")}</legend>
-            <label className="mt-2 flex items-center gap-2 text-sm font-medium text-foreground">
-              <input
-                type="checkbox"
-                checked={schedule.quietEnabled}
-                onChange={(event) => updateSchedule({ quietEnabled: event.target.checked })}
-                className="h-4 w-4 rounded border border-control-border accent-[var(--accent)] focus:ring-2 focus:ring-focus-ring"
-              />
-              {t("pauseHydrate.quietHoursEnabled")}
-            </label>
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              <label className="text-xs text-muted">
-                {t("pauseHydrate.quietStart")}
-                <input
-                  type="time"
-                  value={schedule.quietStart}
-                  disabled={!schedule.quietEnabled}
-                  aria-invalid={quietInvalid}
-                  onChange={(event) => updateSchedule({ quietStart: event.target.value })}
-                  className={timeInputClass}
-                />
-              </label>
-              <label className="text-xs text-muted">
-                {t("pauseHydrate.quietEnd")}
-                <input
-                  type="time"
-                  value={schedule.quietEnd}
-                  disabled={!schedule.quietEnabled}
-                  aria-invalid={quietInvalid}
-                  onChange={(event) => updateSchedule({ quietEnd: event.target.value })}
-                  className={timeInputClass}
-                />
-              </label>
+            <p className="mt-1 text-xs text-muted">{t("pauseHydrate.quietHoursHint")}</p>
+            <div className="mt-2 space-y-2">
+              {selectedSchedule.quietWindows.map((window, index) => (
+                <div key={`${index}-${window.startMinute}-${window.endMinute}`} className="grid grid-cols-[1fr_1fr_auto] items-end gap-2">
+                  <label className="text-xs text-muted">{t("pauseHydrate.quietStart")}<input type="time" value={minutesToTime(window.startMinute)} aria-invalid={quietInvalid} onChange={(event) => changeWindow("quietWindows", index, "startMinute", event.target.value)} className={timeInputClass} /></label>
+                  <label className="text-xs text-muted">{t("pauseHydrate.quietEnd")}<input type="time" value={minutesToTime(window.endMinute)} aria-invalid={quietInvalid} onChange={(event) => changeWindow("quietWindows", index, "endMinute", event.target.value)} className={timeInputClass} /></label>
+                  <Button variant="ghost" size="icon" aria-label={t("pauseHydrate.removeWindow")} onClick={() => removeWindow("quietWindows", index)}>×</Button>
+                </div>
+              ))}
             </div>
-            <p className="mt-2 text-xs text-muted">{t("pauseHydrate.quietHoursHint")}</p>
+            <Button variant="ghost" size="sm" className="mt-2" onClick={() => addWindow("quietWindows")}>+ {t("pauseHydrate.addWindow")}</Button>
             <p className="mt-1 text-xs text-danger" aria-live="polite">{quietInvalid ? t("pauseHydrate.quietHoursInvalid") : ""}</p>
           </fieldset>
 

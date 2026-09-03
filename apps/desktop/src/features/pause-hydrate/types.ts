@@ -5,14 +5,29 @@ export type ReminderAction = "completed" | "snoozed" | "muted";
 export type ReminderEventSource = "manual" | "natural";
 export type ReminderNotificationPermission = NotificationPermission | "unknown" | "unsupported";
 
+export interface ReminderWindow {
+  startMinute: number;
+  endMinute: number;
+}
+
+export interface WeekdaySchedule {
+  workWindows: ReminderWindow[];
+  quietWindows: ReminderWindow[];
+}
+
+export interface HolidayCalendar {
+  year: number;
+  holidays: string[];
+  workdays: string[];
+}
+
 export interface SchedulePolicy {
   activeWeekdays: number[];
-  chinaCalendar2026: boolean;
-  workStartMinute: number;
-  workEndMinute: number;
-  quietEnabled: boolean;
-  quietStartMinute: number;
-  quietEndMinute: number;
+  weekdaySchedules: WeekdaySchedule[];
+  calendarEnabled: boolean;
+  calendarYear: number;
+  calendarAvailable: boolean;
+  calendarData: HolidayCalendar | null;
   naturalBreakEnabled: boolean;
   naturalBreakMinutes: number;
   systemDeferralEnabled: boolean;

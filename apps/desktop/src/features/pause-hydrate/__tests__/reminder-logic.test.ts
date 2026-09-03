@@ -20,4 +20,24 @@ describe("Pause & Hydrate reminder logic", () => {
     expect(normalizeReminderInterval("break", 22)).toBe(60);
     expect(normalizeReminderInterval("hydration", 300)).toBe(45);
   });
+
+  it("moves the next reminder beyond a quiet window", () => {
+    const next = nextDueAt(new Date("2026-08-27T09:30:00+08:00"), 120, {
+      activeWeekdays: [3],
+      weekdaySchedules: Array.from({ length: 7 }, (_, weekday) => ({
+        workWindows: weekday === 3 ? [{ startMinute: 540, endMinute: 1080 }] : [],
+        quietWindows: weekday === 3 ? [{ startMinute: 660, endMinute: 780 }] : [],
+      })),
+      calendarEnabled: true,
+      calendarYear: 2026,
+      calendarAvailable: false,
+      calendarData: null,
+      naturalBreakEnabled: false,
+      naturalBreakMinutes: 5,
+      systemDeferralEnabled: true,
+      deferralGraceMinutes: 5,
+    });
+    expect(next.getHours()).toBe(13);
+    expect(next.getMinutes()).toBe(0);
+  });
 });

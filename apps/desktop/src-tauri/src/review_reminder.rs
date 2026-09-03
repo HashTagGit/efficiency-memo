@@ -1,5 +1,5 @@
 use crate::data_control::DB_FILENAME;
-use crate::local_schedule::minute_in_window;
+use crate::pause_hydrate::schedule_quiet_at;
 use chrono::{DateTime, Datelike, Days, NaiveDate, Timelike, Weekday};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
@@ -230,14 +230,6 @@ fn claim_due(
         }
     }
     preferences = load_preferences(&transaction, &input.user_id)?;
-    let quiet_policy: Option<(bool, i64, i64)> = transaction
-        .query_row(
-            "SELECT quiet_enabled, quiet_start_minute, quiet_end_minute FROM ph_schedule_policies WHERE user_id = ?1",
-            [&input.user_id],
-            |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)),
-        )
-        .optional()
-        .map_err(|error| error.to_string())?;
     let active: bool = transaction
         .query_row(
             "SELECT EXISTS(SELECT 1 FROM ch_sessions WHERE user_id = ?1 AND ended_at IS NULL)",
@@ -245,9 +237,12 @@ fn claim_due(
             |row| row.get(0),
         )
         .map_err(|error| error.to_string())?;
-    let quiet = quiet_policy.is_some_and(|(enabled, start, end)| {
-        enabled && minute_in_window(input.minute_of_day, start, end)
-    });
+    let quiet = schedule_quiet_at(
+        &transaction,
+        &input.user_id,
+        input.weekday,
+        input.minute_of_day,
+    )?;
     if active || quiet || input.notifications_allowed == Some(false) {
         transaction.commit().map_err(|error| error.to_string())?;
         return Ok(Vec::new());

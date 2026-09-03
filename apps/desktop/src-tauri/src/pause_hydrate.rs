@@ -1,10 +1,40 @@
 use crate::local_schedule::minute_in_window;
-use chrono::{DateTime, Duration, NaiveDate, SecondsFormat, Utc};
+use chrono::{DateTime, Datelike, Duration, NaiveDate, SecondsFormat, Timelike, Utc};
 use rusqlite::{params, Connection, OptionalExtension};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 
 const DB_FILENAME: &str = "efficiency-memo.db";
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct ReminderWindow {
+    start_minute: i64,
+    end_minute: i64,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct WeekdaySchedule {
+    work_windows: Vec<ReminderWindow>,
+    quiet_windows: Vec<ReminderWindow>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct HolidayCalendar {
+    year: i64,
+    holidays: Vec<String>,
+    workdays: Vec<String>,
+}
+
+fn default_weekday_schedules() -> Vec<WeekdaySchedule> {
+    (0..7)
+        .map(|_| WeekdaySchedule {
+            work_windows: vec![ReminderWindow { start_minute: 540, end_minute: 1080 }],
+            quiet_windows: Vec::new(),
+        })
+        .collect()
+}
 
 #[derive(Deserialize)]
 pub(crate) struct ReminderPreferenceInput {
@@ -17,8 +47,14 @@ pub(crate) struct ReminderPreferenceInput {
 #[derive(Clone, Debug, Deserialize)]
 pub(crate) struct SchedulePolicyInput {
     active_weekdays_mask: i64,
-    #[serde(default = "default_china_calendar_2026")]
-    china_calendar_2026: bool,
+    #[serde(default = "default_weekday_schedules")]
+    weekday_schedules: Vec<WeekdaySchedule>,
+    #[serde(default)]
+    calendar_year: i64,
+    #[serde(default = "default_calendar_enabled")]
+    calendar_enabled: bool,
+    #[serde(skip)]
+    calendar: Option<HolidayCalendar>,
     work_start_minute: i64,
     work_end_minute: i64,
     quiet_enabled: bool,
@@ -38,7 +74,10 @@ impl Default for SchedulePolicyInput {
     fn default() -> Self {
         Self {
             active_weekdays_mask: 31,
-            china_calendar_2026: true,
+            weekday_schedules: default_weekday_schedules(),
+            calendar_year: 0,
+            calendar_enabled: true,
+            calendar: None,
             work_start_minute: 540,
             work_end_minute: 1080,
             quiet_enabled: false,
@@ -54,7 +93,7 @@ impl Default for SchedulePolicyInput {
     }
 }
 
-fn default_china_calendar_2026() -> bool {
+fn default_calendar_enabled() -> bool {
     true
 }
 
@@ -93,7 +132,19 @@ fn valid_kind(kind: &str) -> bool {
 }
 
 fn valid_policy(policy: &SchedulePolicyInput) -> bool {
+    let valid_windows = |windows: &[ReminderWindow]| {
+        windows.iter().all(|window| {
+            (0..=1439).contains(&window.start_minute)
+                && (0..=1439).contains(&window.end_minute)
+                && window.start_minute != window.end_minute
+        })
+    };
     (1..=127).contains(&policy.active_weekdays_mask)
+        && (policy.weekday_schedules.is_empty() || policy.weekday_schedules.len() == 7)
+        && policy.weekday_schedules.iter().all(|schedule| {
+            valid_windows(&schedule.work_windows) && valid_windows(&schedule.quiet_windows)
+        })
+        && (policy.calendar_year == 0 || (2000..=9999).contains(&policy.calendar_year))
         && (0..=1438).contains(&policy.work_start_minute)
         && (1..=1439).contains(&policy.work_end_minute)
         && policy.work_start_minute < policy.work_end_minute
@@ -102,6 +153,19 @@ fn valid_policy(policy: &SchedulePolicyInput) -> bool {
         && policy.quiet_start_minute != policy.quiet_end_minute
         && (2..=30).contains(&policy.natural_break_minutes)
         && (1..=30).contains(&policy.deferral_grace_minutes)
+}
+
+fn normalize_due_at(policy: &SchedulePolicyInput, due: DateTime<chrono::FixedOffset>) -> DateTime<chrono::FixedOffset> {
+    for offset in 0..=14 * 24 * 60 {
+        let candidate = due + Duration::minutes(offset);
+        let local_date = candidate.date_naive().to_string();
+        let weekday = candidate.weekday().num_days_from_monday() as i64;
+        let minute = (candidate.hour() * 60 + candidate.minute()) as i64;
+        if schedule_allows(policy, &local_date, weekday, minute) {
+            return candidate;
+        }
+    }
+    due
 }
 
 const CHINA_HOLIDAYS_2026: &[&str] = &[
@@ -120,6 +184,14 @@ const CHINA_WORKDAYS_2026: &[&str] = &[
     "2026-01-04", "2026-02-14", "2026-02-28", "2026-05-09", "2026-09-20", "2026-10-10",
 ];
 
+fn builtin_calendar(year: i64) -> Option<HolidayCalendar> {
+    (year == 2026).then(|| HolidayCalendar {
+        year,
+        holidays: CHINA_HOLIDAYS_2026.iter().map(|value| (*value).to_string()).collect(),
+        workdays: CHINA_WORKDAYS_2026.iter().map(|value| (*value).to_string()).collect(),
+    })
+}
+
 fn schedule_allows(
     policy: &SchedulePolicyInput,
     local_date: &str,
@@ -129,40 +201,156 @@ fn schedule_allows(
     if !(0..=6).contains(&weekday) || !(0..=1439).contains(&minute_of_day) {
         return false;
     }
-    let holiday_calendar_active = policy.china_calendar_2026 && local_date.starts_with("2026-");
-    if holiday_calendar_active && CHINA_HOLIDAYS_2026.contains(&local_date) {
+    let calendar_active = policy.calendar_enabled && policy.calendar_year > 0
+        && local_date.starts_with(&format!("{}-", policy.calendar_year));
+    let holiday = policy
+        .calendar
+        .as_ref()
+        .is_some_and(|calendar| calendar.holidays.iter().any(|date| date == local_date))
+        || (calendar_active && policy.calendar_year == 2026 && CHINA_HOLIDAYS_2026.contains(&local_date));
+    if calendar_active && holiday {
         return false;
     }
-    let active_day = if holiday_calendar_active && CHINA_WORKDAYS_2026.contains(&local_date) {
-        true
+    let workday = policy
+        .calendar
+        .as_ref()
+        .is_some_and(|calendar| calendar.workdays.iter().any(|date| date == local_date))
+        || (calendar_active && policy.calendar_year == 2026 && CHINA_WORKDAYS_2026.contains(&local_date));
+    let active_day = workday || policy.active_weekdays_mask & (1 << weekday) != 0;
+    let schedule = policy.weekday_schedules.get(weekday as usize);
+    let work_windows = schedule
+        .map(|value| value.work_windows.as_slice())
+        .unwrap_or(&[]);
+    let quiet_windows = schedule
+        .map(|value| value.quiet_windows.as_slice())
+        .unwrap_or(&[]);
+    let previous_quiet_windows = policy
+        .weekday_schedules
+        .get(((weekday + 6) % 7) as usize)
+        .map(|value| value.quiet_windows.as_slice())
+        .unwrap_or(&[]);
+    let working = if work_windows.is_empty() {
+        minute_in_window(minute_of_day, policy.work_start_minute, policy.work_end_minute)
     } else {
-        policy.active_weekdays_mask & (1 << weekday) != 0
-    };
-    let working = minute_in_window(
-        minute_of_day,
-        policy.work_start_minute,
-        policy.work_end_minute,
-    );
-    let quiet = policy.quiet_enabled
-        && minute_in_window(
+        work_windows.iter().any(|window| minute_in_window(
             minute_of_day,
-            policy.quiet_start_minute,
-            policy.quiet_end_minute,
-        );
+            window.start_minute,
+            window.end_minute,
+        ))
+    };
+    let quiet = (policy.quiet_enabled && minute_in_window(
+        minute_of_day,
+        policy.quiet_start_minute,
+        policy.quiet_end_minute,
+    ))
+        || quiet_windows.iter().any(|window| minute_in_window(
+            minute_of_day,
+            window.start_minute,
+            window.end_minute,
+        ))
+        || previous_quiet_windows.iter().any(|window| {
+            window.start_minute > window.end_minute && minute_of_day < window.end_minute
+        });
     active_day && working && !quiet
 }
 
-fn load_policy(connection: &Connection, user_id: &str) -> Result<SchedulePolicyInput, String> {
-    let china_calendar_2026 = connection
+pub(crate) fn schedule_quiet_at(
+    connection: &Connection,
+    user_id: &str,
+    weekday: i64,
+    minute_of_day: i64,
+) -> Result<bool, String> {
+    if !(0..=6).contains(&weekday) || !(0..=1439).contains(&minute_of_day) {
+        return Err("invalid-local-time".to_string());
+    }
+    let settings = connection
         .query_row(
-            "SELECT value FROM ch_settings WHERE key = 'pause_hydrate.china_calendar_2026'",
+            "SELECT value FROM ch_settings WHERE key = 'pause_hydrate.weekday_schedules'",
+            [],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(|error| error.to_string())?
+        .and_then(|value| serde_json::from_str::<Vec<WeekdaySchedule>>(&value).ok())
+        .filter(|value| value.len() == 7);
+    if let Some(schedules) = settings {
+        let current = schedules[weekday as usize].quiet_windows.as_slice();
+        let previous = schedules[((weekday + 6) % 7) as usize].quiet_windows.as_slice();
+        return Ok(current.iter().any(|window| minute_in_window(
+            minute_of_day,
+            window.start_minute,
+            window.end_minute,
+        )) || previous.iter().any(|window| {
+            window.start_minute > window.end_minute && minute_of_day < window.end_minute
+        }));
+    }
+    let legacy = connection
+        .query_row(
+            "SELECT quiet_enabled, quiet_start_minute, quiet_end_minute FROM ph_schedule_policies WHERE user_id = ?1",
+            [user_id],
+            |row| Ok((row.get::<_, bool>(0)?, row.get::<_, i64>(1)?, row.get::<_, i64>(2)?)),
+        )
+        .optional()
+        .map_err(|error| error.to_string())?;
+    Ok(legacy.is_some_and(|(enabled, start, end)| {
+        enabled && minute_in_window(minute_of_day, start, end)
+    }))
+}
+
+fn load_policy(connection: &Connection, user_id: &str) -> Result<SchedulePolicyInput, String> {
+    let calendar_year = connection
+        .query_row(
+            "SELECT value FROM ch_settings WHERE key = 'pause_hydrate.calendar_year'",
+            [],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(|error| error.to_string())?
+        .and_then(|value| value.parse::<i64>().ok())
+        .unwrap_or_else(|| Utc::now().year() as i64);
+    let calendar_enabled = connection
+        .query_row(
+            "SELECT value FROM ch_settings WHERE key = 'pause_hydrate.calendar_enabled'",
             [],
             |row| row.get::<_, String>(0),
         )
         .optional()
         .map_err(|error| error.to_string())?
         .map(|value| value == "1")
+        .or_else(|| {
+            connection
+                .query_row(
+                    "SELECT value FROM ch_settings WHERE key = 'pause_hydrate.china_calendar_2026'",
+                    [],
+                    |row| row.get::<_, String>(0),
+                )
+                .optional()
+                .ok()
+                .flatten()
+                .map(|value| value == "1")
+        })
         .unwrap_or(true);
+    let weekday_schedules = connection
+        .query_row(
+            "SELECT value FROM ch_settings WHERE key = 'pause_hydrate.weekday_schedules'",
+            [],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(|error| error.to_string())?
+        .and_then(|value| serde_json::from_str::<Vec<WeekdaySchedule>>(&value).ok())
+        .filter(|value| value.len() == 7)
+        .unwrap_or_default();
+    let calendar = connection
+        .query_row(
+            "SELECT value FROM ch_settings WHERE key = ?1",
+            [format!("pause_hydrate.calendar.{calendar_year}")],
+            |row| row.get::<_, String>(0),
+        )
+        .optional()
+        .map_err(|error| error.to_string())?
+        .and_then(|value| serde_json::from_str::<HolidayCalendar>(&value).ok())
+        .or_else(|| builtin_calendar(calendar_year));
     connection
         .query_row(
             "SELECT active_weekdays_mask, work_start_minute, work_end_minute, quiet_enabled, quiet_start_minute, quiet_end_minute, natural_break_enabled, natural_break_minutes, system_deferral_enabled, deferral_grace_minutes, system_deferred, system_deferral_until FROM ph_schedule_policies WHERE user_id = ?1",
@@ -170,7 +358,10 @@ fn load_policy(connection: &Connection, user_id: &str) -> Result<SchedulePolicyI
             |row| {
                 Ok(SchedulePolicyInput {
                     active_weekdays_mask: row.get(0)?,
-                    china_calendar_2026,
+                    weekday_schedules,
+                    calendar_year,
+                    calendar_enabled,
+                    calendar,
                     work_start_minute: row.get(1)?,
                     work_end_minute: row.get(2)?,
                     quiet_enabled: row.get(3)?,
@@ -251,10 +442,42 @@ fn save_preferences(input: SavePreferencesInput, connection: &mut Connection) ->
         .map_err(|error| error.to_string())?;
     transaction
         .execute(
-            "INSERT INTO ch_settings (key, value) VALUES ('pause_hydrate.china_calendar_2026', ?1) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-            [if input.policy.china_calendar_2026 { "1" } else { "0" }],
+            "INSERT INTO ch_settings (key, value) VALUES ('pause_hydrate.weekday_schedules', ?1) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            [serde_json::to_string(&input.policy.weekday_schedules).map_err(|error| error.to_string())?],
         )
         .map_err(|error| error.to_string())?;
+    transaction
+        .execute(
+            "INSERT INTO ch_settings (key, value) VALUES ('pause_hydrate.calendar_enabled', ?1) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            [if input.policy.calendar_enabled { "1" } else { "0" }],
+        )
+        .map_err(|error| error.to_string())?;
+    transaction
+        .execute(
+            "INSERT INTO ch_settings (key, value) VALUES ('pause_hydrate.calendar_year', ?1) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            [input.policy.calendar_year.to_string()],
+        )
+        .map_err(|error| error.to_string())?;
+    let policy = load_policy(&transaction, &input.user_id)?;
+    let due_rows: Vec<(String, String)> = transaction
+        .prepare("SELECT kind, next_due_at FROM ph_reminders WHERE user_id = ?1 AND enabled = 1 AND next_due_at IS NOT NULL")
+        .map_err(|error| error.to_string())?
+        .query_map([&input.user_id], |row| Ok((row.get(0)?, row.get(1)?)))
+        .map_err(|error| error.to_string())?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|error| error.to_string())?;
+    for (kind, due) in due_rows {
+        let parsed = DateTime::parse_from_rfc3339(&due).map_err(|_| "invalid-reminder".to_string())?;
+        let normalized = normalize_due_at(&policy, parsed)
+            .with_timezone(&Utc)
+            .to_rfc3339_opts(SecondsFormat::Millis, true);
+        transaction
+            .execute(
+                "UPDATE ph_reminders SET next_due_at = ?1 WHERE user_id = ?2 AND kind = ?3",
+                params![normalized, input.user_id, kind],
+            )
+            .map_err(|error| error.to_string())?;
+    }
     transaction.commit().map_err(|error| error.to_string())?;
     Ok(newly_enabled)
 }
@@ -472,10 +695,18 @@ fn apply_action(input: ReminderActionInput, connection: &mut Connection) -> Resu
         return Err("invalid-action".to_string());
     }
     let transaction = connection.transaction().map_err(|error| error.to_string())?;
+    let policy = load_policy(&transaction, &input.user_id)?;
+    let next_due_at = normalize_due_at(
+        &policy,
+        DateTime::parse_from_rfc3339(&input.next_due_at)
+            .map_err(|_| "invalid-action".to_string())?,
+    )
+    .with_timezone(&Utc)
+    .to_rfc3339_opts(SecondsFormat::Millis, true);
     let changed = transaction
         .execute(
             "UPDATE ph_reminders SET next_due_at = ?1, pending_at = NULL, muted_until = ?2, updated_at = ?3 WHERE user_id = ?4 AND kind = ?5 AND enabled = 1 AND pending_at IS NOT NULL",
-            params![input.next_due_at, input.muted_until, input.occurred_at, input.user_id, input.kind],
+            params![next_due_at, input.muted_until, input.occurred_at, input.user_id, input.kind],
         )
         .map_err(|error| error.to_string())?;
     if changed != 1 {
@@ -560,7 +791,7 @@ fn complete_natural_break_record_at_date(
     let occurred_at = occurred
         .with_timezone(&Utc)
         .to_rfc3339_opts(SecondsFormat::Millis, true);
-    let next_due_at = (occurred + Duration::minutes(interval_minutes))
+    let next_due_at = normalize_due_at(&policy, occurred + Duration::minutes(interval_minutes))
         .with_timezone(&Utc)
         .to_rfc3339_opts(SecondsFormat::Millis, true);
     let changed = transaction
@@ -642,10 +873,11 @@ pub(crate) fn complete_natural_break(input: NaturalBreakInput, local_date: Strin
 #[cfg(test)]
 mod tests {
     use super::{
-        apply_action, claim_pending, claim_pending_at_date, complete_natural_break_record, save_preferences,
+        apply_action, claim_pending, claim_pending_at_date, complete_natural_break_record, normalize_due_at, save_preferences,
         NaturalBreakInput, ReminderActionInput, ReminderPreferenceInput, SavePreferencesInput,
-        SchedulePolicyInput,
+        ReminderWindow, SchedulePolicyInput,
     };
+    use chrono::DateTime;
     use rusqlite::{params, Connection};
 
     fn database() -> Connection {
@@ -809,6 +1041,19 @@ mod tests {
             .unwrap(),
             vec!["break"]
         );
+    }
+
+    #[test]
+    fn next_due_skips_quiet_window() {
+        let mut policy = SchedulePolicyInput::default();
+        policy.active_weekdays_mask = 8;
+        policy.weekday_schedules[3].quiet_windows = vec![ReminderWindow {
+            start_minute: 660,
+            end_minute: 780,
+        }];
+        let due = DateTime::parse_from_rfc3339("2026-08-27T11:30:00+08:00").unwrap();
+        let normalized = normalize_due_at(&policy, due);
+        assert_eq!(normalized.format("%H:%M").to_string(), "13:00");
     }
 
     #[test]
