@@ -4,7 +4,7 @@ import { useI18n } from "../../../lib/i18n";
 import { usePauseHydrate } from "../context";
 import { DEFAULT_SCHEDULE_POLICY } from "../data";
 import { dbExecute, dbSelect } from "../../../lib/db";
-import { BUILTIN_CHINA_CALENDAR_2026, DEFAULT_WEEKDAY_SCHEDULES } from "../reminder-logic";
+import { BUILTIN_CHINA_CALENDAR_2026, DEFAULT_WEEKDAY_SCHEDULES, nextDueAt } from "../reminder-logic";
 import { parseHolidayCalendar } from "../calendar";
 import {
   REMINDER_KINDS,
@@ -100,6 +100,9 @@ export default function PauseHydratePage() {
   const [draft, setDraft] = useState<DraftPreferences>(emptyDraft);
   const [schedule, setSchedule] = useState<ScheduleDraft>(emptySchedule);
   const [selectedDay, setSelectedDay] = useState(0);
+  const [syncExpanded, setSyncExpanded] = useState(false);
+  const [syncTargets, setSyncTargets] = useState<number[]>([]);
+  const [syncNotice, setSyncNotice] = useState(false);
   const [calendarError, setCalendarError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -195,6 +198,30 @@ export default function PauseHydratePage() {
     updateWindows(kind, selectedSchedule[kind].filter((_, windowIndex) => windowIndex !== index));
   }
 
+  function openSync() {
+    setSyncTargets(WEEKDAYS.filter((day) => day !== selectedDay));
+    setSyncExpanded(true);
+    setSyncNotice(false);
+  }
+
+  function applySync() {
+    const source = schedule.weekdaySchedules[selectedDay];
+    if (!source || syncTargets.length === 0) return;
+    setSchedule((current) => ({
+      ...current,
+      weekdaySchedules: current.weekdaySchedules.map((day, index) => syncTargets.includes(index)
+        ? {
+            workWindows: source.workWindows.map((window) => ({ ...window })),
+            quietWindows: source.quietWindows.map((window) => ({ ...window })),
+          }
+        : day),
+    }));
+    setDirty(true);
+    setSaved(false);
+    setSyncNotice(true);
+    setSyncExpanded(false);
+  }
+
   async function handleCalendarYearChange(year: number) {
     if (!Number.isInteger(year) || year < 2000 || year > 9999) return;
     setCalendarError(null);
@@ -288,17 +315,21 @@ export default function PauseHydratePage() {
   function nextStatus(kind: ReminderKind): string {
     const reminder = state?.reminders[kind];
     if (!reminder || !draft[kind].enabled) return t("pauseHydrate.off");
-    if (schedule.systemDeferralEnabled
-      && (state?.systemDeferred || systemInterruption?.notificationsAllowed === false)) {
-      return t("pauseHydrate.systemDeferred");
-    }
     if (reminder.pendingAt) return t("pauseHydrate.dueNow");
-    if (state?.coreHourActive && reminder.nextDueAt && new Date(reminder.nextDueAt) <= new Date()) {
+    const now = new Date();
+    const deferred = schedule.systemDeferralEnabled
+      && (state?.systemDeferred || systemInterruption?.notificationsAllowed === false);
+    const storedNext = reminder.nextDueAt ? new Date(reminder.nextDueAt) : null;
+    const deferralFloor = state?.systemDeferralUntil && new Date(state.systemDeferralUntil) > now
+      ? new Date(state.systemDeferralUntil)
+      : now;
+    const next = deferred && (!storedNext || storedNext <= deferralFloor)
+      ? nextDueAt(deferralFloor, reminder.intervalMinutes, state.schedulePolicy)
+      : storedNext;
+    if (state?.coreHourActive && next && next <= now) {
       return t("pauseHydrate.waitingForFocus");
     }
-    if (!reminder.nextDueAt) return t("pauseHydrate.off");
-    const next = new Date(reminder.nextDueAt);
-    return Number.isFinite(next.getTime()) ? dateTime.format(next) : t("pauseHydrate.off");
+    return next && Number.isFinite(next.getTime()) ? dateTime.format(next) : t("pauseHydrate.off");
   }
 
   const permissionDot =
@@ -473,6 +504,36 @@ export default function PauseHydratePage() {
               />
             </div>
           </div>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <Button variant="secondary" size="sm" onClick={openSync}>
+              {t("pauseHydrate.syncWeekdays")}
+            </Button>
+            <span className="text-xs text-success" aria-live="polite">{syncNotice ? t("pauseHydrate.syncApplied") : ""}</span>
+          </div>
+          {syncExpanded && (
+            <div className="mt-3 border-l-2 border-accent bg-accent/5 px-4 py-3">
+              <p className="text-xs leading-relaxed text-muted">{t("pauseHydrate.syncHint", { day: t(`pauseHydrate.weekday${selectedDay}`) })}</p>
+              <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2">
+                {WEEKDAYS.filter((day) => day !== selectedDay).map((day) => (
+                  <label key={day} className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
+                    <input
+                      type="checkbox"
+                      checked={syncTargets.includes(day)}
+                      onChange={(event) => setSyncTargets((current) => event.target.checked
+                        ? [...current, day].sort((a, b) => a - b)
+                        : current.filter((target) => target !== day))}
+                      className="h-4 w-4 rounded border border-control-border accent-[var(--accent)] focus:ring-2 focus:ring-focus-ring"
+                    />
+                    {t(`pauseHydrate.weekdayShort${day}`)}
+                  </label>
+                ))}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Button size="sm" disabled={syncTargets.length === 0} onClick={applySync}>{t("pauseHydrate.applySync")}</Button>
+                <Button variant="ghost" size="sm" onClick={() => setSyncExpanded(false)}>{t("pauseHydrate.cancelSync")}</Button>
+              </div>
+            </div>
+          )}
           {calendarError && <p className="mt-2 text-xs text-danger" role="alert">{calendarError}</p>}
         </fieldset>
 

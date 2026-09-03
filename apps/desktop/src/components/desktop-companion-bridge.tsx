@@ -8,6 +8,7 @@ import { requestCheckInNotifications } from "../features/core-hour/notifications
 import { loadCheckInInterval } from "../features/core-hour/settings";
 import { loadLatestActivity } from "../features/core-hour/today-data";
 import { usePauseHydrate } from "../features/pause-hydrate/context";
+import { nextDueAt } from "../features/pause-hydrate/reminder-logic";
 import type { ReminderState } from "../features/pause-hydrate/types";
 import { getCurrentUser } from "../lib/auth";
 import { useI18n } from "../lib/i18n";
@@ -153,17 +154,22 @@ export function DesktopCompanionBridge() {
   const reminderStatus = (reminder: ReminderState | undefined): string => {
     if (!reminder) return t("app.loading");
     if (!reminder.enabled) return t("pauseHydrate.off");
-    if (pauseHydrate?.schedulePolicy.systemDeferralEnabled
-      && (pauseHydrate.systemDeferred || systemInterruption?.notificationsAllowed === false)) {
-      return t("pauseHydrate.systemDeferred");
-    }
     if (reminder.pendingAt) return t("pauseHydrate.dueNow");
-    if (!reminder.nextDueAt) return t("pauseHydrate.dueNow");
+    if (!pauseHydrate?.schedulePolicy || !reminder.nextDueAt) return t("pauseHydrate.dueNow");
+    const now = new Date();
+    const deferred = pauseHydrate.schedulePolicy.systemDeferralEnabled
+      && (pauseHydrate.systemDeferred || systemInterruption?.notificationsAllowed === false);
     const due = new Date(reminder.nextDueAt);
-    if (pauseHydrate?.coreHourActive && due.getTime() <= Date.now()) {
+    const deferralFloor = pauseHydrate.systemDeferralUntil && new Date(pauseHydrate.systemDeferralUntil) > now
+      ? new Date(pauseHydrate.systemDeferralUntil)
+      : now;
+    const next = deferred && due <= deferralFloor
+      ? nextDueAt(deferralFloor, reminder.intervalMinutes, pauseHydrate.schedulePolicy)
+      : due;
+    if (pauseHydrate.coreHourActive && next <= now) {
       return t("pauseHydrate.waitingForFocus");
     }
-    return t("desktopCompanion.nextAt", { time: timeFormatter.format(due) });
+    return t("desktopCompanion.nextAt", { time: timeFormatter.format(next) });
   };
 
   const focusState = pendingCheckIn
