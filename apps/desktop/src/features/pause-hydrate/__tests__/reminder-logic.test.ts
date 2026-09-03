@@ -91,8 +91,8 @@ describe("Pause & Hydrate reminder logic", () => {
 
   it("detects differing-interval collisions", () => {
     const reminders = {
-      break: { enabled: true, intervalMinutes: 60, nextDueAt: "2026-09-03T12:00:00Z" },
-      hydration: { enabled: true, intervalMinutes: 45, nextDueAt: "2026-09-03T12:00:00Z" },
+      break: { enabled: true, intervalMinutes: 60, nextDueAt: "2026-09-04T01:30:58Z" },
+      hydration: { enabled: true, intervalMinutes: 45, nextDueAt: "2026-09-04T01:30:02Z" },
     };
     expect(hasDueCollision(reminders)).toBe(true);
     expect(hasDueCollision({
@@ -118,19 +118,20 @@ describe("Pause & Hydrate reminder logic", () => {
       deferralGraceMinutes: 5,
     };
     const now = new Date("2026-09-03T18:00:00+08:00");
-    const stored = "2026-09-03T18:00:00+08:00";
+    const breakStored = "2026-09-04T01:30:58Z";
+    const hydrationStored = "2026-09-04T01:30:02Z";
     const breakNext = effectiveReminderDueAt(
-      { kind: "break", enabled: true, intervalMinutes: 60, nextDueAt: stored },
+      { kind: "break", enabled: true, intervalMinutes: 60, nextDueAt: breakStored },
       policy,
       now,
-      { kind: "hydration", enabled: true, intervalMinutes: 45, nextDueAt: stored },
+      { kind: "hydration", enabled: true, intervalMinutes: 45, nextDueAt: hydrationStored },
       null,
     );
     const hydrationNext = effectiveReminderDueAt(
-      { kind: "hydration", enabled: true, intervalMinutes: 45, nextDueAt: stored },
+      { kind: "hydration", enabled: true, intervalMinutes: 45, nextDueAt: hydrationStored },
       policy,
       now,
-      { kind: "break", enabled: true, intervalMinutes: 60, nextDueAt: stored },
+      { kind: "break", enabled: true, intervalMinutes: 60, nextDueAt: breakStored },
       null,
     );
     expect(breakNext?.toISOString()).toBe("2026-09-04T01:30:00.000Z");

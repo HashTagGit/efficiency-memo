@@ -114,6 +114,15 @@ export function nextDueAt(now: Date, intervalMinutes: number, policy?: ScheduleP
 
 type ReminderLike = Pick<ReminderState, "enabled" | "intervalMinutes" | "nextDueAt"> & Partial<Pick<ReminderState, "kind">>;
 
+function sameDueMinute(left: string | null, right: string | null): boolean {
+  if (!left || !right) return false;
+  const leftTime = new Date(left).getTime();
+  const rightTime = new Date(right).getTime();
+  return Number.isFinite(leftTime)
+    && Number.isFinite(rightTime)
+    && Math.floor(leftTime / 60_000) === Math.floor(rightTime / 60_000);
+}
+
 export function nextDistinctDueAt(
   reminder: ReminderLike,
   otherReminder: ReminderLike,
@@ -143,7 +152,7 @@ export function effectiveReminderDueAt(
   const collision = Boolean(
     stored
       && otherReminder?.enabled
-      && otherReminder.nextDueAt === reminder.nextDueAt
+      && sameDueMinute(otherReminder.nextDueAt, reminder.nextDueAt)
       && otherReminder.intervalMinutes !== reminder.intervalMinutes,
   );
   const floor = blockedUntil && blockedUntil > now ? blockedUntil : now;
@@ -165,7 +174,7 @@ export function hasDueCollision(
   return movement.enabled
     && hydration.enabled
     && movement.nextDueAt !== null
-    && movement.nextDueAt === hydration.nextDueAt
+    && sameDueMinute(movement.nextDueAt, hydration.nextDueAt)
     && movement.intervalMinutes !== hydration.intervalMinutes;
 }
 
