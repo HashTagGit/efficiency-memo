@@ -8,7 +8,7 @@ import { requestCheckInNotifications } from "../features/core-hour/notifications
 import { loadCheckInInterval } from "../features/core-hour/settings";
 import { loadLatestActivity } from "../features/core-hour/today-data";
 import { usePauseHydrate } from "../features/pause-hydrate/context";
-import { nextDueAt, reminderAllowedAt } from "../features/pause-hydrate/reminder-logic";
+import { effectiveReminderDueAt } from "../features/pause-hydrate/reminder-logic";
 import type { ReminderState } from "../features/pause-hydrate/types";
 import { getCurrentUser } from "../lib/auth";
 import { useI18n } from "../lib/i18n";
@@ -155,27 +155,23 @@ export function DesktopCompanionBridge() {
     if (!reminder) return t("app.loading");
     if (!reminder.enabled) return t("pauseHydrate.off");
     if (reminder.pendingAt) return t("pauseHydrate.dueNow");
-    if (!pauseHydrate?.schedulePolicy || !reminder.nextDueAt) return t("pauseHydrate.dueNow");
+    if (!pauseHydrate?.schedulePolicy) return t("pauseHydrate.dueNow");
     const now = new Date();
     const deferred = pauseHydrate.schedulePolicy.systemDeferralEnabled
       && (pauseHydrate.systemDeferred || systemInterruption?.notificationsAllowed === false);
-    const due = new Date(reminder.nextDueAt);
     const deferralFloor = pauseHydrate.systemDeferralUntil && new Date(pauseHydrate.systemDeferralUntil) > now
       ? new Date(pauseHydrate.systemDeferralUntil)
       : now;
-    const validDue = Number.isFinite(due.getTime()) && reminderAllowedAt(pauseHydrate.schedulePolicy, due)
-      ? due
-      : null;
     const otherReminder = pauseHydrate.reminders[reminder.kind === "break" ? "hydration" : "break"];
-    const collidedDueTime = otherReminder?.enabled
-      && otherReminder.nextDueAt === reminder.nextDueAt
-      && otherReminder.intervalMinutes !== reminder.intervalMinutes;
-    const usableDue = validDue && !collidedDueTime
-      ? validDue
-      : null;
-    const next = !usableDue || deferred && usableDue <= deferralFloor
-      ? nextDueAt(deferralFloor, reminder.intervalMinutes, pauseHydrate.schedulePolicy)
-      : usableDue;
+    const next = effectiveReminderDueAt(
+      reminder,
+      pauseHydrate.schedulePolicy,
+      now,
+      otherReminder,
+      deferred ? deferralFloor : null,
+      pauseHydrate.dueRepairComplete ?? true,
+    );
+    if (!next) return t("pauseHydrate.off");
     if (pauseHydrate.coreHourActive && next <= now) {
       return t("pauseHydrate.waitingForFocus");
     }

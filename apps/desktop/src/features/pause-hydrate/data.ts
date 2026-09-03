@@ -6,7 +6,9 @@ import {
   DEFAULT_WEEKDAY_SCHEDULES,
   nextDueAt,
   reminderAllowedAt,
+  hasLegacyDueCollision,
   normalizeReminderInterval,
+  scheduleHasAvailableTime,
   tomorrowStart,
 } from "./reminder-logic";
 import {
@@ -213,6 +215,7 @@ export async function loadPauseHydrateState(
     coreHourActive: Boolean(activeRows[0]?.active),
     systemDeferred: Boolean(policyRows[0]?.system_deferred),
     systemDeferralUntil: policyRows[0]?.system_deferral_until ?? null,
+    dueRepairComplete: settings.some((setting) => setting.key === "pause_hydrate.due_repair_version" && setting.value === "1"),
     schedulePolicy: mapSchedulePolicy(policyRows[0], settings),
   };
 }
@@ -235,9 +238,9 @@ export async function saveReminderPreferences(
         timezone_offset_minutes: timezoneOffsetMinutes(now),
         work_start_minute: policy.weekdaySchedules[0]?.workWindows[0]?.startMinute ?? 540,
         work_end_minute: policy.weekdaySchedules[0]?.workWindows[0]?.endMinute ?? 1080,
-        quiet_enabled: policy.weekdaySchedules.some((schedule) => schedule.quietWindows.length > 0),
-        quiet_start_minute: policy.weekdaySchedules[0]?.quietWindows[0]?.startMinute ?? 1320,
-        quiet_end_minute: policy.weekdaySchedules[0]?.quietWindows[0]?.endMinute ?? 420,
+        quiet_enabled: false,
+        quiet_start_minute: 1320,
+        quiet_end_minute: 420,
         natural_break_enabled: policy.naturalBreakEnabled,
         natural_break_minutes: policy.naturalBreakMinutes,
         system_deferral_enabled: policy.systemDeferralEnabled,
@@ -296,23 +299,29 @@ export async function markNewPendingReminders(
   await ensureReminderRows(userId, now);
   const state = await loadPauseHydrateState(userId, now);
   const schedule = state.schedulePolicy;
-  const storedDueTimes = REMINDER_KINDS
-    .map((kind) => state.reminders[kind])
-    .filter((reminder) => reminder.enabled && reminder.nextDueAt)
-    .map((reminder) => reminder.nextDueAt);
-  const collidedDueTime = storedDueTimes.length === REMINDER_KINDS.length
-    && new Set(storedDueTimes).size === 1;
+  const [repairRow] = await dbSelect<{ value: string }>(
+    "SELECT value FROM ch_settings WHERE key = 'pause_hydrate.due_repair_version'",
+  );
+  const repairComplete = repairRow?.value === "1";
+  const collidedDueTime = hasLegacyDueCollision(state.reminders, repairComplete);
+  const scheduleAvailable = scheduleHasAvailableTime(schedule);
   for (const kind of REMINDER_KINDS) {
     const reminder = state.reminders[kind];
     if (!reminder?.enabled || !reminder.nextDueAt) continue;
     const stored = new Date(reminder.nextDueAt);
-    // Legacy builds normalized both reminders to one shared work-window boundary.
-    if (Number.isFinite(stored.getTime()) && (collidedDueTime || !reminderAllowedAt(schedule, stored))) {
+    // Legacy builds normalized different-interval reminders to one shared boundary.
+    if (scheduleAvailable && Number.isFinite(stored.getTime())
+      && (collidedDueTime || !reminderAllowedAt(schedule, stored))) {
       await dbExecute(
         "UPDATE ph_reminders SET next_due_at = $1, updated_at = $2 WHERE user_id = $3 AND kind = $4 AND next_due_at = $5",
         [nextDueAt(now, reminder.intervalMinutes, schedule).toISOString(), now.toISOString(), userId, kind, reminder.nextDueAt],
       );
     }
+  }
+  if (!repairComplete) {
+    await dbExecute(
+      "INSERT INTO ch_settings (key, value) VALUES ('pause_hydrate.due_repair_version', '1') ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+    );
   }
   const weekday = (now.getDay() + 6) % 7;
   return invoke<ReminderKind[]>("claim_pause_hydrate_reminders", {

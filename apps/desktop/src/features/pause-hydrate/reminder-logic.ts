@@ -1,4 +1,10 @@
-import type { HolidayCalendar, ReminderKind, SchedulePolicy, WeekdaySchedule } from "./types";
+import type {
+  HolidayCalendar,
+  ReminderKind,
+  ReminderState,
+  SchedulePolicy,
+  WeekdaySchedule,
+} from "./types";
 
 export const DEFAULT_INTERVALS: Record<ReminderKind, number> = {
   break: 60,
@@ -45,17 +51,45 @@ function inWindow(minute: number, start: number, end: number): boolean {
   return start < end ? minute >= start && minute < end : minute >= start || minute < end;
 }
 
-function scheduleFor(policy: SchedulePolicy, day: number): WeekdaySchedule {
+function scheduleFor(
+  policy: Pick<SchedulePolicy, "weekdaySchedules">,
+  day: number,
+): WeekdaySchedule {
   return policy.weekdaySchedules[day] ?? DEFAULT_WEEKDAY_SCHEDULES[day];
 }
 
-function quietAt(policy: SchedulePolicy, date: Date): boolean {
-  const day = weekday(date);
-  const minute = date.getHours() * 60 + date.getMinutes();
+function quietAt(
+  policy: Pick<SchedulePolicy, "weekdaySchedules">,
+  day: number,
+  minute: number,
+): boolean {
   const current = scheduleFor(policy, day).quietWindows;
   const previous = scheduleFor(policy, (day + 6) % 7).quietWindows;
-  return current.some((window) => inWindow(minute, window.startMinute, window.endMinute))
+  return current.some((window) => window.startMinute < window.endMinute
+    ? inWindow(minute, window.startMinute, window.endMinute)
+    : minute >= window.startMinute)
     || previous.some((window) => window.startMinute > window.endMinute && minute < window.endMinute);
+}
+
+function scheduleAllowsMinute(
+  policy: Pick<SchedulePolicy, "weekdaySchedules">,
+  day: number,
+  minute: number,
+): boolean {
+  return scheduleFor(policy, day).workWindows.some((window) => inWindow(
+    minute, window.startMinute, window.endMinute,
+  )) && !quietAt(policy, day, minute);
+}
+
+export function scheduleHasAvailableTime(
+  policy: Pick<SchedulePolicy, "activeWeekdays" | "weekdaySchedules">,
+): boolean {
+  return policy.activeWeekdays.some((day) => {
+    for (let minute = 0; minute < 1440; minute += 1) {
+      if (scheduleAllowsMinute(policy, day, minute)) return true;
+    }
+    return false;
+  });
 }
 
 export function reminderAllowedAt(policy: SchedulePolicy, date: Date): boolean {
@@ -65,10 +99,7 @@ export function reminderAllowedAt(policy: SchedulePolicy, date: Date): boolean {
   const calendarWorkday = calendarActive && policy.calendarData?.workdays.includes(dateText);
   const day = weekday(date);
   const active = calendarWorkday || policy.activeWeekdays.includes(day);
-  const work = scheduleFor(policy, day).workWindows.some((window) => inWindow(
-    date.getHours() * 60 + date.getMinutes(), window.startMinute, window.endMinute,
-  ));
-  return active && work && !quietAt(policy, date);
+  return active && scheduleAllowsMinute(policy, day, date.getHours() * 60 + date.getMinutes());
 }
 
 export function nextDueAt(now: Date, intervalMinutes: number, policy?: SchedulePolicy): Date {
@@ -79,6 +110,45 @@ export function nextDueAt(now: Date, intervalMinutes: number, policy?: ScheduleP
     if (reminderAllowedAt(policy, next)) return next;
   }
   return candidate;
+}
+
+export function effectiveReminderDueAt(
+  reminder: Pick<ReminderState, "enabled" | "intervalMinutes" | "nextDueAt">,
+  policy: SchedulePolicy,
+  now = new Date(),
+  otherReminder?: Pick<ReminderState, "enabled" | "intervalMinutes" | "nextDueAt">,
+  blockedUntil?: Date | null,
+  repairComplete = true,
+): Date | null {
+  if (!reminder.enabled || !scheduleHasAvailableTime(policy)) return null;
+  const stored = reminder.nextDueAt ? new Date(reminder.nextDueAt) : null;
+  const collision = Boolean(
+    !repairComplete
+      && stored
+      && otherReminder?.enabled
+      && otherReminder.nextDueAt === reminder.nextDueAt
+      && otherReminder.intervalMinutes !== reminder.intervalMinutes,
+  );
+  const floor = blockedUntil && blockedUntil > now ? blockedUntil : now;
+  if (stored && Number.isFinite(stored.getTime()) && !collision && reminderAllowedAt(policy, stored)
+    && (!blockedUntil || stored > blockedUntil)) {
+    return stored;
+  }
+  return nextDueAt(floor, reminder.intervalMinutes, policy);
+}
+
+export function hasLegacyDueCollision(
+  reminders: Record<ReminderKind, Pick<ReminderState, "enabled" | "intervalMinutes" | "nextDueAt">>,
+  repairComplete: boolean,
+): boolean {
+  const movement = reminders.break;
+  const hydration = reminders.hydration;
+  return !repairComplete
+    && movement.enabled
+    && hydration.enabled
+    && movement.nextDueAt !== null
+    && movement.nextDueAt === hydration.nextDueAt
+    && movement.intervalMinutes !== hydration.intervalMinutes;
 }
 
 export function tomorrowStart(now: Date): Date {

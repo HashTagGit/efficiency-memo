@@ -16,6 +16,7 @@ const hookState = vi.hoisted(() => ({
   pauseLoadError: false,
   breakPending: true,
   hydrationPending: true,
+  coreHourActive: true,
 }));
 
 vi.mock("../../../lib/auth", () => ({
@@ -58,8 +59,27 @@ vi.mock("../../../features/pause-hydrate/context", () => ({
     loadError: hookState.pauseLoadError,
     state: {
       reminders: {
-        break: { enabled: true, nextDueAt: "2030-01-01T10:00:00.000Z", pendingAt: hookState.breakPending ? "2030-01-01T08:58:00.000Z" : null },
-        hydration: { enabled: true, nextDueAt: "2030-01-01T09:00:00.000Z", pendingAt: hookState.hydrationPending ? "2030-01-01T08:59:00.000Z" : null },
+        break: { kind: "break", enabled: true, intervalMinutes: 60, nextDueAt: "2000-01-03T10:00:00.000Z", pendingAt: hookState.breakPending ? "2030-01-01T08:58:00.000Z" : null, mutedUntil: null },
+        hydration: { kind: "hydration", enabled: true, intervalMinutes: 45, nextDueAt: "2000-01-03T09:00:00.000Z", pendingAt: hookState.hydrationPending ? "2030-01-01T08:59:00.000Z" : null, mutedUntil: null },
+      },
+      coreHourActive: hookState.coreHourActive,
+      systemDeferred: false,
+      systemDeferralUntil: null,
+      dueRepairComplete: true,
+      schedulePolicy: {
+        activeWeekdays: [0, 1, 2, 3, 4, 5, 6],
+        weekdaySchedules: Array.from({ length: 7 }, () => ({
+          workWindows: [{ startMinute: 0, endMinute: 1439 }],
+          quietWindows: [],
+        })),
+        calendarEnabled: false,
+        calendarYear: 0,
+        calendarAvailable: false,
+        calendarData: null,
+        naturalBreakEnabled: false,
+        naturalBreakMinutes: 5,
+        systemDeferralEnabled: true,
+        deferralGraceMinutes: 5,
       },
     },
   }),
@@ -78,6 +98,7 @@ beforeEach(() => {
     pauseLoadError: false,
     breakPending: true,
     hydrationPending: true,
+    coreHourActive: true,
   });
 });
 
@@ -164,5 +185,26 @@ describe("Now dashboard", () => {
     expect(await screen.findByText("Some attention sources could not be confirmed. Retry before treating the list as clear.")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Retry sources" })).toBeTruthy();
     expect(screen.getAllByTestId("dashboard-attention-item")).toHaveLength(1);
+  });
+
+  it("shows that an overdue reminder is waiting for the active focus session", async () => {
+    hookState.uncertain = false;
+    hookState.breakPending = false;
+    hookState.hydrationPending = false;
+    vi.mocked(loadDashboardNow).mockResolvedValue({
+      nextPlan: null,
+      pendingSuggestionCount: 0,
+      dueReviewKind: null,
+    });
+
+    render(
+      <MemoryRouter>
+        <I18nProvider initialLocale="en-US">
+          <DashboardPage />
+        </I18nProvider>
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText("Waiting until CoreHour focus ends")).toBeTruthy();
   });
 });

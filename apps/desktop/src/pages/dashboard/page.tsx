@@ -8,6 +8,7 @@ import { getCurrentUser } from "../../lib/auth";
 import { useSession } from "../../features/core-hour/hooks/use-session";
 import { useCoreHourLoadState, useCoreHourTimer } from "../../features/core-hour/runtime";
 import { usePauseHydrate } from "../../features/pause-hydrate/context";
+import { effectiveReminderDueAt } from "../../features/pause-hydrate/reminder-logic";
 import { loadDashboardNow, type DashboardNowData } from "./dashboard-data";
 
 function ToolIcon({ name }: { name: string }) {
@@ -144,6 +145,7 @@ export function DashboardPage() {
     state: pauseState,
     loading: pauseLoading,
     loadError: pauseLoadError,
+    systemInterruption,
     refresh: refreshPauseHydrate,
   } = usePauseHydrate();
   const [nowData, setNowData] = useState<DashboardNowData | null>(null);
@@ -189,12 +191,39 @@ export function DashboardPage() {
     (kind) => pauseState?.reminders[kind].pendingAt,
   );
   const pendingReminder = pendingReminders[0];
-  const nextReminder = (["break", "hydration"] as const)
-    .filter((kind) => pauseState?.reminders[kind].enabled && pauseState.reminders[kind].nextDueAt)
-    .sort((left, right) => (
-      new Date(pauseState!.reminders[left].nextDueAt!).getTime()
-      - new Date(pauseState!.reminders[right].nextDueAt!).getTime()
-    ))[0];
+  const reminderNow = new Date();
+  const effectiveReminderAt = (kind: "break" | "hydration") => {
+    if (!pauseState) return null;
+    const reminder = pauseState.reminders[kind];
+    if (!pauseState.schedulePolicy) {
+      return reminder.nextDueAt ? new Date(reminder.nextDueAt) : null;
+    }
+    const other = pauseState.reminders[kind === "break" ? "hydration" : "break"];
+    const blocked = pauseState.schedulePolicy.systemDeferralEnabled
+      && (pauseState.systemDeferred || systemInterruption?.notificationsAllowed === false);
+    const blockedUntil = blocked
+      ? pauseState.systemDeferralUntil && new Date(pauseState.systemDeferralUntil) > reminderNow
+        ? new Date(pauseState.systemDeferralUntil)
+        : reminderNow
+      : null;
+    return effectiveReminderDueAt(
+      reminder,
+      pauseState.schedulePolicy,
+      reminderNow,
+      other,
+      blockedUntil,
+      pauseState.dueRepairComplete ?? true,
+    );
+  };
+  const nextReminderEntry = (["break", "hydration"] as const)
+    .map((kind) => ({ kind, at: effectiveReminderAt(kind) }))
+    .filter((entry): entry is { kind: "break" | "hydration"; at: Date } => Boolean(entry.at))
+    .sort((left, right) => left.at.getTime() - right.at.getTime())[0];
+  const nextReminder = nextReminderEntry?.kind;
+  const nextReminderAt = nextReminderEntry?.at ?? null;
+  const reminderWaitingForFocus = Boolean(
+    pauseState?.coreHourActive && nextReminderAt && nextReminderAt <= reminderNow,
+  );
 
   const focusValue = coreLoading
     ? t("dashboard.loading")
@@ -231,9 +260,11 @@ export function DashboardPage() {
       ? t("dashboard.unavailable")
       : pendingReminder
         ? t("dashboard.dueNow")
-        : nextReminder
-          ? timeFormatter.format(new Date(pauseState!.reminders[nextReminder].nextDueAt!))
-          : t("dashboard.remindersOff");
+        : reminderWaitingForFocus
+          ? t("pauseHydrate.waitingForFocus")
+          : nextReminderAt
+            ? timeFormatter.format(nextReminderAt)
+            : t("dashboard.remindersOff");
   const currentReminderDescription = pendingReminder
     ? t("dashboard.reminderDue", { name: t(`pauseHydrate.${pendingReminder}`) })
     : nextReminder

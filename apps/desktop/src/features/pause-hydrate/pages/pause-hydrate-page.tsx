@@ -4,7 +4,12 @@ import { useI18n } from "../../../lib/i18n";
 import { usePauseHydrate } from "../context";
 import { DEFAULT_SCHEDULE_POLICY } from "../data";
 import { dbExecute, dbSelect } from "../../../lib/db";
-import { BUILTIN_CHINA_CALENDAR_2026, DEFAULT_WEEKDAY_SCHEDULES, nextDueAt, reminderAllowedAt } from "../reminder-logic";
+import {
+  BUILTIN_CHINA_CALENDAR_2026,
+  DEFAULT_WEEKDAY_SCHEDULES,
+  effectiveReminderDueAt,
+  scheduleHasAvailableTime,
+} from "../reminder-logic";
 import { parseHolidayCalendar } from "../calendar";
 import {
   REMINDER_KINDS,
@@ -148,8 +153,11 @@ export default function PauseHydratePage() {
   }, [dirty, state]);
 
   const selectedSchedule = schedule.weekdaySchedules[selectedDay] ?? DEFAULT_WEEKDAY_SCHEDULES[selectedDay];
-  const workInvalid = schedule.weekdaySchedules.some((day) => day.workWindows.some((window) => !validWindow(window, false)));
+  const workInvalid = schedule.weekdaySchedules.some((day) => (
+    day.workWindows.length === 0 || day.workWindows.some((window) => !validWindow(window, false))
+  ));
   const quietInvalid = schedule.weekdaySchedules.some((day) => day.quietWindows.some((window) => !validWindow(window, true)));
+  const scheduleUnavailable = !workInvalid && !quietInvalid && !scheduleHasAvailableTime(schedule);
   const naturalBreakInvalid = !Number.isInteger(schedule.naturalBreakMinutes)
     || schedule.naturalBreakMinutes < 2
     || schedule.naturalBreakMinutes > 30;
@@ -195,6 +203,7 @@ export default function PauseHydratePage() {
   }
 
   function removeWindow(kind: "workWindows" | "quietWindows", index: number) {
+    if (kind === "workWindows" && selectedSchedule.workWindows.length <= 1) return;
     updateWindows(kind, selectedSchedule[kind].filter((_, windowIndex) => windowIndex !== index));
   }
 
@@ -263,7 +272,7 @@ export default function PauseHydratePage() {
   }
 
   async function handleSave() {
-    if (workInvalid || quietInvalid || naturalBreakInvalid || deferralGraceInvalid) return;
+    if (workInvalid || quietInvalid || scheduleUnavailable || naturalBreakInvalid || deferralGraceInvalid) return;
     setSaving(true);
     setOperationError(null);
     try {
@@ -314,30 +323,23 @@ export default function PauseHydratePage() {
 
   function nextStatus(kind: ReminderKind): string {
     const reminder = state?.reminders[kind];
-    if (!reminder || !draft[kind].enabled) return t("pauseHydrate.off");
+    if (!reminder || !reminder.enabled) return t("pauseHydrate.off");
     if (reminder.pendingAt) return t("pauseHydrate.dueNow");
     const now = new Date();
-    const deferred = schedule.systemDeferralEnabled
+    const deferred = state.schedulePolicy.systemDeferralEnabled
       && (state?.systemDeferred || systemInterruption?.notificationsAllowed === false);
-    const storedNext = reminder.nextDueAt && Number.isFinite(new Date(reminder.nextDueAt).getTime())
-      ? new Date(reminder.nextDueAt)
-      : null;
     const otherReminder = state.reminders[kind === "break" ? "hydration" : "break"];
-    const collidedDueTime = Boolean(
-      storedNext
-      && otherReminder.enabled
-      && otherReminder.nextDueAt === reminder.nextDueAt
-      && otherReminder.intervalMinutes !== reminder.intervalMinutes,
-    );
-    const validStoredNext = storedNext && !collidedDueTime && reminderAllowedAt(state.schedulePolicy, storedNext)
-      ? storedNext
-      : null;
     const deferralFloor = state?.systemDeferralUntil && new Date(state.systemDeferralUntil) > now
       ? new Date(state.systemDeferralUntil)
       : now;
-    const next = (!validStoredNext || deferred && validStoredNext <= deferralFloor)
-      ? nextDueAt(deferralFloor, reminder.intervalMinutes, state.schedulePolicy)
-      : validStoredNext;
+    const next = effectiveReminderDueAt(
+      reminder,
+      state.schedulePolicy,
+      now,
+      otherReminder,
+      deferred ? deferralFloor : null,
+      state.dueRepairComplete ?? true,
+    );
     if (state?.coreHourActive && next && next <= now) {
       return t("pauseHydrate.waitingForFocus");
     }
@@ -556,14 +558,18 @@ export default function PauseHydratePage() {
             <div className="mt-2 space-y-2">
               {selectedSchedule.workWindows.map((window, index) => (
                 <div key={`${index}-${window.startMinute}-${window.endMinute}`} className="grid grid-cols-[1fr_1fr_auto] items-end gap-2">
-                  <label className="text-xs text-muted">{t("pauseHydrate.workStart")}<input type="time" value={minutesToTime(window.startMinute)} aria-invalid={workInvalid} onChange={(event) => changeWindow("workWindows", index, "startMinute", event.target.value)} className={timeInputClass} /></label>
-                  <label className="text-xs text-muted">{t("pauseHydrate.workEnd")}<input type="time" value={minutesToTime(window.endMinute)} aria-invalid={workInvalid} onChange={(event) => changeWindow("workWindows", index, "endMinute", event.target.value)} className={timeInputClass} /></label>
-                  <Button variant="ghost" size="icon" aria-label={t("pauseHydrate.removeWindow")} onClick={() => removeWindow("workWindows", index)}>×</Button>
+                  <label className="text-xs text-muted">{t("pauseHydrate.workStart")}<input type="time" value={minutesToTime(window.startMinute)} aria-invalid={workInvalid || scheduleUnavailable} onChange={(event) => changeWindow("workWindows", index, "startMinute", event.target.value)} className={timeInputClass} /></label>
+                  <label className="text-xs text-muted">{t("pauseHydrate.workEnd")}<input type="time" value={minutesToTime(window.endMinute)} aria-invalid={workInvalid || scheduleUnavailable} onChange={(event) => changeWindow("workWindows", index, "endMinute", event.target.value)} className={timeInputClass} /></label>
+                  <Button variant="ghost" size="icon" disabled={selectedSchedule.workWindows.length <= 1} aria-label={t("pauseHydrate.removeWindow")} onClick={() => removeWindow("workWindows", index)}>×</Button>
                 </div>
               ))}
             </div>
             <Button variant="ghost" size="sm" className="mt-2" onClick={() => addWindow("workWindows")}>+ {t("pauseHydrate.addWindow")}</Button>
-            <p className="mt-2 text-xs text-danger" aria-live="polite">{workInvalid ? t("pauseHydrate.workHoursInvalid") : ""}</p>
+            <p className="mt-2 text-xs text-danger" aria-live="polite">
+              {workInvalid
+                ? t("pauseHydrate.workHoursInvalid")
+                : scheduleUnavailable ? t("pauseHydrate.scheduleUnavailable") : ""}
+            </p>
           </fieldset>
 
           <fieldset className="min-w-0">
@@ -763,7 +769,7 @@ export default function PauseHydratePage() {
       </div>
 
       <div className="flex flex-wrap items-center gap-3 border-b border-border pb-7">
-        <Button isLoading={saving} disabled={loading || workInvalid || quietInvalid || naturalBreakInvalid || deferralGraceInvalid} onClick={() => void handleSave()}>{t("pauseHydrate.saveSettings")}</Button>
+        <Button isLoading={saving} disabled={loading || workInvalid || quietInvalid || scheduleUnavailable || naturalBreakInvalid || deferralGraceInvalid} onClick={() => void handleSave()}>{t("pauseHydrate.saveSettings")}</Button>
         <span className="text-sm text-success" aria-live="polite">{saved ? t("pauseHydrate.saved") : ""}</span>
       </div>
 

@@ -138,18 +138,62 @@ fn valid_kind(kind: &str) -> bool {
     matches!(kind, "break" | "hydration")
 }
 
+fn scheduled_minute_allows(
+    policy: &SchedulePolicyInput,
+    weekday: i64,
+    minute_of_day: i64,
+) -> bool {
+    if !(0..=6).contains(&weekday) || !(0..=1439).contains(&minute_of_day) {
+        return false;
+    }
+    let configured_schedules = policy.weekday_schedules.len() == 7;
+    if !configured_schedules {
+        return minute_in_window(
+            minute_of_day,
+            policy.work_start_minute,
+            policy.work_end_minute,
+        ) && !(policy.quiet_enabled
+            && minute_in_window(
+                minute_of_day,
+                policy.quiet_start_minute,
+                policy.quiet_end_minute,
+            ));
+    }
+    let schedule = &policy.weekday_schedules[weekday as usize];
+    let previous = &policy.weekday_schedules[((weekday + 6) % 7) as usize];
+    let working = schedule.work_windows.iter().any(|window| {
+        minute_in_window(minute_of_day, window.start_minute, window.end_minute)
+    });
+    let quiet = schedule.quiet_windows.iter().any(|window| {
+        if window.start_minute < window.end_minute {
+            minute_in_window(minute_of_day, window.start_minute, window.end_minute)
+        } else {
+            minute_of_day >= window.start_minute
+        }
+    }) || previous.quiet_windows.iter().any(|window| {
+        window.start_minute > window.end_minute && minute_of_day < window.end_minute
+    });
+    working && !quiet
+}
+
 fn valid_policy(policy: &SchedulePolicyInput) -> bool {
-    let valid_windows = |windows: &[ReminderWindow]| {
+    let valid_windows = |windows: &[ReminderWindow], allow_overnight: bool| {
         windows.iter().all(|window| {
             (0..=1439).contains(&window.start_minute)
                 && (0..=1439).contains(&window.end_minute)
                 && window.start_minute != window.end_minute
+                && (allow_overnight || window.start_minute < window.end_minute)
         })
     };
+    let has_available_time = (0..7).any(|weekday| {
+        policy.active_weekdays_mask & (1 << weekday) != 0
+            && (0..1440).any(|minute| scheduled_minute_allows(policy, weekday, minute))
+    });
     (1..=127).contains(&policy.active_weekdays_mask)
         && (policy.weekday_schedules.is_empty() || policy.weekday_schedules.len() == 7)
         && policy.weekday_schedules.iter().all(|schedule| {
-            valid_windows(&schedule.work_windows) && valid_windows(&schedule.quiet_windows)
+            valid_windows(&schedule.work_windows, false) && valid_windows(&schedule.quiet_windows, true)
+                && !schedule.work_windows.is_empty()
         })
         && (policy.calendar_year == 0 || (2000..=9999).contains(&policy.calendar_year))
         && (-840..=840).contains(&policy.timezone_offset_minutes)
@@ -161,6 +205,7 @@ fn valid_policy(policy: &SchedulePolicyInput) -> bool {
         && policy.quiet_start_minute != policy.quiet_end_minute
         && (2..=30).contains(&policy.natural_break_minutes)
         && (1..=30).contains(&policy.deferral_grace_minutes)
+        && has_available_time
 }
 
 fn normalize_due_at(
@@ -226,47 +271,14 @@ fn schedule_allows(
     if calendar_active && holiday {
         return false;
     }
-    let workday = policy
-        .calendar
-        .as_ref()
-        .is_some_and(|calendar| calendar.workdays.iter().any(|date| date == local_date))
+    let workday = calendar_active
+        && policy
+            .calendar
+            .as_ref()
+            .is_some_and(|calendar| calendar.workdays.iter().any(|date| date == local_date))
         || (calendar_active && policy.calendar_year == 2026 && CHINA_WORKDAYS_2026.contains(&local_date));
     let active_day = workday || policy.active_weekdays_mask & (1 << weekday) != 0;
-    let schedule = policy.weekday_schedules.get(weekday as usize);
-    let work_windows = schedule
-        .map(|value| value.work_windows.as_slice())
-        .unwrap_or(&[]);
-    let quiet_windows = schedule
-        .map(|value| value.quiet_windows.as_slice())
-        .unwrap_or(&[]);
-    let previous_quiet_windows = policy
-        .weekday_schedules
-        .get(((weekday + 6) % 7) as usize)
-        .map(|value| value.quiet_windows.as_slice())
-        .unwrap_or(&[]);
-    let working = if work_windows.is_empty() {
-        minute_in_window(minute_of_day, policy.work_start_minute, policy.work_end_minute)
-    } else {
-        work_windows.iter().any(|window| minute_in_window(
-            minute_of_day,
-            window.start_minute,
-            window.end_minute,
-        ))
-    };
-    let quiet = (policy.quiet_enabled && minute_in_window(
-        minute_of_day,
-        policy.quiet_start_minute,
-        policy.quiet_end_minute,
-    ))
-        || quiet_windows.iter().any(|window| minute_in_window(
-            minute_of_day,
-            window.start_minute,
-            window.end_minute,
-        ))
-        || previous_quiet_windows.iter().any(|window| {
-            window.start_minute > window.end_minute && minute_of_day < window.end_minute
-        });
-    active_day && working && !quiet
+    active_day && scheduled_minute_allows(policy, weekday, minute_of_day)
 }
 
 pub(crate) fn schedule_quiet_at(
@@ -291,11 +303,11 @@ pub(crate) fn schedule_quiet_at(
     if let Some(schedules) = settings {
         let current = schedules[weekday as usize].quiet_windows.as_slice();
         let previous = schedules[((weekday + 6) % 7) as usize].quiet_windows.as_slice();
-        return Ok(current.iter().any(|window| minute_in_window(
-            minute_of_day,
-            window.start_minute,
-            window.end_minute,
-        )) || previous.iter().any(|window| {
+        return Ok(current.iter().any(|window| if window.start_minute < window.end_minute {
+            minute_in_window(minute_of_day, window.start_minute, window.end_minute)
+        } else {
+            minute_of_day >= window.start_minute
+        }) || previous.iter().any(|window| {
             window.start_minute > window.end_minute && minute_of_day < window.end_minute
         }));
     }
@@ -915,7 +927,7 @@ pub(crate) fn complete_natural_break(input: NaturalBreakInput, local_date: Strin
 mod tests {
     use super::{
         apply_action, claim_pending, claim_pending_at_date, complete_natural_break_record, normalize_due_at, save_preferences,
-        NaturalBreakInput, ReminderActionInput, ReminderPreferenceInput, SavePreferencesInput,
+        schedule_allows, valid_policy, NaturalBreakInput, ReminderActionInput, ReminderPreferenceInput, SavePreferencesInput,
         ReminderWindow, SchedulePolicyInput,
     };
     use chrono::DateTime;
@@ -1108,6 +1120,83 @@ mod tests {
         let due = DateTime::parse_from_rfc3339("2026-09-03T06:48:00Z").unwrap();
         let normalized = normalize_due_at(&policy, due, 480);
         assert_eq!(normalized.to_rfc3339(), "2026-09-03T06:48:00+00:00");
+    }
+
+    #[test]
+    fn empty_configured_work_windows_do_not_fall_back_to_legacy_hours() {
+        let mut policy = SchedulePolicyInput::default();
+        policy.weekday_schedules[3].work_windows.clear();
+        assert!(!schedule_allows(&policy, "2026-09-03", 3, 600));
+        assert!(!valid_policy(&policy));
+    }
+
+    #[test]
+    fn fully_quiet_active_week_is_not_a_valid_policy() {
+        let mut policy = SchedulePolicyInput::default();
+        policy.active_weekdays_mask = 1;
+        policy.weekday_schedules[0].work_windows = vec![ReminderWindow {
+            start_minute: 540,
+            end_minute: 1080,
+        }];
+        policy.weekday_schedules[0].quiet_windows = vec![ReminderWindow {
+            start_minute: 540,
+            end_minute: 1080,
+        }];
+        assert!(!valid_policy(&policy));
+    }
+
+    #[test]
+    fn disabled_calendar_does_not_activate_make_up_workday() {
+        let mut connection = database();
+        connection
+            .execute(
+                "INSERT INTO ph_reminders VALUES (?1, 'break', 1, 60, ?2, NULL, NULL, ?2)",
+                params!["local-user", "2026-01-04T01:00:00Z"],
+            )
+            .unwrap();
+        connection
+            .execute(
+                "INSERT INTO ph_schedule_policies (user_id, active_weekdays_mask, work_start_minute, work_end_minute, quiet_enabled, quiet_start_minute, quiet_end_minute, updated_at) VALUES (?1, 31, 540, 1080, 0, 1320, 420, ?2)",
+                params!["local-user", "2026-01-04T01:00:00Z"],
+            )
+            .unwrap();
+        connection
+            .execute(
+                "INSERT INTO ch_settings (key, value) VALUES ('pause_hydrate.calendar_enabled', '0')",
+                [],
+            )
+            .unwrap();
+        connection
+            .execute(
+                "INSERT INTO ch_settings (key, value) VALUES ('pause_hydrate.calendar_year', '2026')",
+                [],
+            )
+            .unwrap();
+        assert!(claim_pending_at_date(
+            "local-user", "2026-01-04T10:00:00Z", "2026-01-04", 6, 600, None, &mut connection,
+        )
+        .unwrap()
+        .is_empty());
+    }
+
+    #[test]
+    fn overnight_quiet_window_starts_on_its_configured_weekday() {
+        let mut policy = SchedulePolicyInput::default();
+        policy.weekday_schedules[0].work_windows = vec![ReminderWindow {
+            start_minute: 0,
+            end_minute: 1439,
+        }];
+        policy.weekday_schedules[0].quiet_windows = vec![ReminderWindow {
+            start_minute: 1320,
+            end_minute: 420,
+        }];
+        policy.weekday_schedules[1].work_windows = vec![ReminderWindow {
+            start_minute: 0,
+            end_minute: 1439,
+        }];
+        assert!(schedule_allows(&policy, "2026-08-31", 0, 360));
+        assert!(!schedule_allows(&policy, "2026-08-31", 0, 1380));
+        assert!(!schedule_allows(&policy, "2026-09-01", 1, 360));
     }
 
     #[test]

@@ -1,7 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
+  effectiveReminderDueAt,
+  hasLegacyDueCollision,
   nextDueAt,
   normalizeReminderInterval,
+  reminderAllowedAt,
+  scheduleHasAvailableTime,
   tomorrowStart,
 } from "../reminder-logic";
 
@@ -39,5 +43,94 @@ describe("Pause & Hydrate reminder logic", () => {
     });
     expect(next.getHours()).toBe(13);
     expect(next.getMinutes()).toBe(0);
+  });
+
+  it("keeps legitimate same-interval reminders together", () => {
+    const policy = {
+      activeWeekdays: [3],
+      weekdaySchedules: Array.from({ length: 7 }, (_, weekday) => ({
+        workWindows: weekday === 3 ? [{ startMinute: 540, endMinute: 1080 }] : [],
+        quietWindows: [],
+      })),
+      calendarEnabled: false,
+      calendarYear: 0,
+      calendarAvailable: false,
+      calendarData: null,
+      naturalBreakEnabled: false,
+      naturalBreakMinutes: 5,
+      systemDeferralEnabled: true,
+      deferralGraceMinutes: 5,
+    };
+    const stored = "2026-08-27T10:00:00+08:00";
+    expect(effectiveReminderDueAt(
+      { enabled: true, intervalMinutes: 60, nextDueAt: stored },
+      policy,
+      NOW,
+      { enabled: true, intervalMinutes: 60, nextDueAt: stored },
+    )?.toISOString()).toBe(new Date(stored).toISOString());
+  });
+
+  it("does not activate an imported make-up day when the calendar is disabled", () => {
+    const policy = {
+      activeWeekdays: [0],
+      weekdaySchedules: Array.from({ length: 7 }, () => ({
+        workWindows: [{ startMinute: 540, endMinute: 1080 }],
+        quietWindows: [],
+      })),
+      calendarEnabled: false,
+      calendarYear: 2026,
+      calendarAvailable: true,
+      calendarData: { year: 2026, holidays: [], workdays: ["2026-01-04"] },
+      naturalBreakEnabled: false,
+      naturalBreakMinutes: 5,
+      systemDeferralEnabled: true,
+      deferralGraceMinutes: 5,
+    };
+    expect(reminderAllowedAt(policy, new Date("2026-01-04T10:00:00+08:00"))).toBe(false);
+  });
+
+  it("repairs a differing-interval collision only once", () => {
+    const reminders = {
+      break: { enabled: true, intervalMinutes: 60, nextDueAt: "2026-09-03T12:00:00Z" },
+      hydration: { enabled: true, intervalMinutes: 45, nextDueAt: "2026-09-03T12:00:00Z" },
+    };
+    expect(hasLegacyDueCollision(reminders, false)).toBe(true);
+    expect(hasLegacyDueCollision(reminders, true)).toBe(false);
+    expect(hasLegacyDueCollision({
+      ...reminders,
+      hydration: { ...reminders.hydration, intervalMinutes: 60 },
+    }, false)).toBe(false);
+  });
+
+  it("applies an overnight quiet window from its start day into the next day", () => {
+    const policy = {
+      activeWeekdays: [0, 1],
+      weekdaySchedules: Array.from({ length: 7 }, (_, weekday) => ({
+        workWindows: [{ startMinute: 0, endMinute: 1439 }],
+        quietWindows: weekday === 0 ? [{ startMinute: 1320, endMinute: 420 }] : [],
+      })),
+      calendarEnabled: false,
+      calendarYear: 0,
+      calendarAvailable: false,
+      calendarData: null,
+      naturalBreakEnabled: false,
+      naturalBreakMinutes: 5,
+      systemDeferralEnabled: true,
+      deferralGraceMinutes: 5,
+    };
+    expect(reminderAllowedAt(policy, new Date("2026-08-31T06:00:00+08:00"))).toBe(true);
+    expect(reminderAllowedAt(policy, new Date("2026-08-31T23:00:00+08:00"))).toBe(false);
+    expect(reminderAllowedAt(policy, new Date("2026-09-01T06:00:00+08:00"))).toBe(false);
+  });
+
+  it("rejects a weekly schedule whose quiet hours cover every work minute", () => {
+    const policy = {
+      activeWeekdays: [0],
+      weekdaySchedules: Array.from({ length: 7 }, (_, weekday) => ({
+        workWindows: weekday === 0 ? [{ startMinute: 540, endMinute: 1080 }] : [],
+        quietWindows: weekday === 0 ? [{ startMinute: 540, endMinute: 1080 }] : [],
+      })),
+    };
+    expect(scheduleHasAvailableTime(policy)).toBe(false);
   });
 });
