@@ -85,6 +85,38 @@ function scheduleAllowsMinute(
   )) && !quietAt(policy, day, minute);
 }
 
+function activeDay(policy: SchedulePolicy, date: Date): boolean {
+  const dateText = localDate(date);
+  const calendarActive = policy.calendarEnabled && policy.calendarAvailable && policy.calendarData?.year === date.getFullYear();
+  if (calendarActive && policy.calendarData?.holidays.includes(dateText)) return false;
+  return Boolean(calendarActive && policy.calendarData?.workdays.includes(dateText))
+    || policy.activeWeekdays.includes(weekday(date));
+}
+
+function workWindowActiveAt(policy: SchedulePolicy, date: Date): boolean {
+  const day = weekday(date);
+  const minute = date.getHours() * 60 + date.getMinutes();
+  return activeDay(policy, date)
+    && scheduleFor(policy, day).workWindows.some((window) => inWorkWindow(
+      minute, window.startMinute, window.endMinute,
+    ));
+}
+
+function nextWorkWindowStart(now: Date, policy: SchedulePolicy): Date | null {
+  for (let offset = 0; offset <= 14 * 24 * 60; offset += 1) {
+    const candidate = new Date(now.getTime() + offset * 60_000);
+    const day = weekday(candidate);
+    if (!activeDay(policy, candidate)) continue;
+    const start = scheduleFor(policy, day).workWindows
+      .map((window) => window.startMinute)
+      .find((minute) => minute === candidate.getHours() * 60 + candidate.getMinutes());
+    if (start === undefined) continue;
+    candidate.setHours(Math.floor(start / 60), start % 60, 0, 0);
+    return candidate;
+  }
+  return null;
+}
+
 export function scheduleHasAvailableTime(
   policy: Pick<SchedulePolicy, "activeWeekdays" | "weekdaySchedules">,
 ): boolean {
@@ -107,8 +139,13 @@ export function reminderAllowedAt(policy: SchedulePolicy, date: Date): boolean {
 }
 
 export function nextDueAt(now: Date, intervalMinutes: number, policy?: SchedulePolicy): Date {
-  const candidate = new Date(now.getTime() + intervalMinutes * 60_000);
-  if (!policy) return candidate;
+  if (!policy) return new Date(now.getTime() + intervalMinutes * 60_000);
+  const candidate = workWindowActiveAt(policy, now)
+    ? new Date(now.getTime() + intervalMinutes * 60_000)
+    : (() => {
+        const start = nextWorkWindowStart(now, policy);
+        return start ? new Date(start.getTime() + intervalMinutes * 60_000) : new Date(now.getTime() + intervalMinutes * 60_000);
+      })();
   for (let offset = 0; offset <= 14 * 24 * 60; offset += 1) {
     const next = new Date(candidate.getTime() + offset * 60_000);
     if (reminderAllowedAt(policy, next)) return next;

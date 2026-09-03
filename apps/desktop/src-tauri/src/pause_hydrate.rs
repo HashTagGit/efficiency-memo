@@ -6,14 +6,14 @@ use tauri::{AppHandle, Manager};
 
 const DB_FILENAME: &str = "efficiency-memo.db";
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 struct ReminderWindow {
     start_minute: i64,
     end_minute: i64,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 struct WeekdaySchedule {
     work_windows: Vec<ReminderWindow>,
@@ -136,6 +136,19 @@ pub(crate) struct NaturalBreakInput {
 
 fn valid_kind(kind: &str) -> bool {
     matches!(kind, "break" | "hydration")
+}
+
+fn schedule_policy_changed(previous: &SchedulePolicyInput, next: &SchedulePolicyInput) -> bool {
+    previous.active_weekdays_mask != next.active_weekdays_mask
+        || previous.weekday_schedules != next.weekday_schedules
+        || previous.calendar_year != next.calendar_year
+        || previous.calendar_enabled != next.calendar_enabled
+        || previous.timezone_offset_minutes != next.timezone_offset_minutes
+        || previous.work_start_minute != next.work_start_minute
+        || previous.work_end_minute != next.work_end_minute
+        || previous.quiet_enabled != next.quiet_enabled
+        || previous.quiet_start_minute != next.quiet_start_minute
+        || previous.quiet_end_minute != next.quiet_end_minute
 }
 
 fn work_minute_in_window(minute: i64, start: i64, end: i64) -> bool {
@@ -432,6 +445,8 @@ fn save_preferences(input: SavePreferencesInput, connection: &mut Connection) ->
         return Err("invalid-policy".to_string());
     }
     let transaction = connection.transaction().map_err(|error| error.to_string())?;
+    let previous_policy = load_policy(&transaction, &input.user_id)?;
+    let schedule_changed = schedule_policy_changed(&previous_policy, &input.policy);
     let mut newly_enabled = false;
     for preference in input.preferences {
         if !valid_kind(&preference.kind)
@@ -449,7 +464,16 @@ fn save_preferences(input: SavePreferencesInput, connection: &mut Connection) ->
             )
             .optional()
             .map_err(|error| error.to_string())?;
+        if existing == Some((preference.enabled, preference.interval_minutes)) && !schedule_changed {
+            continue;
+        }
         if existing == Some((preference.enabled, preference.interval_minutes)) {
+            transaction
+                .execute(
+                    "UPDATE ph_reminders SET next_due_at = ?1, updated_at = ?2 WHERE user_id = ?3 AND kind = ?4",
+                    params![preference.next_due_at, input.updated_at, input.user_id, preference.kind],
+                )
+                .map_err(|error| error.to_string())?;
             continue;
         }
         newly_enabled |= preference.enabled && !existing.map(|value| value.0).unwrap_or(false);
@@ -1154,6 +1178,52 @@ mod tests {
         assert!(schedule_allows(&policy, "2026-08-27", 3, 1141));
         assert!(schedule_allows(&policy, "2026-08-27", 3, 1259));
         assert!(!schedule_allows(&policy, "2026-08-27", 3, 1260));
+    }
+
+    #[test]
+    fn changed_schedule_refreshes_an_unchanged_reminder() {
+        let mut connection = database();
+        connection
+            .execute(
+                "INSERT INTO ph_reminders VALUES (?1, 'break', 1, 60, ?2, NULL, NULL, ?2)",
+                params!["local-user", "2026-08-27T09:00:00Z"],
+            )
+            .unwrap();
+        connection
+            .execute(
+                "INSERT INTO ph_schedule_policies (user_id, active_weekdays_mask, work_start_minute, work_end_minute, quiet_enabled, quiet_start_minute, quiet_end_minute, updated_at) VALUES (?1, 8, 540, 1080, 0, 1320, 420, ?2)",
+                params!["local-user", "2026-08-27T08:00:00Z"],
+            )
+            .unwrap();
+        let mut policy = SchedulePolicyInput::default();
+        policy.active_weekdays_mask = 8;
+        policy.weekday_schedules[3].work_windows = vec![ReminderWindow {
+            start_minute: 720,
+            end_minute: 1080,
+        }];
+        let _ = save_preferences(
+            SavePreferencesInput {
+                user_id: "local-user".into(),
+                updated_at: "2026-08-27T08:00:00Z".into(),
+                preferences: vec![ReminderPreferenceInput {
+                    kind: "break".into(),
+                    enabled: true,
+                    interval_minutes: 60,
+                    next_due_at: Some("2026-08-27T13:00:00Z".into()),
+                }],
+                policy,
+            },
+            &mut connection,
+        )
+        .unwrap();
+        let next_due: String = connection
+            .query_row(
+                "SELECT next_due_at FROM ph_reminders WHERE kind = 'break'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(next_due, "2026-08-27T13:00:00.000Z");
     }
 
     #[test]
