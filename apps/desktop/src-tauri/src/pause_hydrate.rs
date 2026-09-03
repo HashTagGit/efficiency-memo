@@ -138,6 +138,14 @@ fn valid_kind(kind: &str) -> bool {
     matches!(kind, "break" | "hydration")
 }
 
+fn work_minute_in_window(minute: i64, start: i64, end: i64) -> bool {
+    if start < end {
+        minute > start && minute < end
+    } else {
+        minute > start || minute < end
+    }
+}
+
 fn scheduled_minute_allows(
     policy: &SchedulePolicyInput,
     weekday: i64,
@@ -148,7 +156,7 @@ fn scheduled_minute_allows(
     }
     let configured_schedules = policy.weekday_schedules.len() == 7;
     if !configured_schedules {
-        return minute_in_window(
+        return work_minute_in_window(
             minute_of_day,
             policy.work_start_minute,
             policy.work_end_minute,
@@ -162,7 +170,7 @@ fn scheduled_minute_allows(
     let schedule = &policy.weekday_schedules[weekday as usize];
     let previous = &policy.weekday_schedules[((weekday + 6) % 7) as usize];
     let working = schedule.work_windows.iter().any(|window| {
-        minute_in_window(minute_of_day, window.start_minute, window.end_minute)
+        work_minute_in_window(minute_of_day, window.start_minute, window.end_minute)
     });
     let quiet = schedule.quiet_windows.iter().any(|window| {
         if window.start_minute < window.end_minute {
@@ -1128,6 +1136,24 @@ mod tests {
         policy.weekday_schedules[3].work_windows.clear();
         assert!(!schedule_allows(&policy, "2026-09-03", 3, 600));
         assert!(!valid_policy(&policy));
+    }
+
+    #[test]
+    fn work_window_boundaries_do_not_trigger_reminders() {
+        let mut policy = SchedulePolicyInput::default();
+        policy.active_weekdays_mask = 8;
+        policy.weekday_schedules[3].work_windows = vec![
+            ReminderWindow { start_minute: 570, end_minute: 1050 },
+            ReminderWindow { start_minute: 1140, end_minute: 1260 },
+        ];
+        assert!(!schedule_allows(&policy, "2026-08-27", 3, 570));
+        assert!(schedule_allows(&policy, "2026-08-27", 3, 571));
+        assert!(schedule_allows(&policy, "2026-08-27", 3, 1049));
+        assert!(!schedule_allows(&policy, "2026-08-27", 3, 1050));
+        assert!(!schedule_allows(&policy, "2026-08-27", 3, 1140));
+        assert!(schedule_allows(&policy, "2026-08-27", 3, 1141));
+        assert!(schedule_allows(&policy, "2026-08-27", 3, 1259));
+        assert!(!schedule_allows(&policy, "2026-08-27", 3, 1260));
     }
 
     #[test]

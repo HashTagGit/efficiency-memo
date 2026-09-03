@@ -51,6 +51,10 @@ function inWindow(minute: number, start: number, end: number): boolean {
   return start < end ? minute >= start && minute < end : minute >= start || minute < end;
 }
 
+function inWorkWindow(minute: number, start: number, end: number): boolean {
+  return start < end ? minute > start && minute < end : minute > start || minute < end;
+}
+
 function scheduleFor(
   policy: Pick<SchedulePolicy, "weekdaySchedules">,
   day: number,
@@ -76,7 +80,7 @@ function scheduleAllowsMinute(
   day: number,
   minute: number,
 ): boolean {
-  return scheduleFor(policy, day).workWindows.some((window) => inWindow(
+  return scheduleFor(policy, day).workWindows.some((window) => inWorkWindow(
     minute, window.startMinute, window.endMinute,
   )) && !quietAt(policy, day, minute);
 }
