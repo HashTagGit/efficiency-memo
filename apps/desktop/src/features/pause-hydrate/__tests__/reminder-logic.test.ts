@@ -42,7 +42,7 @@ describe("Pause & Hydrate reminder logic", () => {
       deferralGraceMinutes: 5,
     });
     expect(next.getHours()).toBe(13);
-    expect(next.getMinutes()).toBe(0);
+    expect(next.getMinutes()).toBe(1);
   });
 
   it("does not trigger reminders at work-window boundaries", () => {
@@ -52,7 +52,9 @@ describe("Pause & Hydrate reminder logic", () => {
         workWindows: weekday === 3
           ? [{ startMinute: 570, endMinute: 1050 }, { startMinute: 1140, endMinute: 1260 }]
           : [],
-        quietWindows: [],
+        quietWindows: weekday === 3
+          ? [{ startMinute: 690, endMinute: 810 }, { startMinute: 1140, endMinute: 1200 }]
+          : [],
       })),
       calendarEnabled: false,
       calendarYear: 0,
@@ -66,12 +68,14 @@ describe("Pause & Hydrate reminder logic", () => {
     expect(reminderAllowedAt(policy, new Date("2026-08-27T09:30:00+08:00"))).toBe(false);
     expect(reminderAllowedAt(policy, new Date("2026-08-27T17:30:00+08:00"))).toBe(false);
     expect(reminderAllowedAt(policy, new Date("2026-08-27T19:00:00+08:00"))).toBe(false);
+    expect(reminderAllowedAt(policy, new Date("2026-08-27T13:30:00+08:00"))).toBe(false);
+    expect(reminderAllowedAt(policy, new Date("2026-08-27T13:31:00+08:00"))).toBe(true);
     expect(nextDueAt(new Date("2026-08-27T09:00:00+08:00"), 30, policy).toISOString())
       .toBe("2026-08-27T02:00:00.000Z");
     expect(nextDueAt(new Date("2026-08-27T08:31:00+08:00"), 60, policy).toISOString())
       .toBe("2026-08-27T02:30:00.000Z");
     expect(nextDueAt(new Date("2026-08-27T18:30:00+08:00"), 30, policy).toISOString())
-      .toBe("2026-08-27T11:30:00.000Z");
+      .toBe("2026-08-27T12:01:00.000Z");
   });
 
   it("keeps legitimate same-interval reminders together", () => {

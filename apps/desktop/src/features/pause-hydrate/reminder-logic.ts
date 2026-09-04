@@ -75,6 +75,18 @@ function quietAt(
     || previous.some((window) => window.startMinute > window.endMinute && minute < window.endMinute);
 }
 
+function quietBoundaryAt(
+  policy: Pick<SchedulePolicy, "weekdaySchedules">,
+  day: number,
+  minute: number,
+): boolean {
+  const current = scheduleFor(policy, day).quietWindows;
+  const previous = scheduleFor(policy, (day + 6) % 7).quietWindows;
+  return current.some((window) => minute === window.startMinute
+    || (window.startMinute < window.endMinute && minute === window.endMinute))
+    || previous.some((window) => window.startMinute > window.endMinute && minute === window.endMinute);
+}
+
 function scheduleAllowsMinute(
   policy: Pick<SchedulePolicy, "weekdaySchedules">,
   day: number,
@@ -82,7 +94,7 @@ function scheduleAllowsMinute(
 ): boolean {
   return scheduleFor(policy, day).workWindows.some((window) => inWorkWindow(
     minute, window.startMinute, window.endMinute,
-  )) && !quietAt(policy, day, minute);
+  )) && !quietAt(policy, day, minute) && !quietBoundaryAt(policy, day, minute);
 }
 
 function activeDay(policy: SchedulePolicy, date: Date): boolean {

@@ -159,6 +159,24 @@ fn work_minute_in_window(minute: i64, start: i64, end: i64) -> bool {
     }
 }
 
+fn quiet_boundary_at(
+    policy: &SchedulePolicyInput,
+    weekday: i64,
+    minute_of_day: i64,
+) -> bool {
+    let current = &policy.weekday_schedules[weekday as usize].quiet_windows;
+    let previous = &policy.weekday_schedules[((weekday + 6) % 7) as usize].quiet_windows;
+    current
+        .iter()
+        .any(|window| {
+            minute_of_day == window.start_minute
+                || (window.start_minute < window.end_minute && minute_of_day == window.end_minute)
+        })
+        || previous
+            .iter()
+            .any(|window| window.start_minute > window.end_minute && minute_of_day == window.end_minute)
+}
+
 fn scheduled_minute_allows(
     policy: &SchedulePolicyInput,
     weekday: i64,
@@ -178,7 +196,10 @@ fn scheduled_minute_allows(
                 minute_of_day,
                 policy.quiet_start_minute,
                 policy.quiet_end_minute,
-            ));
+            ))
+            && !(policy.quiet_enabled
+                && (minute_of_day == policy.quiet_start_minute
+                    || minute_of_day == policy.quiet_end_minute));
     }
     let schedule = &policy.weekday_schedules[weekday as usize];
     let previous = &policy.weekday_schedules[((weekday + 6) % 7) as usize];
@@ -194,7 +215,7 @@ fn scheduled_minute_allows(
     }) || previous.quiet_windows.iter().any(|window| {
         window.start_minute > window.end_minute && minute_of_day < window.end_minute
     });
-    working && !quiet
+    working && !quiet && !quiet_boundary_at(policy, weekday, minute_of_day)
 }
 
 fn valid_policy(policy: &SchedulePolicyInput) -> bool {
@@ -1138,7 +1159,7 @@ mod tests {
         }];
         let due = DateTime::parse_from_rfc3339("2026-08-27T11:30:00+08:00").unwrap();
         let normalized = normalize_due_at(&policy, due, 480);
-        assert_eq!(normalized.format("%H:%M").to_string(), "13:00");
+        assert_eq!(normalized.format("%H:%M").to_string(), "13:01");
     }
 
     #[test]
@@ -1170,14 +1191,22 @@ mod tests {
             ReminderWindow { start_minute: 570, end_minute: 1050 },
             ReminderWindow { start_minute: 1140, end_minute: 1260 },
         ];
+        policy.weekday_schedules[3].quiet_windows = vec![
+            ReminderWindow { start_minute: 690, end_minute: 810 },
+            ReminderWindow { start_minute: 1140, end_minute: 1200 },
+        ];
         assert!(!schedule_allows(&policy, "2026-08-27", 3, 570));
         assert!(schedule_allows(&policy, "2026-08-27", 3, 571));
         assert!(schedule_allows(&policy, "2026-08-27", 3, 1049));
         assert!(!schedule_allows(&policy, "2026-08-27", 3, 1050));
         assert!(!schedule_allows(&policy, "2026-08-27", 3, 1140));
-        assert!(schedule_allows(&policy, "2026-08-27", 3, 1141));
+        assert!(!schedule_allows(&policy, "2026-08-27", 3, 1141));
         assert!(schedule_allows(&policy, "2026-08-27", 3, 1259));
         assert!(!schedule_allows(&policy, "2026-08-27", 3, 1260));
+        assert!(!schedule_allows(&policy, "2026-08-27", 3, 810));
+        assert!(schedule_allows(&policy, "2026-08-27", 3, 811));
+        assert!(!schedule_allows(&policy, "2026-08-27", 3, 1200));
+        assert!(schedule_allows(&policy, "2026-08-27", 3, 1201));
     }
 
     #[test]
@@ -1513,6 +1542,12 @@ mod tests {
     fn reminder_action_updates_state_and_event_together() {
         let mut connection = database();
         insert_pending(&connection);
+        connection
+            .execute(
+                "INSERT INTO ph_reminders VALUES (?1, 'hydration', 1, 45, ?2, NULL, NULL, ?2)",
+                params!["local-user", "2026-08-27T11:45:00Z"],
+            )
+            .unwrap();
 
         apply_action(
             ReminderActionInput {
@@ -1529,13 +1564,22 @@ mod tests {
         )
         .unwrap();
 
-        let pending: Option<String> = connection
-            .query_row("SELECT pending_at FROM ph_reminders", [], |row| row.get(0))
+        let break_pending: Option<String> = connection
+            .query_row("SELECT pending_at FROM ph_reminders WHERE kind = 'break'", [], |row| row.get(0))
+            .unwrap();
+        let hydration_state: (Option<String>, String) = connection
+            .query_row(
+                "SELECT pending_at, next_due_at FROM ph_reminders WHERE kind = 'hydration'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
             .unwrap();
         let events: i64 = connection
             .query_row("SELECT COUNT(*) FROM ph_reminder_events", [], |row| row.get(0))
             .unwrap();
-        assert!(pending.is_none());
+        assert!(break_pending.is_none());
+        assert!(hydration_state.0.is_none());
+        assert_eq!(hydration_state.1, "2026-08-27T11:45:00Z");
         assert_eq!(events, 1);
     }
 }
