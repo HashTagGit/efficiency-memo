@@ -105,22 +105,38 @@ function activeDay(policy: SchedulePolicy, date: Date): boolean {
     || policy.activeWeekdays.includes(weekday(date));
 }
 
-function workWindowActiveAt(policy: SchedulePolicy, date: Date): boolean {
+function effectiveWorkSegmentActiveAt(policy: SchedulePolicy, date: Date): boolean {
   const day = weekday(date);
   const minute = date.getHours() * 60 + date.getMinutes();
   return activeDay(policy, date)
-    && scheduleFor(policy, day).workWindows.some((window) => inWorkWindow(
-      minute, window.startMinute, window.endMinute,
-    ));
+    && scheduleAllowsMinute(policy, day, minute);
 }
 
-function nextWorkWindowStart(now: Date, policy: SchedulePolicy): Date | null {
+function effectiveWorkSegmentStarts(policy: SchedulePolicy, day: number): number[] {
+  const schedule = scheduleFor(policy, day);
+  const starts = schedule.workWindows
+    .filter((window) => !quietAt(policy, day, window.startMinute))
+    .map((window) => window.startMinute);
+  const previous = scheduleFor(policy, (day + 6) % 7);
+  const quietEnds = [
+    ...schedule.quietWindows.filter((window) => window.startMinute < window.endMinute).map((window) => window.endMinute),
+    ...previous.quietWindows.filter((window) => window.startMinute > window.endMinute).map((window) => window.endMinute),
+  ];
+  for (const minute of quietEnds) {
+    if (schedule.workWindows.some((window) => inWorkWindow(minute, window.startMinute, window.endMinute))
+      && !quietAt(policy, day, minute)) {
+      starts.push(minute);
+    }
+  }
+  return [...new Set(starts)].sort((left, right) => left - right);
+}
+
+function nextEffectiveWorkSegmentStart(now: Date, policy: SchedulePolicy): Date | null {
   for (let offset = 0; offset <= 14 * 24 * 60; offset += 1) {
     const candidate = new Date(now.getTime() + offset * 60_000);
     const day = weekday(candidate);
     if (!activeDay(policy, candidate)) continue;
-    const start = scheduleFor(policy, day).workWindows
-      .map((window) => window.startMinute)
+    const start = effectiveWorkSegmentStarts(policy, day)
       .find((minute) => minute === candidate.getHours() * 60 + candidate.getMinutes());
     if (start === undefined) continue;
     candidate.setHours(Math.floor(start / 60), start % 60, 0, 0);
@@ -152,15 +168,17 @@ export function reminderAllowedAt(policy: SchedulePolicy, date: Date): boolean {
 
 export function nextDueAt(now: Date, intervalMinutes: number, policy?: SchedulePolicy): Date {
   if (!policy) return new Date(now.getTime() + intervalMinutes * 60_000);
-  const candidate = workWindowActiveAt(policy, now)
+  let candidate = effectiveWorkSegmentActiveAt(policy, now)
     ? new Date(now.getTime() + intervalMinutes * 60_000)
     : (() => {
-        const start = nextWorkWindowStart(now, policy);
+        const start = nextEffectiveWorkSegmentStart(now, policy);
         return start ? new Date(start.getTime() + intervalMinutes * 60_000) : new Date(now.getTime() + intervalMinutes * 60_000);
       })();
-  for (let offset = 0; offset <= 14 * 24 * 60; offset += 1) {
-    const next = new Date(candidate.getTime() + offset * 60_000);
-    if (reminderAllowedAt(policy, next)) return next;
+  for (let attempt = 0; attempt <= 14; attempt += 1) {
+    if (reminderAllowedAt(policy, candidate)) return candidate;
+    const start = nextEffectiveWorkSegmentStart(candidate, policy);
+    if (!start) return candidate;
+    candidate = new Date(start.getTime() + intervalMinutes * 60_000);
   }
   return candidate;
 }

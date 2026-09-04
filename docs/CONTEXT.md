@@ -32,6 +32,14 @@ _Avoid_: Wellbeing, health tracker
 A configured break or hydration prompt with its own interval and next due time.
 _Avoid_: Alarm, timer
 
+**Effective Work Segment**:
+A continuous interval produced by subtracting a day's quiet windows from its work windows; its start and end are boundaries for reminder accumulation, not reminder events.
+_Avoid_: Workday, alarm window
+
+**Reminder Schedule Boundary**:
+The start or end of a Work Window, Quiet Window, or Effective Work Segment; reminders never fire exactly on a boundary.
+_Avoid_: Reminder Event, notification time
+
 **Reminder Event**:
 A timestamped record that a reminder was completed, postponed, or muted for the day.
 _Avoid_: Health score, counter

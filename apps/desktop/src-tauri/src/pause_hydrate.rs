@@ -250,24 +250,56 @@ fn valid_policy(policy: &SchedulePolicyInput) -> bool {
         && has_available_time
 }
 
-fn normalize_due_at(
+fn next_effective_segment_start(
     policy: &SchedulePolicyInput,
-    due: DateTime<chrono::FixedOffset>,
-    timezone_offset_minutes: i64,
-) -> DateTime<chrono::FixedOffset> {
-    let timezone = FixedOffset::east_opt((timezone_offset_minutes * 60) as i32)
-        .unwrap_or_else(|| *due.offset());
+    from: DateTime<chrono::FixedOffset>,
+    timezone: FixedOffset,
+) -> Option<DateTime<chrono::FixedOffset>> {
     for offset in 0..=14 * 24 * 60 {
-        let candidate = due + Duration::minutes(offset);
+        let candidate = from + Duration::minutes(offset);
         let local = candidate.with_timezone(&timezone);
         let local_date = local.date_naive().to_string();
         let weekday = local.weekday().num_days_from_monday() as i64;
         let minute = (local.hour() * 60 + local.minute()) as i64;
-        if schedule_allows(policy, &local_date, weekday, minute) {
-            return candidate;
+        let next = candidate + Duration::minutes(1);
+        let next_local = next.with_timezone(&timezone);
+        let next_date = next_local.date_naive().to_string();
+        let next_weekday = next_local.weekday().num_days_from_monday() as i64;
+        let next_minute = (next_local.hour() * 60 + next_local.minute()) as i64;
+        if !schedule_allows(policy, &local_date, weekday, minute)
+            && schedule_allows(policy, &next_date, next_weekday, next_minute)
+        {
+            return candidate.with_second(0)?.with_nanosecond(0);
         }
     }
-    due
+    None
+}
+
+fn normalize_due_at(
+    policy: &SchedulePolicyInput,
+    due: DateTime<chrono::FixedOffset>,
+    timezone_offset_minutes: i64,
+    interval_minutes: i64,
+) -> DateTime<chrono::FixedOffset> {
+    let timezone = FixedOffset::east_opt((timezone_offset_minutes * 60) as i32)
+        .unwrap_or_else(|| *due.offset());
+    let mut candidate = due;
+    for _ in 0..=14 * 24 * 4 {
+        let local = candidate.with_timezone(&timezone);
+        if schedule_allows(
+            policy,
+            &local.date_naive().to_string(),
+            local.weekday().num_days_from_monday() as i64,
+            (local.hour() * 60 + local.minute()) as i64,
+        ) {
+            return candidate;
+        }
+        let Some(start) = next_effective_segment_start(policy, candidate, timezone) else {
+            return candidate;
+        };
+        candidate = start + Duration::minutes(interval_minutes);
+    }
+    candidate
 }
 
 const CHINA_HOLIDAYS_2026: &[&str] = &[
@@ -556,16 +588,21 @@ fn save_preferences(input: SavePreferencesInput, connection: &mut Connection) ->
         )
         .map_err(|error| error.to_string())?;
     let policy = load_policy(&transaction, &input.user_id)?;
-    let due_rows: Vec<(String, String)> = transaction
-        .prepare("SELECT kind, next_due_at FROM ph_reminders WHERE user_id = ?1 AND enabled = 1 AND next_due_at IS NOT NULL")
+    let due_rows: Vec<(String, String, i64)> = transaction
+        .prepare("SELECT kind, next_due_at, interval_minutes FROM ph_reminders WHERE user_id = ?1 AND enabled = 1 AND next_due_at IS NOT NULL")
         .map_err(|error| error.to_string())?
-        .query_map([&input.user_id], |row| Ok((row.get(0)?, row.get(1)?)))
+        .query_map([&input.user_id], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?)))
         .map_err(|error| error.to_string())?
         .collect::<Result<Vec<_>, _>>()
         .map_err(|error| error.to_string())?;
-    for (kind, due) in due_rows {
+    for (kind, due, interval_minutes) in due_rows {
         let parsed = DateTime::parse_from_rfc3339(&due).map_err(|_| "invalid-reminder".to_string())?;
-        let normalized = normalize_due_at(&policy, parsed, policy.timezone_offset_minutes)
+        let normalized = normalize_due_at(
+            &policy,
+            parsed,
+            policy.timezone_offset_minutes,
+            interval_minutes,
+        )
             .with_timezone(&Utc)
             .to_rfc3339_opts(SecondsFormat::Millis, true);
         transaction
@@ -793,6 +830,13 @@ fn apply_action(input: ReminderActionInput, connection: &mut Connection) -> Resu
     }
     let transaction = connection.transaction().map_err(|error| error.to_string())?;
     let policy = load_policy(&transaction, &input.user_id)?;
+    let interval_minutes = transaction
+        .query_row(
+            "SELECT interval_minutes FROM ph_reminders WHERE user_id = ?1 AND kind = ?2",
+            params![input.user_id, input.kind],
+            |row| row.get::<_, i64>(0),
+        )
+        .map_err(|error| error.to_string())?;
     if !(-840..=840).contains(&input.timezone_offset_minutes) {
         return Err("invalid-action".to_string());
     }
@@ -801,6 +845,7 @@ fn apply_action(input: ReminderActionInput, connection: &mut Connection) -> Resu
         DateTime::parse_from_rfc3339(&input.next_due_at)
             .map_err(|_| "invalid-action".to_string())?,
         input.timezone_offset_minutes,
+        interval_minutes,
     )
     .with_timezone(&Utc)
     .to_rfc3339_opts(SecondsFormat::Millis, true);
@@ -897,6 +942,7 @@ fn complete_natural_break_record_at_date(
         &policy,
         occurred + Duration::minutes(interval_minutes),
         input.timezone_offset_minutes,
+        interval_minutes,
     )
         .with_timezone(&Utc)
         .to_rfc3339_opts(SecondsFormat::Millis, true);
@@ -1158,8 +1204,8 @@ mod tests {
             end_minute: 780,
         }];
         let due = DateTime::parse_from_rfc3339("2026-08-27T11:30:00+08:00").unwrap();
-        let normalized = normalize_due_at(&policy, due, 480);
-        assert_eq!(normalized.format("%H:%M").to_string(), "13:01");
+        let normalized = normalize_due_at(&policy, due, 480, 120);
+        assert_eq!(normalized.format("%H:%M").to_string(), "15:00");
     }
 
     #[test]
@@ -1171,7 +1217,7 @@ mod tests {
             end_minute: 1050,
         }];
         let due = DateTime::parse_from_rfc3339("2026-09-03T06:48:00Z").unwrap();
-        let normalized = normalize_due_at(&policy, due, 480);
+        let normalized = normalize_due_at(&policy, due, 480, 60);
         assert_eq!(normalized.to_rfc3339(), "2026-09-03T06:48:00+00:00");
     }
 

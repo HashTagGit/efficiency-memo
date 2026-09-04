@@ -41,8 +41,8 @@ describe("Pause & Hydrate reminder logic", () => {
       systemDeferralEnabled: true,
       deferralGraceMinutes: 5,
     });
-    expect(next.getHours()).toBe(13);
-    expect(next.getMinutes()).toBe(1);
+    expect(next.getHours()).toBe(15);
+    expect(next.getMinutes()).toBe(0);
   });
 
   it("does not trigger reminders at work-window boundaries", () => {
@@ -75,7 +75,7 @@ describe("Pause & Hydrate reminder logic", () => {
     expect(nextDueAt(new Date("2026-08-27T08:31:00+08:00"), 60, policy).toISOString())
       .toBe("2026-08-27T02:30:00.000Z");
     expect(nextDueAt(new Date("2026-08-27T18:30:00+08:00"), 30, policy).toISOString())
-      .toBe("2026-08-27T12:01:00.000Z");
+      .toBe("2026-08-27T12:30:00.000Z");
   });
 
   it("keeps legitimate same-interval reminders together", () => {

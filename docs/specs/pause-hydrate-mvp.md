@@ -18,7 +18,9 @@ Provide a local, low-friction reminder loop for taking breaks and drinking water
 ## Acceptance Criteria
 
 - Both reminders are disabled by default and request notification permission only after the user enables one and saves.
-- Enabling or changing an interval schedules the next reminder from the save time.
+- Work windows minus quiet windows form Effective Work Segments; segment boundaries never trigger reminders.
+- If a reminder interval starts before a segment or lands outside a segment, it restarts from the next segment start plus the full interval.
+- Changing work, quiet, weekday, calendar, or sync settings recalculates enabled reminders against the new schedule without changing completed history.
 - A reminder becomes pending once when due and is not repeatedly notified until the user acts.
 - Completing schedules the next interval and increments today's count.
 - Postponing schedules the next reminder exactly 10 minutes later.
