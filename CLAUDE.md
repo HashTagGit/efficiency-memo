@@ -86,12 +86,9 @@ Scopes: `ui`, `desktop`, `core-hour`, `auth`, `db`, `shared`, `settings`, `dashb
 
 Architecture decisions live in [`docs/adr/`](docs/adr/). Create an ADR only when a decision is hard to reverse, surprising without context, and the result of a real trade-off between genuine alternatives.
 
-## AI Agent Workflow Rules
+## AI Agent Workflow
 
-- **不得在没有测试的情况下修改 `features/` 下的逻辑文件。** 每次改动 feature 逻辑，必须同步更新或新增对应的 `__tests__/` 测试，并在提交前通过 `pnpm test`。
-- **不得恢复本地 `bak/` 归档或修改 Deferred Code**（`pages/settings/sync/`）除非有明确的产品决策记录在 ADR 中。修改前必须先创建 ADR。
-- **不得引入新的第三方依赖**而不说明原因。新依赖须在 PR 描述中列出名称、版本、用途。
-- **每次改动组件后**，运行 `pnpm --filter @memo/ui test` 确认全绿再提交。
+The canonical agent workflow is the repository and package guidance in `AGENTS.md`. Keep this file focused on architecture and commands; do not add duplicate agent rules here.
 
 ## Feature Boundary Rules
 
@@ -101,9 +98,3 @@ Architecture decisions live in [`docs/adr/`](docs/adr/). Create an ADR only when
 |---|---|
 | 归档功能恢复 | 在 `docs/adr/` 新建 ADR，明确产品目标和 UI 接入方案，获得用户确认 |
 | WebDAV Sync | 同上，需额外明确多设备冲突解决策略 |
-
-### Token 使用规则
-
-- 所有颜色必须通过 CSS 变量 utility（`bg-surface`、`text-foreground`、`text-muted`、`bg-accent`、`text-danger` 等）
-- 禁止使用 Tailwind 内置颜色 utility：`bg-white`、`text-gray-*`、`bg-blue-*`、`text-red-*` 等
-- 新增 token 时先在 `apps/desktop/src/index.css` 的 `:root` + `@theme inline` 两处同步声明

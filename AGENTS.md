@@ -1,55 +1,43 @@
-# AGENTS.md
+# EfficiencyMemo
 
-## Purpose
-EfficiencyMemo is a pnpm monorepo that hosts a unified tool gallery for daily productivity. It bundles CoreHour and Pause & Hydrate behind a deployable surface:
+Repository instructions for Codex. Keep this file short and limited to rules that are specific to this repository.
 
-- **Desktop app (`apps/desktop/`)** — Tauri v2 + local SQLite + local auth + WebDAV sync. Recommended for personal, offline-first use. No cloud account required.
+## Priority and scope
 
-The desktop surface consumes the shared design system (`packages/shared/` and `packages/ui/`).
+- User instructions take precedence over this file and any Skill. Ask only when a missing answer would materially change the result; otherwise make the smallest reasonable assumption and finish the authorized work.
+- The repository is a pnpm monorepo. The only deployable surface is `apps/desktop/` (Tauri v2 + Vite/React SPA + local SQLite). `packages/shared/` is a dependency-free leaf package; `packages/ui/` is a presentational React/Tailwind library.
+- Instructions closer to a file override this file. Read the nearest `AGENTS.md` before editing package code.
 
-## Context
-The repository is organized as a workspace so the design system, shared types, and each tool stay in their own packages.
+## Hard boundaries
 
+- Keep persistence local through `apps/desktop/src/lib/db.ts` and Tauri SQLite. Schema changes add a numbered migration under `apps/desktop/src-tauri/migrations/`; never rewrite existing migrations.
+- Do not restore `bak/`, re-enable WebDAV sync, add web/SSR/Supabase infrastructure, or change product scope without an explicit product decision recorded in `docs/adr/`.
+- Reuse `@memo/shared` and `@memo/ui`; do not create feature-local copies of shared contracts or primitives. Do not add a production dependency without checking the whole workspace and documenting why.
+- Preserve secrets, PII, generated output, `node_modules/`, and user changes. Never edit `.gitignore` without user approval.
+
+## Commands
+
+Run from the repository root:
+
+```text
+pnpm install --frozen-lockfile
+pnpm lint                         # all workspaces
+pnpm typecheck                    # workspaces that define it
+pnpm test                         # all workspace tests
+pnpm --filter desktop build       # frontend build
+pnpm --filter desktop tauri:build # native installer build
 ```
-EfficiencyMemo/
-  apps/
-    desktop/            # Tauri v2 app (recommended for personal use)
-  packages/
-    shared/             # Cross-tool types and constants
-    ui/                 # React + Tailwind v4 component library
-  .omo/                 # Planning artifacts and research notes
-```
 
-- `apps/desktop/` — Tauri v2 desktop app with Vite + React 19 SPA, local SQLite via `tauri-plugin-sql`, manual WebDAV sync, OS keychain credential storage. Recommended for personal use.
+Use the narrowest command that proves the change, then run the required broader check before handoff. The native Tauri window from `pnpm --filter desktop tauri:dev` is required for SQLite/native APIs; the Vite URL alone is not an equivalent runtime.
 
-**Stack**: React 19.2.4, Tailwind v4, Vitest. Node >= 20, pnpm >= 9.
+## Code and review rules
 
-**Desktop stack**: Tauri 2 (desktop shell), Vite 6 (desktop frontend build), React Router 7 (desktop SPA routing), SQLite via `tauri-plugin-sql` (desktop storage), WebDAV via `reqwest_dav` 0.3 (desktop sync), OS keychain via `keyring` 3 (desktop credential storage).
+- TypeScript is strict: no `any`, `@ts-ignore`, or `@ts-expect-error`. Keep tests beside the source under `__tests__/` and test behavior, not implementation constants.
+- Feature or component behavior changes require focused tests when the behavior is non-trivial. Docs-only and reversible metadata edits do not need new tests.
+- UI uses semantic tokens from `apps/desktop/src/index.css` (`bg-surface`, `text-foreground`, `text-muted`, `bg-accent`, etc.); do not add hardcoded Tailwind color utilities. Use existing `@memo/ui` primitives and preserve keyboard/screen-reader behavior.
+- Add an ADR only for a hard-to-reverse, surprising decision with a real trade-off. Use terms from [`docs/CONTEXT.md`](docs/CONTEXT.md).
+- For review, report actionable correctness, scope, security, accessibility, and maintainability findings with file/line evidence. Leave formatting and lint enforcement to CI unless the task changes them.
 
-**Tooling**: TypeScript strict mode, ESLint, Vitest for unit/integration. The test suite runs 57 Vitest cases (16 in `packages/shared` + 41 in `packages/ui`) across the workspace.
+## Collaboration and handoff
 
-## Patterns
-
-**Commands** (run from repo root):
-- `pnpm typecheck` and `pnpm test` run in every workspace that defines the script (`apps/desktop` and `packages/shared`)
-- `pnpm --filter desktop tauri:dev` — Launch desktop app in dev mode
-- `pnpm --filter desktop tauri:build` — Build production desktop installer
-- `pnpm --filter desktop build` — Build desktop frontend (Vite only, no Rust)
-- `pnpm --filter desktop typecheck` — TypeScript check in desktop
-
-**Conventions**:
-- Tests mirror the source tree under `__tests__/` and use Vitest + Testing Library
-- Components compose `@memo/ui` primitives instead of re-implementing buttons, cards, or modals
-
-## Constraints
-- Do not modify the `.gitignore` patterns without checking with the user; it already covers `node_modules/`, `.next/`, `dist/`, `.env*` (with `!.env.example`), test outputs, and OS junk
-- Do not commit secrets, `node_modules`, build output, or Playwright reports
-- Do not add a new top-level dependency without checking every workspace first
-- Do not modify feature copies in `apps/desktop/src/features/` when adding new shared code. Shared code goes through `packages/shared/` and `packages/ui/` only.
-
-## Dependencies
-- **External**: Node.js 20+, pnpm 9+
-- **For desktop development**: Rust toolchain (install via [rustup](https://rustup.rs/)); Windows: MSVC Build Tools; macOS: Xcode Command Line Tools; Linux: `build-essential`, `libwebkit2gtk-4.1-dev`, `libssl-dev`, `libgtk-3-dev`
-- **Apps**: `desktop` depends on `tauri`, `react`, `react-router-dom`, `@tauri-apps/api`, `@tauri-apps/plugin-sql`, `@memo/shared`, `@memo/ui`
-- **Packages**: `@memo/shared` has no runtime deps; `@memo/ui` declares `react`, `react-dom`, `tailwindcss` as peer deps
-- **Schema**: three SQLite DDL files in `apps/desktop/src-tauri/migrations/` (do not delete or rewrite)
+Delegate only an independently describable, verifiable slice when parallel work saves time; the root agent owns integration and final verification. Keep updates concise, state assumptions, and report changed files plus the checks actually run.

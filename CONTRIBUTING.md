@@ -35,7 +35,7 @@ EfficiencyMemo/
 | Command | Description |
 |---|---|
 | `pnpm typecheck` | TypeScript check across all workspaces |
-| `pnpm test` | Run Vitest (142 cases) |
+| `pnpm test` | Run all workspace tests |
 | `pnpm --filter desktop tauri:dev` | Launch desktop app in dev mode |
 | `pnpm --filter desktop tauri:build` | Build production desktop installer |
 | `pnpm --filter desktop build` | Build desktop frontend (Vite only) |
@@ -50,7 +50,7 @@ Keep the user workflow local: session timer, check-ins, plans, reviews, recovery
 - Path aliases: `@/*` -> `apps/desktop/src/*`, `@memo/shared` -> `packages/shared/src`, `@memo/ui` -> `packages/ui/src`
 - Tests mirror source tree under `__tests__/`
 
-See [AGENTS.md](./AGENTS.md) for full conventions.
+See [AGENTS.md](./AGENTS.md) for repository boundaries and agent workflow.
 
 ## Testing
 
