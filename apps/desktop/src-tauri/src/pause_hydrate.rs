@@ -773,23 +773,31 @@ fn claim_pending_at_date(
         transaction.commit().map_err(|error| error.to_string())?;
         return Ok(Vec::new());
     }
-    let candidates: Vec<String> = {
+    let candidates: Vec<(String, i64)> = {
         let mut statement = transaction
-            .prepare("SELECT kind FROM ph_reminders WHERE user_id = ?1 AND enabled = 1 AND pending_at IS NULL AND next_due_at IS NOT NULL AND next_due_at <= ?2 AND (muted_until IS NULL OR muted_until <= ?2)")
+            .prepare("SELECT kind, interval_minutes FROM ph_reminders WHERE user_id = ?1 AND enabled = 1 AND next_due_at IS NOT NULL AND next_due_at <= ?2 AND (muted_until IS NULL OR muted_until <= ?2)")
             .map_err(|error| error.to_string())?;
         let rows = statement
-            .query_map(params![user_id, now], |row| row.get(0))
+            .query_map(params![user_id, now], |row| Ok((row.get(0)?, row.get(1)?)))
             .map_err(|error| error.to_string())?
             .collect::<Result<Vec<_>, _>>()
             .map_err(|error| error.to_string())?;
         rows
     };
     let mut claimed = Vec::new();
-    for kind in candidates {
+    for (kind, interval_minutes) in candidates {
+        let next_due_at = normalize_due_at(
+            &policy,
+            parsed_now + Duration::minutes(interval_minutes),
+            policy.timezone_offset_minutes,
+            interval_minutes,
+        )
+        .with_timezone(&Utc)
+        .to_rfc3339_opts(SecondsFormat::Millis, true);
         let changed = transaction
             .execute(
-                "UPDATE ph_reminders SET pending_at = ?1, updated_at = ?1 WHERE user_id = ?2 AND kind = ?3 AND enabled = 1 AND pending_at IS NULL AND next_due_at IS NOT NULL AND next_due_at <= ?1 AND (muted_until IS NULL OR muted_until <= ?1)",
-                params![now, user_id, kind],
+                "UPDATE ph_reminders SET pending_at = COALESCE(pending_at, ?1), next_due_at = ?2, updated_at = ?1 WHERE user_id = ?3 AND kind = ?4 AND enabled = 1 AND next_due_at IS NOT NULL AND next_due_at <= ?1 AND (muted_until IS NULL OR muted_until <= ?1)",
+                params![now, next_due_at, user_id, kind],
             )
             .map_err(|error| error.to_string())?;
         if changed == 1 {
@@ -1109,7 +1117,7 @@ mod tests {
     }
 
     #[test]
-    fn pending_claim_succeeds_only_once() {
+    fn pending_reminder_reclaims_only_after_its_interval() {
         let mut connection = database();
         connection
             .execute(
@@ -1125,6 +1133,19 @@ mod tests {
         assert!(claim_pending("local-user", "2026-08-27T10:00:01Z", 3, 600, None, &mut connection)
             .unwrap()
             .is_empty());
+        assert_eq!(
+            claim_pending("local-user", "2026-08-27T11:00:00Z", 3, 660, None, &mut connection).unwrap(),
+            vec!["break"]
+        );
+        let state: (String, String) = connection
+            .query_row(
+                "SELECT pending_at, next_due_at FROM ph_reminders WHERE kind = 'break'",
+                [],
+                |row| Ok((row.get(0)?, row.get(1)?)),
+            )
+            .unwrap();
+        assert_eq!(state.0, "2026-08-27T10:00:00Z");
+        assert_eq!(state.1, "2026-08-27T12:00:00.000Z");
     }
 
     #[test]

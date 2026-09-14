@@ -21,7 +21,7 @@ Provide a local, low-friction reminder loop for taking breaks and drinking water
 - Work windows minus quiet windows form Effective Work Segments; segment boundaries never trigger reminders.
 - If a reminder interval starts before a segment or lands outside a segment, it restarts from the next segment start plus the full interval.
 - Changing work, quiet, weekday, calendar, or sync settings recalculates enabled reminders against the new schedule without changing completed history.
-- A reminder becomes pending once when due and is not repeatedly notified until the user acts.
+- A due reminder becomes pending once and repeats its native notification only after its configured interval until the user acts.
 - Completing schedules the next interval and increments today's count.
 - Postponing schedules the next reminder exactly 10 minutes later.
 - Muting schedules the next reminder for one interval after the next local midnight.
