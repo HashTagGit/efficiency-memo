@@ -100,13 +100,17 @@ jobs:
           const path = require('node:path');
           const manifest = JSON.parse(fs.readFileSync(path.join(process.env.RUNNER_TEMP, 'updater-check', 'latest.json'), 'utf8'));
           const { assets } = JSON.parse(fs.readFileSync(path.join(process.env.RUNNER_TEMP, 'updater-assets.json'), 'utf8'));
-          const downloadPrefix = 'https://github.com/' + process.env.GITHUB_REPOSITORY + '/releases/download/' + process.env.GITHUB_REF_NAME + '/';
+          const downloadPrefixes = [
+            'https://github.com/' + process.env.GITHUB_REPOSITORY + '/releases/download/' + process.env.GITHUB_REF_NAME + '/',
+            'https://github.com/' + process.env.GITHUB_REPOSITORY + '/releases/latest/download/',
+          ];
           if (manifest.version?.replace(/^v/, '') !== process.env.GITHUB_REF_NAME.replace(/^v/, '')) throw Error('Updater version must match release tag');
           for (const os of ['windows', 'linux', 'darwin']) {
             const entries = Object.entries(manifest.platforms ?? {}).filter(([target]) => target.startsWith(os + '-'));
             if (!entries.length) throw Error('Missing updater platform: ' + os);
             for (const [target, update] of entries) {
-              if (typeof update.url !== 'string' || !update.url.startsWith(downloadPrefix)) throw Error('Invalid updater URL: ' + target);
+              const downloadPrefix = typeof update.url === 'string' && downloadPrefixes.find((prefix) => update.url.startsWith(prefix));
+              if (!downloadPrefix) throw Error('Invalid updater URL: ' + target);
               const name = decodeURIComponent(update.url.slice(downloadPrefix.length));
               const bundle = assets.find((asset) => asset.name === name);
               const signature = assets.find((asset) => asset.name === bundle?.name + '.sig');
