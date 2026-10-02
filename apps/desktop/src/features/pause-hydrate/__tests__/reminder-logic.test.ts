@@ -11,7 +11,37 @@ import {
 
 const NOW = new Date("2026-08-27T10:00:00+08:00");
 
+const dailyPolicy = {
+  activeWeekdays: [0, 1, 2, 3, 4],
+  weekdaySchedules: Array.from({ length: 7 }, () => ({
+    workWindows: [{ startMinute: 570, endMinute: 1050 }],
+    quietWindows: [{ startMinute: 690, endMinute: 810 }],
+  })),
+  calendarEnabled: false,
+  calendarYear: 2026,
+  calendarAvailable: false,
+  calendarData: null,
+  naturalBreakEnabled: false,
+  naturalBreakMinutes: 5,
+  systemDeferralEnabled: true,
+  deferralGraceMinutes: 5,
+};
+
 describe("Pause & Hydrate reminder logic", () => {
+  it("restarts a full interval after a gap even when its old candidate lands inside work time", () => {
+    expect(nextDueAt(new Date("2026-10-01T11:20:00+08:00"), 180, dailyPolicy).toISOString())
+      .toBe(new Date("2026-10-01T16:30:00+08:00").toISOString());
+  });
+
+  it("does not keep a previous-day reminder earlier than the new segment's first full interval", () => {
+    expect(effectiveReminderDueAt(
+      { enabled: true, intervalMinutes: 45, nextDueAt: "2026-10-02T09:46:00+08:00" },
+      dailyPolicy,
+      new Date("2026-10-02T08:00:00+08:00"),
+    )?.toISOString()).toBe(new Date("2026-10-02T10:15:00+08:00").toISOString());
+    expect(nextDueAt(new Date("2026-10-01T17:10:16+08:00"), 45, dailyPolicy).toISOString())
+      .toBe(new Date("2026-10-02T10:15:00+08:00").toISOString());
+  });
   it("schedules intervals and the start of the next local day", () => {
     expect(nextDueAt(NOW, 45).getTime() - NOW.getTime()).toBe(45 * 60_000);
     const tomorrow = tomorrowStart(NOW);
@@ -168,7 +198,7 @@ describe("Pause & Hydrate reminder logic", () => {
       null,
     );
     expect(breakNext?.toISOString()).toBe("2026-09-04T02:30:00.000Z");
-    expect(hydrationNext?.toISOString()).toBe("2026-09-04T03:15:00.000Z");
+    expect(hydrationNext?.toISOString()).toBe("2026-09-04T02:15:00.000Z");
   });
 
   it("applies an overnight quiet window from its start day into the next day", () => {

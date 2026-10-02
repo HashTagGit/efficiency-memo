@@ -177,6 +177,11 @@ export async function loadPauseHydrateState(
   now = new Date(),
 ): Promise<PauseHydrateState> {
   await ensureReminderRows(userId, now);
+  await invoke("refresh_pause_hydrate_schedule", {
+    userId,
+    now: now.toISOString(),
+    timezoneOffsetMinutes: timezoneOffsetMinutes(now),
+  });
   const [reminderRows, countRows, eventRows, activeRows, policyRows, settings] = await Promise.all([
     dbSelect<ReminderRow>(
       "SELECT kind, enabled, interval_minutes, next_due_at, pending_at, muted_until FROM ph_reminders WHERE user_id = $1 ORDER BY kind",
@@ -329,7 +334,9 @@ export async function markNewPendingReminders(
     const stored = new Date(reminder.nextDueAt);
     // Reconcile different-interval reminders that landed on one shared boundary.
     const otherReminder = state.reminders[kind === "break" ? "hydration" : "break"];
-    const needsRepair = collidedDueTime || !reminderAllowedAt(schedule, stored);
+    const effective = scheduleAvailable ? effectiveReminderDueAt(reminder, schedule, now, otherReminder) : null;
+    const needsRepair = collidedDueTime || !reminderAllowedAt(schedule, stored)
+      || (effective !== null && effective.getTime() !== stored.getTime());
     const next = scheduleAvailable && Number.isFinite(stored.getTime()) && needsRepair
       ? effectiveReminderDueAt(reminder, schedule, now, otherReminder)
       : null;

@@ -1,5 +1,5 @@
 use crate::local_schedule::minute_in_window;
-use chrono::{DateTime, Datelike, Duration, FixedOffset, NaiveDate, SecondsFormat, Timelike, Utc};
+use chrono::{DateTime, Datelike, Duration, FixedOffset, NaiveDate, SecondsFormat, TimeZone, Utc};
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
@@ -250,26 +250,33 @@ fn valid_policy(policy: &SchedulePolicyInput) -> bool {
         && has_available_time
 }
 
-fn next_effective_segment_start(
+fn next_due_from(
     policy: &SchedulePolicyInput,
     from: DateTime<chrono::FixedOffset>,
     timezone: FixedOffset,
+    interval_minutes: i64,
 ) -> Option<DateTime<chrono::FixedOffset>> {
-    for offset in 0..=14 * 24 * 60 {
-        let candidate = from + Duration::minutes(offset);
-        let local = candidate.with_timezone(&timezone);
-        let local_date = local.date_naive().to_string();
-        let weekday = local.weekday().num_days_from_monday() as i64;
-        let minute = (local.hour() * 60 + local.minute()) as i64;
-        let next = candidate + Duration::minutes(1);
-        let next_local = next.with_timezone(&timezone);
-        let next_date = next_local.date_naive().to_string();
-        let next_weekday = next_local.weekday().num_days_from_monday() as i64;
-        let next_minute = (next_local.hour() * 60 + next_local.minute()) as i64;
-        if !schedule_allows(policy, &local_date, weekday, minute)
-            && schedule_allows(policy, &next_date, next_weekday, next_minute)
-        {
-            return candidate.with_second(0)?.with_nanosecond(0);
+    let date = from.with_timezone(&timezone).date_naive();
+    for offset in 0..=14 {
+        let day = date.checked_add_signed(Duration::days(offset))?;
+        let midnight = timezone.from_local_datetime(&day.and_hms_opt(0, 0, 0)?).single()?;
+        let weekday = day.weekday().num_days_from_monday() as i64;
+        let mut start = None;
+        for minute in 0..=1440 {
+            let allowed = minute < 1440 && schedule_allows(policy, &day.to_string(), weekday, minute);
+            if allowed && start.is_none() {
+                start = Some((minute - 1).max(0));
+            }
+            if !allowed {
+                if let Some(start_minute) = start.take() {
+                    let segment_start = midnight + Duration::minutes(start_minute);
+                    let segment_end = midnight + Duration::minutes(minute);
+                    let candidate = from.max(segment_start) + Duration::minutes(interval_minutes);
+                    if candidate < segment_end {
+                        return Some(candidate.with_timezone(from.offset()));
+                    }
+                }
+            }
         }
     }
     None
@@ -283,23 +290,43 @@ fn normalize_due_at(
 ) -> DateTime<chrono::FixedOffset> {
     let timezone = FixedOffset::east_opt((timezone_offset_minutes * 60) as i32)
         .unwrap_or_else(|| *due.offset());
-    let mut candidate = due;
-    for _ in 0..=14 * 24 * 4 {
-        let local = candidate.with_timezone(&timezone);
-        if schedule_allows(
-            policy,
-            &local.date_naive().to_string(),
-            local.weekday().num_days_from_monday() as i64,
-            (local.hour() * 60 + local.minute()) as i64,
-        ) {
-            return candidate;
+    next_due_from(policy, due - Duration::minutes(interval_minutes), timezone, interval_minutes)
+        .unwrap_or(due)
+}
+
+fn refresh_daily_schedule(
+    user_id: &str,
+    now: DateTime<FixedOffset>,
+    timezone_offset_minutes: i64,
+    connection: &mut Connection,
+) -> Result<(), String> {
+    let timezone = FixedOffset::east_opt((timezone_offset_minutes * 60) as i32)
+        .ok_or_else(|| "invalid-local-time".to_string())?;
+    let day = now.with_timezone(&timezone).date_naive();
+    let midnight = timezone.from_local_datetime(&day.and_hms_opt(0, 0, 0).unwrap()).single().unwrap();
+    let transaction = connection.transaction().map_err(|error| error.to_string())?;
+    let policy = load_policy(&transaction, user_id)?;
+    let rows: Vec<(String, i64, String, Option<String>)> = transaction
+        .prepare("SELECT kind, interval_minutes, updated_at, next_due_at FROM ph_reminders WHERE user_id = ?1 AND enabled = 1")
+        .map_err(|error| error.to_string())?
+        .query_map([user_id], |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?)))
+        .map_err(|error| error.to_string())?
+        .collect::<Result<_, _>>()
+        .map_err(|error| error.to_string())?;
+    for (kind, interval, updated_at, stored) in rows {
+        let updated = DateTime::parse_from_rfc3339(&updated_at).map_err(|_| "invalid-reminder".to_string())?;
+        let first = next_due_from(&policy, midnight, timezone, interval);
+        let too_early = stored.as_deref().and_then(|value| DateTime::parse_from_rfc3339(value).ok())
+            .is_some_and(|value| first.is_some_and(|due| value < due) && value >= midnight);
+        if updated.with_timezone(&timezone).date_naive() < day || too_early {
+            let next = first.map(|value| value.with_timezone(&Utc).to_rfc3339_opts(SecondsFormat::Millis, true));
+            transaction.execute(
+                "UPDATE ph_reminders SET next_due_at = ?1, pending_at = NULL, updated_at = ?2 WHERE user_id = ?3 AND kind = ?4",
+                params![next, now.with_timezone(&Utc).to_rfc3339_opts(SecondsFormat::Millis, true), user_id, kind],
+            ).map_err(|error| error.to_string())?;
         }
-        let Some(start) = next_effective_segment_start(policy, candidate, timezone) else {
-            return candidate;
-        };
-        candidate = start + Duration::minutes(interval_minutes);
     }
-    candidate
+    transaction.commit().map_err(|error| error.to_string())
 }
 
 const CHINA_HOLIDAYS_2026: &[&str] = &[
@@ -995,6 +1022,18 @@ fn connection(app: &AppHandle) -> Result<Connection, String> {
 }
 
 #[tauri::command]
+pub(crate) fn refresh_pause_hydrate_schedule(
+    user_id: String,
+    now: String,
+    timezone_offset_minutes: i64,
+    app: AppHandle,
+) -> Result<(), String> {
+    if !(-840..=840).contains(&timezone_offset_minutes) { return Err("invalid-local-time".into()); }
+    let now = DateTime::parse_from_rfc3339(&now).map_err(|_| "invalid-local-time".to_string())?;
+    refresh_daily_schedule(&user_id, now, timezone_offset_minutes, &mut connection(&app)?)
+}
+
+#[tauri::command]
 pub(crate) fn save_pause_hydrate_preferences(input: SavePreferencesInput, app: AppHandle) -> Result<bool, String> {
     save_preferences(input, &mut connection(&app)?)
 }
@@ -1039,6 +1078,47 @@ mod tests {
     };
     use chrono::DateTime;
     use rusqlite::{params, Connection};
+
+    #[test]
+    fn interval_cannot_span_a_quiet_gap() {
+        let mut policy = SchedulePolicyInput::default();
+        policy.weekday_schedules[3].quiet_windows = vec![ReminderWindow { start_minute: 690, end_minute: 810 }];
+        let due = DateTime::parse_from_rfc3339("2026-10-01T14:20:00+08:00").unwrap();
+        assert_eq!(normalize_due_at(&policy, due, 480, 180).to_rfc3339(), "2026-10-01T16:30:00+08:00");
+    }
+
+    #[test]
+    fn new_local_day_resets_previous_pending_and_uses_a_full_first_interval() {
+        let mut connection = database();
+        let mut policy = SchedulePolicyInput::default();
+        policy.timezone_offset_minutes = 480;
+        policy.calendar_enabled = false;
+        for schedule in &mut policy.weekday_schedules {
+            schedule.work_windows = vec![ReminderWindow { start_minute: 570, end_minute: 1050 }];
+        }
+        save_preferences(SavePreferencesInput {
+            user_id: "local-user".into(),
+            updated_at: "2026-10-01T09:00:00Z".into(),
+            preferences: vec![ReminderPreferenceInput {
+                kind: "hydration".into(), enabled: true, interval_minutes: 45,
+                next_due_at: Some("2026-10-02T02:16:00Z".into()),
+            }],
+            policy,
+        }, &mut connection).unwrap();
+        connection.execute("UPDATE ph_reminders SET pending_at = '2026-10-01T09:00:00Z'", []).unwrap();
+        super::refresh_daily_schedule("local-user", DateTime::parse_from_rfc3339("2026-10-02T00:00:00Z").unwrap(), 480, &mut connection).unwrap();
+        let state: (Option<String>, String) = connection.query_row(
+            "SELECT pending_at, next_due_at FROM ph_reminders", [],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        ).unwrap();
+        assert!(state.0.is_none());
+        assert_eq!(state.1, "2026-10-02T02:15:00.000Z");
+        // Loading again later that day must preserve a newly completed reminder's progress.
+        connection.execute("UPDATE ph_reminders SET next_due_at = '2026-10-02T03:15:00.000Z'", []).unwrap();
+        super::refresh_daily_schedule("local-user", DateTime::parse_from_rfc3339("2026-10-02T02:30:00Z").unwrap(), 480, &mut connection).unwrap();
+        let due: String = connection.query_row("SELECT next_due_at FROM ph_reminders", [], |row| row.get(0)).unwrap();
+        assert_eq!(due, "2026-10-02T03:15:00.000Z");
+    }
 
     fn database() -> Connection {
         let connection = Connection::open_in_memory().unwrap();

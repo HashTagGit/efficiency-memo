@@ -176,6 +176,13 @@ fn ensure_no_active_session(connection: &Connection) -> Result<(), String> {
     Ok(())
 }
 
+#[tauri::command]
+pub(crate) fn ensure_update_installable(app: AppHandle) -> Result<(), String> {
+    let connection = Connection::open(database_path(&app)?).map_err(|error| error.to_string())?;
+    ensure_no_active_session(&connection)?;
+    connection.execute_batch("PRAGMA wal_checkpoint(FULL);").map_err(|error| error.to_string())
+}
+
 fn table_exists(connection: &Connection, table: &str) -> Result<bool, String> {
     connection
         .query_row(

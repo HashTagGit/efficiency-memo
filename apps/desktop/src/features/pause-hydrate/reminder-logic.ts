@@ -2,6 +2,7 @@ import type {
   HolidayCalendar,
   ReminderKind,
   ReminderState,
+  ReminderWindow,
   SchedulePolicy,
   WeekdaySchedule,
 } from "./types";
@@ -47,14 +48,6 @@ function weekday(date: Date): number {
   return (date.getDay() + 6) % 7;
 }
 
-function inWindow(minute: number, start: number, end: number): boolean {
-  return start < end ? minute >= start && minute < end : minute >= start || minute < end;
-}
-
-function inWorkWindow(minute: number, start: number, end: number): boolean {
-  return start < end ? minute > start && minute < end : minute > start || minute < end;
-}
-
 function scheduleFor(
   policy: Pick<SchedulePolicy, "weekdaySchedules">,
   day: number,
@@ -62,29 +55,38 @@ function scheduleFor(
   return policy.weekdaySchedules[day] ?? DEFAULT_WEEKDAY_SCHEDULES[day];
 }
 
-function quietAt(
+export function effectiveWorkSegments(
   policy: Pick<SchedulePolicy, "weekdaySchedules">,
   day: number,
-  minute: number,
-): boolean {
-  const current = scheduleFor(policy, day).quietWindows;
-  const previous = scheduleFor(policy, (day + 6) % 7).quietWindows;
-  return current.some((window) => window.startMinute < window.endMinute
-    ? inWindow(minute, window.startMinute, window.endMinute)
-    : minute >= window.startMinute)
-    || previous.some((window) => window.startMinute > window.endMinute && minute < window.endMinute);
-}
-
-function quietBoundaryAt(
-  policy: Pick<SchedulePolicy, "weekdaySchedules">,
-  day: number,
-  minute: number,
-): boolean {
-  const current = scheduleFor(policy, day).quietWindows;
-  const previous = scheduleFor(policy, (day + 6) % 7).quietWindows;
-  return current.some((window) => minute === window.startMinute
-    || (window.startMinute < window.endMinute && minute === window.endMinute))
-    || previous.some((window) => window.startMinute > window.endMinute && minute === window.endMinute);
+): ReminderWindow[] {
+  const schedule = scheduleFor(policy, day);
+  const work: ReminderWindow[] = [];
+  for (const window of [...schedule.workWindows].sort((a, b) => a.startMinute - b.startMinute)) {
+    const previous = work.at(-1);
+    if (previous && window.startMinute <= previous.endMinute) {
+      previous.endMinute = Math.max(previous.endMinute, window.endMinute);
+    } else {
+      work.push({ ...window });
+    }
+  }
+  const quiet = schedule.quietWindows.map((window) => ({
+    startMinute: window.startMinute,
+    endMinute: window.startMinute < window.endMinute ? window.endMinute : 1440,
+  }));
+  for (const window of scheduleFor(policy, (day + 6) % 7).quietWindows) {
+    if (window.startMinute > window.endMinute) quiet.push({ startMinute: 0, endMinute: window.endMinute });
+  }
+  let segments = work;
+  for (const block of quiet) {
+    segments = segments.flatMap((segment) => {
+      if (block.endMinute <= segment.startMinute || block.startMinute >= segment.endMinute) return [segment];
+      const remaining: ReminderWindow[] = [];
+      if (block.startMinute > segment.startMinute) remaining.push({ ...segment, endMinute: block.startMinute });
+      if (block.endMinute < segment.endMinute) remaining.push({ ...segment, startMinute: block.endMinute });
+      return remaining;
+    });
+  }
+  return segments;
 }
 
 function scheduleAllowsMinute(
@@ -92,9 +94,7 @@ function scheduleAllowsMinute(
   day: number,
   minute: number,
 ): boolean {
-  return scheduleFor(policy, day).workWindows.some((window) => inWorkWindow(
-    minute, window.startMinute, window.endMinute,
-  )) && !quietAt(policy, day, minute) && !quietBoundaryAt(policy, day, minute);
+  return effectiveWorkSegments(policy, day).some((segment) => minute > segment.startMinute && minute < segment.endMinute);
 }
 
 function activeDay(policy: SchedulePolicy, date: Date): boolean {
@@ -105,55 +105,13 @@ function activeDay(policy: SchedulePolicy, date: Date): boolean {
     || policy.activeWeekdays.includes(weekday(date));
 }
 
-function effectiveWorkSegmentActiveAt(policy: SchedulePolicy, date: Date): boolean {
-  const day = weekday(date);
-  const minute = date.getHours() * 60 + date.getMinutes();
-  return activeDay(policy, date)
-    && scheduleAllowsMinute(policy, day, minute);
-}
-
-function effectiveWorkSegmentStarts(policy: SchedulePolicy, day: number): number[] {
-  const schedule = scheduleFor(policy, day);
-  const starts = schedule.workWindows
-    .filter((window) => !quietAt(policy, day, window.startMinute))
-    .map((window) => window.startMinute);
-  const previous = scheduleFor(policy, (day + 6) % 7);
-  const quietEnds = [
-    ...schedule.quietWindows.filter((window) => window.startMinute < window.endMinute).map((window) => window.endMinute),
-    ...previous.quietWindows.filter((window) => window.startMinute > window.endMinute).map((window) => window.endMinute),
-  ];
-  for (const minute of quietEnds) {
-    if (schedule.workWindows.some((window) => inWorkWindow(minute, window.startMinute, window.endMinute))
-      && !quietAt(policy, day, minute)) {
-      starts.push(minute);
-    }
-  }
-  return [...new Set(starts)].sort((left, right) => left - right);
-}
-
-function nextEffectiveWorkSegmentStart(now: Date, policy: SchedulePolicy): Date | null {
-  for (let offset = 0; offset <= 14 * 24 * 60; offset += 1) {
-    const candidate = new Date(now.getTime() + offset * 60_000);
-    const day = weekday(candidate);
-    if (!activeDay(policy, candidate)) continue;
-    const start = effectiveWorkSegmentStarts(policy, day)
-      .find((minute) => minute === candidate.getHours() * 60 + candidate.getMinutes());
-    if (start === undefined) continue;
-    candidate.setHours(Math.floor(start / 60), start % 60, 0, 0);
-    return candidate;
-  }
-  return null;
-}
 
 export function scheduleHasAvailableTime(
   policy: Pick<SchedulePolicy, "activeWeekdays" | "weekdaySchedules">,
+  intervalMinutes = 0,
 ): boolean {
-  return policy.activeWeekdays.some((day) => {
-    for (let minute = 0; minute < 1440; minute += 1) {
-      if (scheduleAllowsMinute(policy, day, minute)) return true;
-    }
-    return false;
-  });
+  return policy.activeWeekdays.some((day) => effectiveWorkSegments(policy, day)
+    .some((segment) => segment.endMinute - segment.startMinute > Math.max(1, intervalMinutes)));
 }
 
 export function reminderAllowedAt(policy: SchedulePolicy, date: Date): boolean {
@@ -168,19 +126,20 @@ export function reminderAllowedAt(policy: SchedulePolicy, date: Date): boolean {
 
 export function nextDueAt(now: Date, intervalMinutes: number, policy?: SchedulePolicy): Date {
   if (!policy) return new Date(now.getTime() + intervalMinutes * 60_000);
-  let candidate = effectiveWorkSegmentActiveAt(policy, now)
-    ? new Date(now.getTime() + intervalMinutes * 60_000)
-    : (() => {
-        const start = nextEffectiveWorkSegmentStart(now, policy);
-        return start ? new Date(start.getTime() + intervalMinutes * 60_000) : new Date(now.getTime() + intervalMinutes * 60_000);
-      })();
-  for (let attempt = 0; attempt <= 14; attempt += 1) {
-    if (reminderAllowedAt(policy, candidate)) return candidate;
-    const start = nextEffectiveWorkSegmentStart(candidate, policy);
-    if (!start) return candidate;
-    candidate = new Date(start.getTime() + intervalMinutes * 60_000);
+  const day = new Date(now);
+  day.setHours(0, 0, 0, 0);
+  for (let offset = 0; offset <= 14; offset += 1, day.setDate(day.getDate() + 1)) {
+    if (!activeDay(policy, day)) continue;
+    for (const segment of effectiveWorkSegments(policy, weekday(day))) {
+      const start = new Date(day);
+      const end = new Date(day);
+      start.setMinutes(segment.startMinute);
+      end.setMinutes(segment.endMinute);
+      const candidate = new Date(Math.max(now.getTime(), start.getTime()) + intervalMinutes * 60_000);
+      if (candidate < end) return candidate;
+    }
   }
-  return candidate;
+  throw new Error("no-reminder-window");
 }
 
 type ReminderLike = Pick<ReminderState, "enabled" | "intervalMinutes" | "nextDueAt"> & Partial<Pick<ReminderState, "kind">>;
@@ -200,15 +159,12 @@ export function nextDistinctDueAt(
   floor: Date,
   policy: SchedulePolicy,
 ): Date {
-  const reminderComesFirst = reminder.kind && otherReminder.kind
-    ? reminder.kind === "break"
-    : reminder.intervalMinutes <= otherReminder.intervalMinutes;
-  const firstDue = nextDueAt(
-    floor,
-    reminderComesFirst ? reminder.intervalMinutes : otherReminder.intervalMinutes,
-    policy,
-  );
-  return reminderComesFirst ? firstDue : nextDueAt(firstDue, reminder.intervalMinutes, policy);
+  const due = nextDueAt(floor, reminder.intervalMinutes, policy);
+  const otherDue = nextDueAt(floor, otherReminder.intervalMinutes, policy);
+  return due.getTime() === otherDue.getTime() && reminder.kind === "hydration"
+    && reminder.intervalMinutes !== otherReminder.intervalMinutes
+    ? nextDueAt(due, reminder.intervalMinutes, policy)
+    : due;
 }
 
 export function effectiveReminderDueAt(
@@ -218,7 +174,7 @@ export function effectiveReminderDueAt(
   otherReminder?: ReminderLike,
   blockedUntil?: Date | null,
 ): Date | null {
-  if (!reminder.enabled || !scheduleHasAvailableTime(policy)) return null;
+  if (!reminder.enabled || !scheduleHasAvailableTime(policy, reminder.intervalMinutes)) return null;
   const stored = reminder.nextDueAt ? new Date(reminder.nextDueAt) : null;
   const collision = Boolean(
     stored
@@ -232,7 +188,10 @@ export function effectiveReminderDueAt(
   }
   if (stored && Number.isFinite(stored.getTime()) && !collision && reminderAllowedAt(policy, stored)
     && (!blockedUntil || stored > blockedUntil)) {
-    return stored;
+    const day = new Date(stored < now && localDate(stored) !== localDate(now) ? now : stored);
+    day.setHours(0, 0, 0, 0);
+    const firstDue = nextDueAt(day, reminder.intervalMinutes, policy);
+    return stored < firstDue ? firstDue : stored;
   }
   return nextDueAt(floor, reminder.intervalMinutes, policy);
 }

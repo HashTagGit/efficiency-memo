@@ -14,6 +14,8 @@ For each weekday, subtract quiet windows from work windows to produce continuous
 
 Changing schedule policy recalculates enabled reminders against the new segments while preserving completed events and pending action ownership. Reminder actions still identify and update only their own reminder kind.
 
+At a new local calendar day, discard the previous day's pending prompts and reminder-clock progress. Each enabled reminder starts with the first eligible effective segment plus its own full interval. A configured 09:31 start with a 45-minute interval legitimately produces 10:16; this does not indicate overnight accumulation. Completed events remain unchanged. An interval may never span a quiet gap merely because its final timestamp lands inside a later segment.
+
 ## Consequences
 
 The frontend and Rust scheduler must share the same segment-boundary semantics. A reminder may move to a later segment or day when no full interval remains, which is intentional and avoids prompts at transitions. Regression tests cover multiple work windows, quiet-window subtraction, segment boundaries, schedule changes, and action isolation.

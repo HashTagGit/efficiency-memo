@@ -136,6 +136,8 @@ pub fn run() {
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         .plugin(
             tauri_plugin_sql::Builder::default()
                 .add_migrations("sqlite:efficiency-memo.db", migrations)
@@ -158,6 +160,7 @@ pub fn run() {
             sync::sync_list,
             sync::store_webdav_credentials,
             data_control::current_data_summary,
+            data_control::ensure_update_installable,
             data_control::create_local_backup,
             data_control::preview_local_backup,
             data_control::prepare_local_restore,
@@ -169,6 +172,7 @@ pub fn run() {
             desktop_companion::update_desktop_companion,
             core_hour::save_core_hour_session_block,
             pause_hydrate::save_pause_hydrate_preferences,
+            pause_hydrate::refresh_pause_hydrate_schedule,
             pause_hydrate::claim_pause_hydrate_reminders,
             pause_hydrate::act_on_pause_hydrate_reminder,
             pause_hydrate::complete_natural_break,

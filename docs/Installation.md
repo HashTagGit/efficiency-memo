@@ -28,10 +28,13 @@ The first launch takes a few minutes while Rust compiles the native shell. Subse
 
 Interact with the native Tauri window, not `http://localhost:1420`. That address is the Vite development server and lacks the Tauri bridge required for local SQLite access.
 
-To build a production installer:
+To build a production installer with updater signatures, set the release signing key first:
 
-```bash
-pnpm --filter desktop tauri:build
+```powershell
+$env:TAURI_SIGNING_PRIVATE_KEY = "C:\path\to\updater.key"
+# Only for a password-protected key:
+$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = "your-key-password"
+pnpm --filter desktop tauri:build -- --ci
 ```
 
 Build output:
@@ -41,6 +44,25 @@ Build output:
 | Windows | `.msi` installer and standalone `.exe` in `apps/desktop/src-tauri/target/release/bundle/msi/` |
 | macOS | `.dmg` in `apps/desktop/src-tauri/target/release/bundle/dmg/` |
 | Linux | `.AppImage`, `.deb`, or `.rpm` in `apps/desktop/src-tauri/target/release/bundle/` |
+
+## In-app updates and releases
+
+Settings → App updates provides manual checking, version information, release notes, download progress, and **Install and restart**. Finish an active CoreHour session before installation. Windows launches the downloaded signed installer automatically; Linux AppImage and macOS restart into the installed version. System permission prompts may still appear. The SQLite database remains in the existing user-data directory.
+
+The desktop uses the official `tauri-plugin-updater` and `tauri-plugin-process` dependencies: the updater performs native download, signature verification and installation; the process plugin supplies restart on macOS/Linux. The public verification key and HTTPS feed are in `apps/desktop/src-tauri/tauri.conf.json`. No GitHub token or signing private key is shipped in the app.
+
+The first update-enabled version is **0.2.0**. Users of the earlier 0.1.0 installers must install this version once, because those older clients contain no updater. Subsequent upgrades can be performed in Settings.
+
+Publishing requirements:
+
+1. Back up the private key securely. This workstation's key is stored at `%LOCALAPPDATA%\EfficiencyMemo\release-signing\updater.key`; it is outside the repository. The matching `.pub` key is public. Do not replace this key after distributing an update-enabled build.
+2. Add repository secret `TAURI_SIGNING_PRIVATE_KEY` using that private key's contents; add `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` only if protected by a password. In PowerShell, `Get-Content -Raw "C:\path\to\updater.key" | gh secret set TAURI_SIGNING_PRIVATE_KEY --repo HashTagGit/efficiency-memo` uploads the key through standard input without printing it or placing its value in command arguments.
+3. Keep the desktop `package.json`, `Cargo.toml`, and `tauri.conf.json` versions equal. Use matching tags such as `v0.2.0`; an older tag with a different embedded version cannot reliably drive update checks.
+4. The existing Release workflow validates versions and signing configuration, builds Windows/macOS/Linux, uploads signatures and `latest.json` with the official Tauri Action, and publishes only after every platform succeeds.
+
+The client reads `https://github.com/HashTagGit/efficiency-memo/releases/latest/download/latest.json`. Until a signed release containing this manifest is published, checking reports a recoverable error; it does not report that the app is up to date. Testing the interface does not itself publish or install an update.
+
+On Windows, `scripts/build-desktop.ps1` uses the above workstation key by default, or accepts `-SigningKeyPath`. Other machines need the original release key or `TAURI_SIGNING_PRIVATE_KEY` set explicitly.
 
 ## Platform Notes
 

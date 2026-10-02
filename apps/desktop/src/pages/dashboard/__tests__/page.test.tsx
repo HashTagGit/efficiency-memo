@@ -59,8 +59,8 @@ vi.mock("../../../features/pause-hydrate/context", () => ({
     loadError: hookState.pauseLoadError,
     state: {
       reminders: {
-        break: { kind: "break", enabled: true, intervalMinutes: 60, nextDueAt: "2000-01-03T10:00:00.000Z", pendingAt: hookState.breakPending ? "2030-01-01T08:58:00.000Z" : null, mutedUntil: null },
-        hydration: { kind: "hydration", enabled: true, intervalMinutes: 45, nextDueAt: "2000-01-03T09:00:00.000Z", pendingAt: hookState.hydrationPending ? "2030-01-01T08:59:00.000Z" : null, mutedUntil: null },
+        break: { kind: "break", enabled: true, intervalMinutes: 60, nextDueAt: "2026-10-01T02:00:00.000Z", pendingAt: hookState.breakPending ? "2026-10-01T02:00:00.000Z" : null, mutedUntil: null },
+        hydration: { kind: "hydration", enabled: true, intervalMinutes: 45, nextDueAt: "2026-10-01T01:00:00.000Z", pendingAt: hookState.hydrationPending ? "2026-10-01T01:00:00.000Z" : null, mutedUntil: null },
       },
       coreHourActive: hookState.coreHourActive,
       systemDeferred: false,
@@ -89,6 +89,8 @@ vi.mock("../dashboard-data", () => ({
 }));
 
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date("2026-10-01T06:00:00Z"));
   Object.assign(hookState, {
     coreLoading: false,
     coreLoadError: false,
@@ -103,6 +105,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.clearAllMocks();
 });
 

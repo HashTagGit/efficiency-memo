@@ -1,6 +1,6 @@
 [package]
 name = "efficiency-memo"
-version = "0.1.0"
+version = "0.2.0"
 description = "EfficiencyMemo Desktop - A unified tool gallery for daily productivity"
 authors = ["JunYe Lin <junyelin2000@163.com>"]
 edition = "2021"
@@ -29,6 +29,8 @@ dirs = "5"
 tauri-plugin-notification = "2.0.0-beta.0"
 tauri-plugin-dialog = "2"
 tauri-plugin-fs = "2"
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 dbus = "0.9"

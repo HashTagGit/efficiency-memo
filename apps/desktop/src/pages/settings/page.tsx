@@ -3,6 +3,7 @@ import { PageHeader } from "@memo/ui";
 import { PALETTES, useAppearance, type ThemeMode } from "../../lib/appearance";
 import { useI18n, type Locale } from "../../lib/i18n";
 import { SettingsNavigation } from "./settings-navigation";
+import { AppUpdates } from "./app-updates";
 
 const themeModes: ThemeMode[] = ["light", "dark", "system"];
 const locales: Locale[] = ["en-US", "zh-CN"];
@@ -72,6 +73,8 @@ export function AppSettingsPage() {
           ))}
         </div>
       </section>
+
+      <AppUpdates />
 
       <section className="border-t border-border py-6" aria-labelledby="desktop-companion-heading">
         <h2 id="desktop-companion-heading" className="text-base font-semibold text-foreground">{t("appSettings.companion")}</h2>
