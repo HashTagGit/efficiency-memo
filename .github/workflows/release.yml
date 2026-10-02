@@ -46,7 +46,7 @@ jobs:
           else
             gh release create "$GITHUB_REF_NAME" --draft --title "EfficiencyMemo $GITHUB_REF_NAME" --generate-notes
           fi
-          id=$(gh api "repos/$GITHUB_REPOSITORY/releases/tags/$GITHUB_REF_NAME" --jq .id)
+          id=$(gh release view "$GITHUB_REF_NAME" --json databaseId --jq .databaseId)
           echo "id=$id" >> "$GITHUB_OUTPUT"
 
   build:
