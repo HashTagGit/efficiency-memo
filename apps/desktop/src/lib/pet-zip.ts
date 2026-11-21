@@ -47,6 +47,7 @@ export async function openPetZip(archive: Blob) {
     if (next > end) invalidZip();
     const path = decoder.decode(new Uint8Array(buffer, cursor + 46, nameLength));
     const segments = path.replace(/\/$/, "").split("/");
+    // eslint-disable-next-line no-control-regex -- Reject control characters in archive paths.
     if (/[\\:\x00-\x1f]/.test(path) || segments.some((part) => !part || part === "." || part === "..") || entries.has(path)) invalidZip();
     entries.set(path, {
       path, flags: word(cursor + 8), method: word(cursor + 10), crc: dword(cursor + 16),

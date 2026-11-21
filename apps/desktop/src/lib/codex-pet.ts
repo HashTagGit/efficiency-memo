@@ -27,6 +27,7 @@ export function parsePetManifest(value: unknown): CodexPetManifest {
     || typeof displayName !== "string" || !displayName.trim() || displayName.length > 120
     || typeof description !== "string" || description.length > 500
     || (spriteVersionNumber !== 1 && spriteVersionNumber !== 2)
+    // eslint-disable-next-line no-control-regex -- Control characters are invalid in imported filenames.
     || typeof spritesheetPath !== "string" || !/^[^/\\\x00-\x1f]+\.(png|webp)$/i.test(spritesheetPath)) {
     throw new PetPackError("manifest");
   }
