@@ -15,6 +15,8 @@ All notable changes to this project will be documented in this file.
 - The desktop workspace now supports persisted light and dark themes with reorganized navigation and consistent action styling.
 
 ### Added
+- Windows desktop pet with selectable Codex Pet packages, reminder bubbles, focus poses, edge docking, and pointer gaze.
+- Bundled Mole Baby (拉姆 from mole-baby) and Clawd (clawd-on-desk) Codex Pet packages, with per-package notices, an installed third-party notice, and a reproducible SVG-to-frame renderer.
 - CoreHour uncertain-time review for suspend/background timer gaps and Windows system idle, with keep, trim, or discard decisions that persist across restart.
 - A privacy-limited Windows last-input clock adapter; no key, window, application, or content events are collected.
 - CoreHour direct planning with pointer/keyboard movement, cross-day Week moves, start/end resize handles, 15-minute snapping, and bilingual failure feedback.
