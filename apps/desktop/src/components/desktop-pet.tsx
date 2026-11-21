@@ -9,6 +9,7 @@ import { PetSprite, type PetPose } from "./pet-sprite";
 import { PET_TRACKS } from "../lib/codex-pet";
 import { useDesktopPetGestures } from "./desktop-pet-gestures";
 import { useDesktopPetBehavior } from "./desktop-pet-behavior";
+import { useDesktopPetHitTest } from "./desktop-pet-hit-test";
 import "./desktop-pet.css";
 
 interface PetView {
@@ -19,6 +20,8 @@ interface PetView {
   snoozeFailed?: boolean;
   focus?: DesktopPetFocus;
   preferences?: DesktopPetBehaviorPreferences;
+  mini?: "left" | "right" | null;
+  dock?: "left" | "right" | null;
 }
 
 const JUMP_DURATION = PET_TRACKS[4].reduce((sum, duration) => sum + duration, 0);
@@ -35,9 +38,12 @@ export function DesktopPet() {
   const [held, setHeld] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const lastTapAt = useRef(-Infinity);
+  const bubble = useRef<HTMLElement>(null);
+  const avatar = useRef<HTMLButtonElement>(null);
   const { current, count } = view;
   const locale = detectInitialLocale();
   const t = (key: string) => translate(locale, `desktopPet.${key}`);
+  useDesktopPetHitTest(ready, avatar, bubble, pet.atlas, held || menuOpen);
 
   useEffect(() => {
     let active = true;
@@ -79,6 +85,33 @@ export function DesktopPet() {
   }, [reminderId]);
 
   useEffect(() => {
+    if (reminderId === undefined || revealedId !== reminderId) return;
+    let frame = 0;
+    let sent = false;
+    function confirm() {
+      window.cancelAnimationFrame(frame);
+      frame = window.requestAnimationFrame(() => {
+        frame = window.requestAnimationFrame(() => {
+          const bounds = bubble.current?.getBoundingClientRect();
+          if (sent || document.hidden || !bounds || !bounds.width || !bounds.height
+            || bounds.left < 0 || bounds.top < 0 || bounds.right > window.innerWidth || bounds.bottom > window.innerHeight) return;
+          sent = true;
+          void invoke<boolean>("confirm_desktop_pet_reminder_shown", { id: reminderId })
+            .then((confirmed) => { sent = confirmed; }).catch(() => { sent = false; });
+        });
+      });
+    }
+    confirm();
+    window.addEventListener("resize", confirm);
+    document.addEventListener("visibilitychange", confirm);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener("resize", confirm);
+      document.removeEventListener("visibilitychange", confirm);
+    };
+  }, [reminderId, revealedId]);
+
+  useEffect(() => {
     if (!wave) return;
     const timer = window.setTimeout(() => setWave(0), WAVE_DURATION);
     return () => window.clearTimeout(timer);
@@ -86,7 +119,7 @@ export function DesktopPet() {
 
   const { sample, interrupt } = useDesktopPetBehavior({
     ready, held: held || menuOpen || Boolean(wave),
-    blocked: Boolean(current) || view.focus === "working" || view.focus === "waiting",
+    blocked: Boolean(current || view.mini) || view.focus === "working" || view.focus === "waiting",
     supportsLook: pet.manifest.spriteVersionNumber === 2, preferences: view.preferences,
   });
   const pose: PetPose = current ? "alert" : wave ? "greeting" : view.focus === "waiting" ? "waiting"
@@ -101,7 +134,7 @@ export function DesktopPet() {
     setWave(now);
   }
 
-  const gestureHandlers = useDesktopPetGestures(!current, tap, (pressed) => {
+  const gestureHandlers = useDesktopPetGestures(!current && !view.mini, tap, (pressed) => {
     if (pressed) interrupt();
     setHeld(pressed);
   });
@@ -132,15 +165,21 @@ export function DesktopPet() {
   return (
     <main
       aria-label={t("name")}
+      data-mini={view.mini ?? undefined}
+      data-left-alert={current && view.dock === "left" ? "" : undefined}
       onKeyDown={(event) => { if (event.key === "Escape" && revealedId === reminderId) void respond("dismiss"); }}
     >
       <button
+        ref={avatar}
         type="button"
         className="desktop-pet-avatar touch-none rounded-md focus-visible:outline-2 focus-visible:outline-focus-ring"
-        aria-label={t("name")}
-        data-draggable={!current}
+        aria-label={t(view.mini ? "peek" : "name")}
+        data-draggable={!current && !view.mini}
         {...gestureHandlers}
-        onClick={(event) => { if (event.detail === 0) tap(); }}
+        onClick={(event) => {
+          if (view.mini) void invoke("peek_desktop_pet").catch((error) => console.warn("Desktop pet could not peek.", error));
+          else if (event.detail === 0) tap();
+        }}
         onContextMenu={(event) => { event.preventDefault(); openMenu(); }}
         onKeyDown={(event) => {
           if (event.key !== "ContextMenu" && !(event.shiftKey && event.key === "F10")) return;
@@ -149,12 +188,12 @@ export function DesktopPet() {
         }}
       >
         <span className="desktop-pet-character" role="img" aria-label={t("name")}>
-          <PetSprite key={`${pet.manifest.id}:${current?.id ?? wave}`} pet={pet} animated pose={pose} gaze={pose === "idle" ? sample.gaze : null} />
-          {pose === "sleeping" ? <span aria-hidden="true" className="desktop-pet-sleep">Z</span> : null}
+          <PetSprite key={`${pet.manifest.id}:${current?.id ?? wave}`} pet={pet} animated pose={pose} gaze={pose === "idle" ? sample.gaze : null} peekSide={view.mini} />
+          {!view.mini && pose === "sleeping" ? <span aria-hidden="true" className="desktop-pet-sleep">Z</span> : null}
         </span>
       </button>
       {current && revealedId === current.id ? (
-        <section className="desktop-pet-bubble bg-surface text-foreground" aria-labelledby="pet-reminder-title">
+        <section ref={bubble} className="desktop-pet-bubble bg-surface text-foreground" aria-labelledby="pet-reminder-title">
           <div aria-live="polite" aria-atomic="true">
             <h1 id="pet-reminder-title" className="text-sm font-semibold leading-5">{current.title}</h1>
             <p className="mt-1 text-xs leading-[1.45] text-muted">{current.body}</p>

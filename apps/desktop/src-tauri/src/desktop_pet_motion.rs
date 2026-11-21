@@ -14,6 +14,7 @@ const WALK_DURATION: Duration = Duration::from_millis(1800);
 pub(crate) struct Preferences {
     pub(super) look_enabled: bool,
     pub(super) walk_enabled: bool,
+    pub(super) mini_enabled: bool,
 }
 
 #[derive(Clone, Copy, Default, Deserialize, PartialEq, Serialize)]

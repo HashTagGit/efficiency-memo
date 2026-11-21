@@ -5,7 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
 
-pub(crate) const SCHEMA_VERSION: i64 = 22;
+pub(crate) const SCHEMA_VERSION: i64 = 23;
 const MIN_SUPPORTED_SCHEMA_VERSION: i64 = 7;
 pub(crate) const DB_FILENAME: &str = "efficiency-memo.db";
 pub(crate) const SIDECAR_FILENAME: &str = "efficiency-memo.db.next";
@@ -340,6 +340,9 @@ fn validate_required_schema(connection: &Connection, schema_version: i64) -> Res
     }
     if schema_version >= 22 {
         validate_table_columns(connection, "desktop_reminder_preferences", &["look_enabled", "walk_enabled"])?;
+    }
+    if schema_version >= 23 {
+        validate_table_columns(connection, "desktop_reminder_preferences", &["mini_enabled"])?;
     }
     for version in 1..=schema_version {
         let applied: i64 = connection
@@ -687,6 +690,7 @@ mod tests {
             include_str!("../migrations/0020_desktop_pet_catalog.sql"),
             include_str!("../migrations/0021_desktop_pet_position.sql"),
             include_str!("../migrations/0022_desktop_pet_behavior.sql"),
+            include_str!("../migrations/0023_desktop_pet_mini_mode.sql"),
         ] {
             connection.execute_batch(migration).unwrap();
         }
@@ -720,7 +724,8 @@ mod tests {
                     (19, 'migration', 'installed', 1, X'', 0),
                     (20, 'migration', 'installed', 1, X'', 0),
                     (21, 'migration', 'installed', 1, X'', 0),
-                    (22, 'migration', 'installed', 1, X'', 0);
+                    (22, 'migration', 'installed', 1, X'', 0),
+                    (23, 'migration', 'installed', 1, X'', 0);
                 INSERT INTO users VALUES ('local-user', 'local@example.test', 'created', 'updated');
                 INSERT INTO ch_tags VALUES ('tag-1', 'local-user', 'Focus', '#000000', 0, 'created', 0);
                 INSERT INTO ch_sessions (
@@ -786,7 +791,8 @@ mod tests {
              ALTER TABLE desktop_reminder_preferences DROP COLUMN pet_x;
              ALTER TABLE desktop_reminder_preferences DROP COLUMN pet_y;
              ALTER TABLE desktop_reminder_preferences DROP COLUMN look_enabled;
-             ALTER TABLE desktop_reminder_preferences DROP COLUMN walk_enabled;",
+             ALTER TABLE desktop_reminder_preferences DROP COLUMN walk_enabled;
+             ALTER TABLE desktop_reminder_preferences DROP COLUMN mini_enabled;",
         ).unwrap();
         drop(legacy_v19);
         assert_eq!(inspect_backup(&legacy_v19_destination).unwrap().schema_version, 19);

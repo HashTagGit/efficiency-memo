@@ -18,6 +18,18 @@ html.desktop-pet-window,
 .desktop-pet-avatar[data-draggable="true"] { cursor: grab; }
 .desktop-pet-avatar:active[data-draggable="true"] { cursor: grabbing; }
 
+[data-mini] .desktop-pet-avatar {
+  width: 64px;
+  height: 64px;
+  cursor: pointer;
+}
+
+[data-mini="left"] .desktop-pet-avatar { left: -28px; right: auto; }
+[data-mini="right"] .desktop-pet-avatar { right: -28px; }
+
+[data-mini="left"] [data-peek-nod] { transform: translate(2px, -2px); }
+[data-mini="right"] [data-peek-nod] { transform: translate(-2px, -2px); }
+
 .desktop-pet-character {
   display: grid;
   justify-items: center;
@@ -58,6 +70,9 @@ html.desktop-pet-window,
   border-right: 1px solid var(--control-border);
   border-bottom: 1px solid var(--control-border);
 }
+
+[data-left-alert] .desktop-pet-avatar { left: 8px; right: auto; }
+[data-left-alert] .desktop-pet-bubble::after { left: 36px; right: auto; }
 
 .desktop-pet-actions {
   display: flex;

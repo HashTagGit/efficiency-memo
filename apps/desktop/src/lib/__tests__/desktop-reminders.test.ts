@@ -38,6 +38,17 @@ describe("desktop reminder delivery", () => {
     expect(sendNotification).toHaveBeenCalledWith({ title: reminder.title, body: reminder.body });
   });
 
+  it("does not acknowledge a queued review until its specific bubble has been displayed", async () => {
+    const review = { ...reminder, kind: "daily-review" } as const;
+    const key = "review:d:2026-11-21";
+    vi.mocked(invoke).mockResolvedValueOnce(false).mockResolvedValueOnce(true);
+    vi.mocked(isPermissionGranted).mockResolvedValue(true);
+    expect(await deliverDesktopReminder(review, key)).toBe(false);
+    expect(sendNotification).not.toHaveBeenCalled();
+    expect(await deliverDesktopReminder(review, key)).toBe(true);
+    expect(invoke).toHaveBeenCalledWith("show_desktop_pet_reminder", { input: review, deliveryKey: key });
+  });
+
   it("falls back to the system notification when the pet window fails", async () => {
     vi.mocked(invoke).mockRejectedValueOnce(new Error("Window unavailable"));
     vi.mocked(isPermissionGranted).mockResolvedValue(true);

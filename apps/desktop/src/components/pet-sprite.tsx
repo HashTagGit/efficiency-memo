@@ -8,18 +8,50 @@ const animationRows: Record<PetPose, number> = {
   idle: 0, alert: 4, greeting: 3, working: 7, waiting: 6, sleeping: 0, "walk-left": 2, "walk-right": 1,
 };
 const closedEyePets = new Set(["amber-cat", "lantern-moth", "pocket-robot"]);
+const PEEK_PAUSE = 4200;
+const PEEK_GLANCE = 240;
 
-export function PetSprite({ pet, animated = false, pose = "idle", gaze = null }: {
+export function PetSprite({ pet, animated = false, pose = "idle", gaze = null, repeat = false, peekSide }: {
   pet: DesktopPetSprite;
   animated?: boolean;
   pose?: PetPose;
   gaze?: number | null;
+  repeat?: boolean;
+  peekSide?: "left" | "right" | null;
 }) {
   const firstRow = animationRows[pose];
   const look = gaze !== null && gaze >= 0 && gaze < 16 && pet.manifest.spriteVersionNumber === 2;
-  const stationary = look || pose === "sleeping";
+  const stationary = Boolean(peekSide) || look || pose === "sleeping";
   const [cell, setCell] = useState({ row: firstRow, column: 0 });
+  const [glancing, setGlancing] = useState(false);
   const backgroundImage = useMemo(() => `url(${JSON.stringify(pet.atlas)})`, [pet.atlas]);
+  useEffect(() => {
+    if (!animated || !peekSide) return;
+    const motion = window.matchMedia?.("(prefers-reduced-motion: reduce)");
+    let timer: number | undefined;
+
+    function pause() {
+      setGlancing(false);
+      timer = window.setTimeout(() => {
+        setGlancing(true);
+        timer = window.setTimeout(pause, PEEK_GLANCE);
+      }, PEEK_PAUSE);
+    }
+    function sync() {
+      window.clearTimeout(timer);
+      setGlancing(false);
+      if (!document.hidden && !motion?.matches) pause();
+    }
+    sync();
+    motion?.addEventListener("change", sync);
+    document.addEventListener("visibilitychange", sync);
+    return () => {
+      window.clearTimeout(timer);
+      motion?.removeEventListener("change", sync);
+      document.removeEventListener("visibilitychange", sync);
+    };
+  }, [animated, peekSide]);
+
   useEffect(() => {
     if (!animated || stationary) return;
     const motion = window.matchMedia?.("(prefers-reduced-motion: reduce)");
@@ -31,8 +63,8 @@ export function PetSprite({ pet, animated = false, pose = "idle", gaze = null }:
       const track = PET_TRACKS[row];
       column++;
       if (column === track.length) {
-        if (row === 4) row = 6;
-        else if (row === 3) row = 0;
+        if (!repeat && row === 4) row = 6;
+        else if (!repeat && row === 3) row = 0;
         column = 0;
       }
       play();
@@ -53,16 +85,21 @@ export function PetSprite({ pet, animated = false, pose = "idle", gaze = null }:
       window.clearTimeout(timer);
       motion?.removeEventListener("change", updateMotion);
     };
-  }, [pose, animated, firstRow, stationary]);
+  }, [pose, animated, firstRow, stationary, repeat]);
 
   const rows = petAtlasRows(pet.manifest.spriteVersionNumber);
-  const frame = look
-    ? { row: PET_TRACKS.length + Math.floor(gaze / PET_COLUMNS), column: gaze % PET_COLUMNS }
-    : pose === "sleeping" ? { row: 0, column: closedEyePets.has(pet.manifest.id) ? 3 : 0 } : cell;
+  const peekGaze = peekSide === "left" ? (glancing ? 3 : 4) : (glancing ? 13 : 12);
+  const direction = peekSide ? (pet.manifest.spriteVersionNumber === 2 ? peekGaze : null) : look ? gaze : null;
+  const frame = direction !== null
+    ? { row: PET_TRACKS.length + Math.floor(direction / PET_COLUMNS), column: direction % PET_COLUMNS }
+    : peekSide ? { row: 0, column: 0 }
+      : pose === "sleeping" ? { row: 0, column: closedEyePets.has(pet.manifest.id) ? 3 : 0 } : cell;
   return (
     <span
       aria-hidden="true"
-      data-pose={look ? "looking" : pose}
+      data-pose={peekSide ? "peeking" : look ? "looking" : pose}
+      data-peek-nod={peekSide && glancing && direction === null ? "" : undefined}
+      data-pet-frame={`${frame.row}:${frame.column}`}
       className="block h-full aspect-[12/13] [image-rendering:pixelated] bg-no-repeat"
       style={{
         backgroundImage,

@@ -1,4 +1,5 @@
 import codexPetAtlas from "./codex-pet-atlas.json";
+import { openPetZip } from "./pet-zip";
 
 export const PET_FRAME_WIDTH = codexPetAtlas.frameWidth;
 export const PET_FRAME_HEIGHT = codexPetAtlas.frameHeight;
@@ -14,7 +15,7 @@ export interface CodexPetManifest {
 }
 
 export class PetPackError extends Error {
-  constructor(readonly reason: "files" | "manifest" | "image" | "layout" | "duplicate") {
+  constructor(readonly reason: "files" | "manifest" | "image" | "layout" | "duplicate" | "zip") {
     super(reason);
   }
 }
@@ -66,6 +67,21 @@ export interface ImportedPetPack {
 }
 
 export async function readPetPack(files: readonly File[]): Promise<ImportedPetPack> {
+  if (files.length === 1 && files[0].name.toLowerCase().endsWith(".zip")) {
+    try {
+      const archive = await openPetZip(files[0]);
+      const manifests = archive.paths.filter((path) => path === "pet.json" || path.endsWith("/pet.json"));
+      if (manifests.length !== 1) throw new PetPackError("zip");
+      const path = manifests[0];
+      const file = await archive.read(path, 16 * 1024);
+      const manifest = parsePetManifest(JSON.parse(await file.text()));
+      const sprite = await archive.read(path.slice(0, path.lastIndexOf("/") + 1) + manifest.spritesheetPath, 20 * 1024 * 1024);
+      return await readPetPack([file, sprite]);
+    } catch (error) {
+      if (error instanceof PetPackError) throw error;
+      throw new PetPackError("zip");
+    }
+  }
   const manifestFile = files.find((file) => file.name === "pet.json");
   if (files.length !== 2 || !manifestFile || manifestFile.size > 16 * 1024) throw new PetPackError("files");
   let manifest: CodexPetManifest;

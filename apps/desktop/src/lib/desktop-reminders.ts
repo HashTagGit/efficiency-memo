@@ -28,36 +28,36 @@ export async function saveDesktopPetEnabled(enabled: boolean): Promise<void> {
 }
 
 export interface DesktopPetPosition { x: number; y: number }
-export interface DesktopPetBehaviorPreferences { lookEnabled: boolean; walkEnabled: boolean }
+export interface DesktopPetBehaviorPreferences { lookEnabled: boolean; walkEnabled: boolean; miniEnabled: boolean }
 export type DesktopPetFocus = "idle" | "working" | "paused" | "waiting";
 
-type BehaviorRow = { look_enabled: number; walk_enabled: number };
+type BehaviorRow = { look_enabled: number; walk_enabled: number; mini_enabled: number };
 
 function behaviorPreferences(row?: BehaviorRow): DesktopPetBehaviorPreferences {
-  return { lookEnabled: row?.look_enabled === 1, walkEnabled: row?.walk_enabled === 1 };
+  return { lookEnabled: row?.look_enabled === 1, walkEnabled: row?.walk_enabled === 1, miniEnabled: row?.mini_enabled === 1 };
 }
 
 export async function loadDesktopPetBehavior(): Promise<DesktopPetBehaviorPreferences> {
   const [row] = await dbSelect<BehaviorRow>(
-    "SELECT look_enabled, walk_enabled FROM desktop_reminder_preferences WHERE id = 1",
+    "SELECT look_enabled, walk_enabled, mini_enabled FROM desktop_reminder_preferences WHERE id = 1",
   );
   return behaviorPreferences(row);
 }
 
 export async function saveDesktopPetBehavior(preferences: DesktopPetBehaviorPreferences): Promise<void> {
   await dbExecute(
-    "INSERT INTO desktop_reminder_preferences (id, pet_enabled, look_enabled, walk_enabled) VALUES (1, 1, $1, $2) ON CONFLICT(id) DO UPDATE SET look_enabled = excluded.look_enabled, walk_enabled = excluded.walk_enabled",
-    [Number(preferences.lookEnabled), Number(preferences.walkEnabled)],
+    "INSERT INTO desktop_reminder_preferences (id, pet_enabled, look_enabled, walk_enabled, mini_enabled) VALUES (1, 1, $1, $2, $3) ON CONFLICT(id) DO UPDATE SET look_enabled = excluded.look_enabled, walk_enabled = excluded.walk_enabled, mini_enabled = excluded.mini_enabled",
+    [Number(preferences.lookEnabled), Number(preferences.walkEnabled), Number(preferences.miniEnabled)],
   );
   await invoke("set_desktop_pet_behavior", { preferences });
 }
 
-export async function setDesktopPetEnabled(enabled: boolean): Promise<void> {
+export async function setDesktopPetEnabled(enabled: boolean, recover?: boolean): Promise<void> {
   const [row] = enabled ? await dbSelect<BehaviorRow & { pet_x: number | null; pet_y: number | null }>(
-    "SELECT pet_x, pet_y, look_enabled, walk_enabled FROM desktop_reminder_preferences WHERE id = 1",
+    "SELECT pet_x, pet_y, look_enabled, walk_enabled, mini_enabled FROM desktop_reminder_preferences WHERE id = 1",
   ) : [];
   const position = row?.pet_x != null && row.pet_y != null ? { x: row.pet_x, y: row.pet_y } : null;
-  await invoke("set_desktop_pet_enabled", { enabled, position, preferences: behaviorPreferences(row) });
+  await invoke("set_desktop_pet_enabled", { enabled, position, preferences: behaviorPreferences(row), recover });
 }
 
 export async function saveDesktopPetPosition(position: DesktopPetPosition | null): Promise<void> {
@@ -67,8 +67,8 @@ export async function saveDesktopPetPosition(position: DesktopPetPosition | null
   );
 }
 
-export function showDesktopPetReminder(input: DesktopReminder): Promise<void> {
-  return invoke("show_desktop_pet_reminder", { input });
+export function showDesktopPetReminder(input: DesktopReminder, deliveryKey?: string): Promise<boolean> {
+  return invoke("show_desktop_pet_reminder", deliveryKey ? { input, deliveryKey } : { input });
 }
 
 export async function canDeliverDesktopReminder(): Promise<boolean> {
@@ -76,11 +76,11 @@ export async function canDeliverDesktopReminder(): Promise<boolean> {
   return isPermissionGranted().catch(() => false);
 }
 
-export async function deliverDesktopReminder(reminder: DesktopReminder): Promise<boolean> {
+export async function deliverDesktopReminder(reminder: DesktopReminder, deliveryKey?: string): Promise<boolean> {
   try {
     if (await desktopPetEnabled()) {
-      await showDesktopPetReminder(reminder);
-      return true;
+      const shown = await showDesktopPetReminder(reminder, deliveryKey);
+      return deliveryKey ? shown : true;
     }
   } catch (error) {
     console.warn("Desktop pet reminder could not be shown.", error);

@@ -28,7 +28,7 @@ vi.mock("../../../pages/settings/app-updates", () => ({ AppUpdates: () => null }
 vi.mock("../../../lib/desktop-reminders", () => ({
   supportsDesktopPet: vi.fn(() => true),
   desktopPetEnabled: vi.fn().mockResolvedValue(true),
-  loadDesktopPetBehavior: vi.fn().mockResolvedValue({ lookEnabled: false, walkEnabled: false }),
+  loadDesktopPetBehavior: vi.fn().mockResolvedValue({ lookEnabled: false, walkEnabled: false, miniEnabled: false }),
   saveDesktopPetBehavior: vi.fn().mockResolvedValue(undefined),
   showDesktopPetReminder: vi.fn().mockResolvedValue(undefined),
 }));
@@ -64,11 +64,14 @@ it("opens the separate pet page from Tools and keeps pet controls out of app set
   expect(look.checked).toBe(false);
   expect(walk.checked).toBe(false);
   fireEvent.click(look);
-  await waitFor(() => expect(saveDesktopPetBehavior).toHaveBeenCalledWith({ lookEnabled: true, walkEnabled: false }));
+  await waitFor(() => expect(saveDesktopPetBehavior).toHaveBeenCalledWith({ lookEnabled: true, walkEnabled: false, miniEnabled: false }));
   const robot = await screen.findByRole("radio", { name: "Pocket Robot" });
   fireEvent.click(robot);
   await waitFor(() => expect(saveDesktopPetSelection).toHaveBeenCalledWith("pocket-robot"));
   await waitFor(() => expect((robot as HTMLInputElement).checked).toBe(true));
+  const working = await screen.findByRole("button", { name: "Working" });
+  fireEvent.click(working);
+  expect(working.getAttribute("aria-pressed")).toBe("true");
 
   expect(screen.getByRole("button", { name: "Import a pet pack" })).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Send a test reminder" }));

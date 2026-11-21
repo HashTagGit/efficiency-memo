@@ -1,15 +1,17 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Button, PageHeader } from "@memo/ui";
-import { PetSprite } from "../../components/pet-sprite";
+import { PetSprite, type PetPose } from "../../components/pet-sprite";
 import { PetPackError, readPetPack, type ImportedPetPack } from "../../lib/codex-pet";
 import {
   BUNDLED_PETS,
   DEFAULT_PET,
   loadDesktopPetSelection,
+  loadDesktopPetSprite,
   loadImportedDesktopPets,
   saveDesktopPetSelection,
   saveImportedDesktopPet,
   updateDesktopPetWindow,
+  type DesktopPetSprite,
 } from "../../lib/desktop-pet-catalog";
 import {
   desktopPetEnabled,
@@ -22,6 +24,46 @@ import {
   supportsDesktopPet,
 } from "../../lib/desktop-reminders";
 import { useI18n } from "../../lib/i18n";
+
+const previewPoses = ["idle", "greeting", "working", "walk-left", "walk-right"] as const satisfies readonly PetPose[];
+
+function PetActionPreview({ id }: { id: string }) {
+  const { t } = useI18n();
+  const [pet, setPet] = useState<DesktopPetSprite | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [pose, setPose] = useState<(typeof previewPoses)[number]>("idle");
+
+  useEffect(() => {
+    let active = true;
+    void loadDesktopPetSprite(id).then((next) => {
+      if (!active) return;
+      if (next.manifest.id === id) setPet(next);
+      else setFailed(true);
+    }).catch(() => { if (active) setFailed(true); });
+    return () => { active = false; };
+  }, [id]);
+
+  return (
+    <fieldset className="mt-4 rounded-md border border-border bg-surface p-3">
+      <legend className="px-1 text-sm font-medium text-foreground">{t("desktopPet.motionPreview")}</legend>
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="grid h-20 w-20 shrink-0 place-items-center rounded-md bg-background">
+          {pet ? <PetSprite key={pose} pet={pet} animated pose={pose} repeat /> : null}
+        </div>
+        {pet ? (
+          <div className="flex flex-wrap gap-2" role="group" aria-label={t("desktopPet.motionPreview")}>
+            {previewPoses.map((action) => (
+              <Button key={action} size="sm" variant={pose === action ? "primary" : "ghost"}
+                aria-pressed={pose === action} onClick={() => setPose(action)}>
+                {t(`desktopPet.pose.${action}`)}
+              </Button>
+            ))}
+          </div>
+        ) : <p role="status" className="text-sm text-muted">{t(failed ? "desktopPet.motionPreviewError" : "app.loading")}</p>}
+      </div>
+    </fieldset>
+  );
+}
 
 export default function PetAssistantPage() {
   const { t } = useI18n();
@@ -36,7 +78,7 @@ export default function PetAssistantPage() {
 function PetSettings() {
   const { t } = useI18n();
   const [enabled, setEnabled] = useState<boolean | null>(null);
-  const [behavior, setBehavior] = useState<DesktopPetBehaviorPreferences>({ lookEnabled: false, walkEnabled: false });
+  const [behavior, setBehavior] = useState<DesktopPetBehaviorPreferences>({ lookEnabled: false, walkEnabled: false, miniEnabled: false });
   const [selected, setSelected] = useState(DEFAULT_PET.manifest.id);
   const [imported, setImported] = useState<Pick<ImportedPetPack, "manifest" | "thumbnail">[]>([]);
   const [busy, setBusy] = useState(false);
@@ -57,7 +99,7 @@ function PetSettings() {
     return () => { active = false; };
   }, []);
 
-  async function run(action: () => Promise<void>) {
+  async function run(action: () => Promise<unknown>) {
     setErrorKey(null);
     setBusy(true);
     try {
@@ -120,7 +162,7 @@ function PetSettings() {
 
       <fieldset className="mt-5 space-y-2" disabled={busy || enabled === null}>
         <legend className="text-sm font-medium text-foreground">{t("desktopPet.interaction")}</legend>
-        {(["lookEnabled", "walkEnabled"] as const).map((key) => (
+        {(["lookEnabled", "walkEnabled", "miniEnabled"] as const).map((key) => (
           <div key={key}>
             <label className="inline-flex items-center gap-2 text-sm text-foreground">
               <input
@@ -158,10 +200,15 @@ function PetSettings() {
         </div>
       </fieldset>
 
+      <PetActionPreview key={selected} id={selected} />
+
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <input type="file" ref={fileInput} hidden multiple accept=".json,.png,.webp" onChange={importFiles} />
+        <input type="file" ref={fileInput} hidden multiple accept=".zip,.json,.png,.webp" onChange={importFiles} />
         <Button variant="secondary" size="sm" disabled={busy || enabled === null} aria-describedby="desktop-pet-import-hint" onClick={() => fileInput.current?.click()}>
           {t("desktopPet.import")}
+        </Button>
+        <Button variant="ghost" size="sm" disabled={busy || enabled !== true} onClick={() => void run(() => setDesktopPetEnabled(true, true))}>
+          {t("desktopPet.recoverWindow")}
         </Button>
         <Button variant="ghost" size="sm" disabled={busy || enabled !== true} onClick={() => void run(() => showDesktopPetReminder({
           kind: "preview", title: t("desktopPet.previewTitle"), body: t("desktopPet.previewBody"),

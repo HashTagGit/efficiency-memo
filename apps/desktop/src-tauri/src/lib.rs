@@ -155,6 +155,12 @@ pub fn run() {
             sql: include_str!("../migrations/0022_desktop_pet_behavior.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 23,
+            description: "desktop pet mini mode",
+            sql: include_str!("../migrations/0023_desktop_pet_mini_mode.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
@@ -178,6 +184,7 @@ pub fn run() {
                 eprintln!("WARN: Failed to apply pending import: {e}");
             }
             desktop_companion::setup(app)?;
+            desktop_pet::watch_geometry(app.handle().clone());
             activity_assist::setup(app.handle().clone());
             Ok(())
         })
@@ -208,6 +215,7 @@ pub fn run() {
             desktop_companion::show_main_window,
             desktop_companion::update_desktop_companion,
             desktop_pet::show_desktop_pet_reminder,
+            desktop_pet::confirm_desktop_pet_reminder_shown,
             desktop_pet::desktop_pet_ready,
             desktop_pet::respond_to_desktop_pet_reminder,
             desktop_pet::set_desktop_pet_enabled,
@@ -221,6 +229,8 @@ pub fn run() {
             desktop_pet::set_desktop_pet_focus,
             desktop_pet::sample_desktop_pet_behavior,
             desktop_pet::interrupt_desktop_pet_motion,
+            desktop_pet::peek_desktop_pet,
+            desktop_pet::update_desktop_pet_hit_regions,
             core_hour::save_core_hour_session_block,
             pause_hydrate::save_pause_hydrate_preferences,
             pause_hydrate::refresh_pause_hydrate_schedule,

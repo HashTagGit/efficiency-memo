@@ -17,7 +17,7 @@ vi.mock("@tauri-apps/api/core", () => ({
   invoke: vi.fn().mockResolvedValue(undefined),
 }));
 
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.clearAllMocks(); vi.mocked(invoke).mockResolvedValue(undefined); });
+afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); vi.clearAllMocks(); vi.mocked(invoke).mockResolvedValue(undefined); });
 
 it("keeps the character on screen before, during, and after a reminder", async () => {
   render(<DesktopPet />);
@@ -122,4 +122,42 @@ it("asks the native behavior sampler to suppress motion when reduced motion is e
   await waitFor(() => expect(invoke).toHaveBeenCalledWith("sample_desktop_pet_behavior", {
     input: { held: false, supportsLook: true, reducedMotion: true },
   }));
+});
+
+it("uses the visible mini pet as a peek control without starting a drag", () => {
+  render(<DesktopPet />);
+  const [publish] = connect.mock.lastCall ?? [];
+  act(() => publish({ current: null, count: 0, petId: "amber-cat", mini: "right" }));
+  expect(screen.getByRole("img").querySelector('[data-pose="peeking"]')).toBeTruthy();
+  fireEvent.click(screen.getByRole("button", { name: "Show full desktop pet" }));
+  expect(invoke).toHaveBeenCalledWith("peek_desktop_pet");
+  expect(invoke).not.toHaveBeenCalledWith("drag_desktop_pet", expect.anything());
+});
+
+it("gives a docked pet an inward gaze and briefly glances up while preserving its sprite element", () => {
+  vi.useFakeTimers();
+  const { container, rerender } = render(<PetSprite pet={DEFAULT_PET} animated peekSide="left" />);
+  const sprite = container.querySelector("[data-pet-frame]");
+  expect(sprite?.getAttribute("data-pet-frame")).toBe("9:4");
+  act(() => vi.advanceTimersByTime(4200));
+  expect(sprite?.getAttribute("data-pet-frame")).toBe("9:3");
+  act(() => vi.advanceTimersByTime(240));
+  expect(sprite?.getAttribute("data-pet-frame")).toBe("9:4");
+  rerender(<PetSprite pet={DEFAULT_PET} animated peekSide="right" />);
+  expect(container.querySelector("[data-pet-frame]")).toBe(sprite);
+  expect(sprite?.getAttribute("data-pet-frame")).toBe("10:4");
+});
+
+it("uses a small nod for a V1 pet in place of direction frames and skips it in reduced motion", () => {
+  vi.useFakeTimers();
+  const pet = { ...DEFAULT_PET, manifest: { ...DEFAULT_PET.manifest, spriteVersionNumber: 1 as const } };
+  const { container, rerender } = render(<PetSprite pet={pet} animated peekSide="left" />);
+  const sprite = container.querySelector("[data-pet-frame]");
+  act(() => vi.advanceTimersByTime(4200));
+  expect(sprite?.hasAttribute("data-peek-nod")).toBe(true);
+  expect(sprite?.getAttribute("data-pet-frame")).toBe("0:0");
+  vi.stubGlobal("matchMedia", () => ({ matches: true, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
+  rerender(<PetSprite pet={pet} animated peekSide="right" />);
+  act(() => vi.advanceTimersByTime(5000));
+  expect(sprite?.hasAttribute("data-peek-nod")).toBe(false);
 });

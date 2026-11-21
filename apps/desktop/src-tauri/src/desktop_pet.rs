@@ -1,4 +1,8 @@
-use std::{collections::VecDeque, sync::Mutex};
+use std::{
+    collections::VecDeque,
+    sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex},
+    time::{Duration, Instant},
+};
 
 use rusqlite::{Connection, OpenFlags, OptionalExtension};
 use serde::{Deserialize, Serialize};
@@ -9,11 +13,14 @@ use tauri::{
 
 #[path = "desktop_pet_motion.rs"]
 mod motion;
+#[path = "desktop_pet_input.rs"]
+mod input;
 
 pub(crate) const LABEL: &str = "desktop-pet";
 const PET_SIZE: f64 = 88.0;
 const BUBBLE_WIDTH: f64 = 300.0;
 const BUBBLE_HEIGHT: f64 = 218.0;
+const MINI_EDGE_DISTANCE: f64 = 12.0;
 pub(crate) const SHOW_PET: &str = "show-desktop-pet";
 const OPEN_PET_ASSISTANT: &str = "open-pet-assistant";
 const HIDE_PET: &str = "hide-desktop-pet";
@@ -69,8 +76,17 @@ pub(crate) struct PetReminder {
 #[derive(Clone, Serialize)]
 struct QueuedReminder {
     id: u32,
+    #[serde(skip)]
+    delivery_key: Option<String>,
     #[serde(flatten)]
     reminder: PetReminder,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+enum DockSide {
+    Left,
+    Right,
 }
 
 #[derive(Clone, Serialize)]
@@ -83,6 +99,8 @@ pub(crate) struct PetView {
     snooze_failed: bool,
     focus: motion::Focus,
     preferences: motion::Preferences,
+    mini: Option<DockSide>,
+    dock: Option<DockSide>,
 }
 
 #[derive(Default)]
@@ -92,20 +110,32 @@ struct Queue {
     drag_offset: Option<PhysicalPosition<f64>>,
     items: VecDeque<QueuedReminder>,
     next_id: u32,
+    displayed: VecDeque<String>,
     view: Option<Channel<PetView>>,
     resting_position: Option<PhysicalPosition<i32>>,
     pet_id: Option<String>,
     snoozing: Option<u32>,
     snooze_failed: bool,
     behavior: motion::Behavior,
+    dock: Option<DockSide>,
+    mini: Option<DockSide>,
+    peek_until: Option<Instant>,
+    hit_regions: Option<input::HitRegions>,
+    #[cfg(not(target_os = "windows"))]
+    ignoring_cursor: bool,
 }
 
 impl Queue {
+    #[cfg(test)]
     fn push(&mut self, reminder: PetReminder) {
+        self.enqueue(reminder, None);
+    }
+
+    fn enqueue(&mut self, reminder: PetReminder, delivery_key: Option<String>) {
         if self
             .items
             .iter()
-            .any(|item| item.reminder.kind == reminder.kind)
+            .any(|item| item.reminder.kind == reminder.kind && item.delivery_key == delivery_key)
         {
             return;
         }
@@ -113,8 +143,22 @@ impl Queue {
         self.next_id = self.next_id.wrapping_add(1);
         self.items.push_back(QueuedReminder {
             id: self.next_id,
+            delivery_key,
             reminder,
         });
+    }
+
+    fn mark_displayed(&mut self, id: u32) -> Option<String> {
+        let key = self.items.front().filter(|item| item.id == id)?.delivery_key.as_ref()?;
+        if self.displayed.contains(key) {
+            return None;
+        }
+        let key = key.clone();
+        if self.displayed.len() == 16 {
+            self.displayed.pop_front();
+        }
+        self.displayed.push_back(key.clone());
+        Some(key)
     }
 
     fn take_current(&mut self, id: u32) -> Option<PetReminder> {
@@ -141,20 +185,60 @@ impl Queue {
             snooze_failed: self.snooze_failed,
             focus: self.behavior.focus,
             preferences: self.behavior.preferences,
+            mini: self.mini,
+            dock: self.dock,
         })
     }
 
     fn publish(&mut self, window: &WebviewWindow) -> tauri::Result<()> {
+        if self.is_dragging() { return Ok(()); }
+        if self.enabled && !self.hidden && self.view.is_some() {
+            self.reconcile_geometry(window)?;
+        }
         let Some(snapshot) = self.snapshot() else { return Ok(()); };
         if let Some(view) = &self.view {
-            if self.enabled && !self.hidden {
-                adjust_window(window, &mut self.resting_position, !self.items.is_empty())?;
-            }
             view.send(snapshot)?;
         }
         let visible = self.enabled && !self.hidden && self.view.is_some();
-        if visible != window.is_visible()? {
+        if visible != window.is_visible()? || (visible && window.is_minimized()?) {
             set_visible_without_activation(window, visible)?;
+        }
+        Ok(())
+    }
+
+    fn reconcile_geometry(&mut self, window: &WebviewWindow) -> tauri::Result<bool> {
+        let expanded = !self.items.is_empty();
+        let mini = self.behavior.preferences.mini_enabled && !expanded && self.behavior.focus == motion::Focus::Idle
+            && self.peek_until.map_or(true, |until| Instant::now() >= until);
+        if !self.behavior.preferences.mini_enabled { self.dock = None; }
+        if let Some(regions) = &self.hit_regions {
+            // A live drag/menu/press owns the current window bounds until the input ends.
+            if regions.held && !expanded { return Ok(false); }
+        }
+        adjust_window(window, &mut self.resting_position, &mut self.dock, expanded, mini)?;
+        let next = if mini { self.dock } else { None };
+        let changed = next != self.mini;
+        self.mini = next;
+        Ok(changed)
+    }
+
+    fn reconcile_pointer(&mut self, window: &WebviewWindow) -> tauri::Result<()> {
+        let following_input = match &self.hit_regions {
+            Some(regions) if !self.is_dragging() => {
+                let cursor = window.cursor_position()?;
+                let client = window.inner_position()?;
+                let dpi = window.scale_factor()?;
+                regions.contains((cursor.x - f64::from(client.x)) / dpi, (cursor.y - f64::from(client.y)) / dpi)
+            }
+            _ => true,
+        };
+        let ignore = !following_input;
+        #[cfg(target_os = "windows")]
+        input::windows::set_cursor_passthrough(window, ignore)?;
+        #[cfg(not(target_os = "windows"))]
+        if ignore != self.ignoring_cursor {
+            window.set_ignore_cursor_events(ignore)?;
+            self.ignoring_cursor = ignore;
         }
         Ok(())
     }
@@ -238,34 +322,102 @@ fn position_on_work_area(window: &WebviewWindow) -> tauri::Result<()> {
 fn adjust_window(
     window: &WebviewWindow,
     resting_position: &mut Option<PhysicalPosition<i32>>,
+    dock: &mut Option<DockSide>,
     expanded: bool,
+    mini: bool,
 ) -> tauri::Result<()> {
-    let scale = window.scale_factor()?;
-    let pixels = |logical: f64| (logical * scale).round() as u32;
-    let rest = PhysicalSize::new(pixels(PET_SIZE), pixels(PET_SIZE));
-    match (expanded, *resting_position) {
-        (true, None) => {
-            let position = window.outer_position()?;
-            let resting_size = window.outer_size()?;
-            let size = PhysicalSize::new(pixels(BUBBLE_WIDTH), pixels(BUBBLE_HEIGHT));
-            let origin = PhysicalPosition::new(
-                position.x + resting_size.width as i32 - size.width as i32,
-                position.y + resting_size.height as i32 - size.height as i32,
-            );
-            let center_x = f64::from(position.x) + f64::from(resting_size.width) / 2.0;
-            let center_y = f64::from(position.y) + f64::from(resting_size.height) / 2.0;
-            let origin = window.monitor_from_point(center_x, center_y)?
-                .map_or(origin, |monitor| clamp_to_work_area(origin, size, &monitor));
-            set_pet_bounds(window, origin, size)?;
-            *resting_position = Some(position);
-        }
-        (false, Some(position)) => {
-            set_pet_bounds(window, position, rest)?;
-            *resting_position = None;
-        }
-        _ => {}
+    let current = window.outer_position()?;
+    let actual_size = window.outer_size()?;
+    let original = resting_position.unwrap_or(current);
+    let Some(monitor) = window.monitor_from_point(f64::from(original.x), f64::from(original.y))?
+        .or(window.primary_monitor()?) else { return Ok(()); };
+    let scale = monitor.scale_factor();
+    let rest = pet_size(&monitor);
+    let resting = clamp_to_work_area(original, rest, &monitor);
+    let work = monitor.work_area();
+    let left = work.position.x;
+    let right = left.saturating_add(work.size.width as i32);
+    if mini || dock.is_some() {
+        *dock = dock_side(original.x, left, right, rest.width, scale);
     }
+    let (origin, size) = pet_layout(resting, left, right, *dock, expanded, scale);
+    let origin = clamp_to_work_area(origin, size, &monitor);
+    if (current, actual_size) != (origin, size) {
+        set_pet_bounds(window, origin, size)?;
+    }
+    *resting_position = (expanded || dock.is_some()).then_some(resting);
     Ok(())
+}
+
+fn dock_side(x: i32, left: i32, right: i32, width: u32, scale: f64) -> Option<DockSide> {
+    let left_gap = i64::from(x) - i64::from(left);
+    let right_gap = i64::from(right) - i64::from(x) - i64::from(width);
+    let tolerance = (MINI_EDGE_DISTANCE * scale).round() as i64;
+    if left_gap < 0 || right_gap < 0 || left_gap.min(right_gap) > tolerance {
+        return None;
+    }
+    Some(if left_gap <= right_gap { DockSide::Left } else { DockSide::Right })
+}
+
+fn pet_layout(resting: PhysicalPosition<i32>, left: i32, right: i32, dock: Option<DockSide>, expanded: bool, scale: f64)
+    -> (PhysicalPosition<i32>, PhysicalSize<u32>) {
+    let rest = (PET_SIZE * scale).round() as u32;
+    if let Some(side) = dock {
+        // Peeking and fully showing the pet share these bounds. The WebView clips the sprite.
+        let docked = PhysicalPosition::new(if side == DockSide::Left { left } else { right - rest as i32 }, resting.y);
+        let (mut origin, size) = reminder_bounds(docked, expanded, scale);
+        if side == DockSide::Left { origin.x = left; }
+        return (origin, size);
+    }
+    reminder_bounds(resting, expanded, scale)
+}
+
+fn reminder_bounds(resting: PhysicalPosition<i32>, expanded: bool, scale: f64) -> (PhysicalPosition<i32>, PhysicalSize<u32>) {
+    let pixels = |logical: f64| (logical * scale).round() as u32;
+    let rest = pixels(PET_SIZE);
+    if !expanded {
+        return (resting, PhysicalSize::new(rest, rest));
+    }
+    let size = PhysicalSize::new(pixels(BUBBLE_WIDTH), pixels(BUBBLE_HEIGHT));
+    (PhysicalPosition::new(resting.x + rest as i32 - size.width as i32, resting.y + rest as i32 - size.height as i32), size)
+}
+
+pub(crate) fn watch_geometry(app: AppHandle) {
+    if !cfg!(target_os = "windows") { return; }
+    std::thread::spawn(move || {
+        let pending = Arc::new(AtomicBool::new(false));
+        let mut next_geometry = Instant::now();
+        loop {
+            std::thread::sleep(Duration::from_millis(30));
+            let state = app.state::<PetQueue>();
+            let Ok(queue) = state.0.try_lock() else { continue; };
+            if !queue.enabled || queue.hidden || queue.view.is_none() { continue; }
+            let now = Instant::now();
+            let geometry_due = now >= next_geometry;
+            if !geometry_due && queue.hit_regions.is_none() { continue; }
+            drop(queue);
+            if pending.swap(true, Ordering::AcqRel) { continue; }
+            if geometry_due { next_geometry = now + Duration::from_millis(500); }
+            let handle = app.clone();
+            let in_flight = Arc::clone(&pending);
+            if app.run_on_main_thread(move || {
+                if let Some(window) = handle.get_webview_window(LABEL) {
+                    let state = handle.state::<PetQueue>();
+                    let mut queue = state.0.lock().expect("desktop pet queue poisoned");
+                    if queue.enabled && !queue.hidden && queue.view.is_some() {
+                        if geometry_due && !queue.is_dragging() {
+                            let changed = queue.reconcile_geometry(&window).unwrap_or(false);
+                            if changed || window.is_visible().is_ok_and(|visible| !visible) || window.is_minimized().unwrap_or(false) {
+                                let _ = queue.publish(&window);
+                            }
+                        }
+                        let _ = queue.reconcile_pointer(&window);
+                    }
+                }
+                in_flight.store(false, Ordering::Release);
+            }).is_err() { break; }
+        }
+    });
 }
 
 fn set_pet_bounds(
@@ -327,6 +479,7 @@ pub(crate) async fn set_desktop_pet_enabled(
     enabled: bool,
     position: Option<PetPosition>,
     preferences: Option<motion::Preferences>,
+    recover: Option<bool>,
 ) -> Result<(), String> {
     if !cfg!(target_os = "windows") || window.label() != "main" {
         return Err("Desktop pet reminders are only available from the Windows main window".into());
@@ -350,10 +503,18 @@ pub(crate) async fn set_desktop_pet_enabled(
             return Ok(());
         }
         if let Some(window) = app.get_webview_window(LABEL) {
+            if recover == Some(true) {
+                queue.drag_offset = None;
+                queue.publish(&window)?;
+                return window.reload();
+            }
             return queue.publish(&window);
         }
         queue.view = None;
         queue.resting_position = None;
+        queue.hit_regions = None;
+        #[cfg(not(target_os = "windows"))]
+        { queue.ignoring_cursor = false; }
         let window = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::default())
             .title("EfficiencyMemo Pet")
             .inner_size(PET_SIZE, PET_SIZE)
@@ -368,6 +529,8 @@ pub(crate) async fn set_desktop_pet_enabled(
             .focused(false)
             .visible(false)
             .build()?;
+        #[cfg(target_os = "windows")]
+        input::windows::set_cursor_passthrough(&window, false)?;
         window.set_size(LogicalSize::new(PET_SIZE, PET_SIZE))?;
         if let Some(position) = position {
             if let Some(monitor) = window.monitor_from_point(f64::from(position.x), f64::from(position.y))? {
@@ -427,11 +590,30 @@ pub(crate) async fn sample_desktop_pet_behavior(
         return Err("Expected the desktop pet window".into());
     }
     update_queue(window.app_handle().clone(), move |_, queue| {
-        if !queue.enabled || queue.hidden || queue.is_dragging() || !queue.items.is_empty() {
+        if !queue.enabled || queue.hidden || queue.is_dragging() || !queue.items.is_empty() || queue.dock.is_some() {
             queue.behavior.interrupt(false);
             return Ok(motion::Sample::default());
         }
         queue.behavior.sample(&window, input)
+    }).await
+}
+
+#[tauri::command]
+pub(crate) async fn peek_desktop_pet(window: WebviewWindow) -> Result<(), String> {
+    if window.label() != LABEL { return Err("Expected the desktop pet window".into()); }
+    update_queue(window.app_handle().clone(), move |_, queue| {
+        queue.peek_until = Some(Instant::now() + Duration::from_secs(6));
+        queue.behavior.interrupt(true);
+        queue.publish(&window)
+    }).await
+}
+
+#[tauri::command]
+pub(crate) async fn update_desktop_pet_hit_regions(window: WebviewWindow, regions: input::HitRegions) -> Result<(), String> {
+    if window.label() != LABEL || !regions.valid() { return Err("Invalid desktop pet hit regions".into()); }
+    update_queue(window.app_handle().clone(), move |_, queue| {
+        queue.hit_regions = Some(regions);
+        queue.reconcile_pointer(&window)
     }).await
 }
 
@@ -473,8 +655,8 @@ pub(crate) async fn load_desktop_pet_sprite(
     window: WebviewWindow,
     pet_id: String,
 ) -> Result<Option<PetSprite>, String> {
-    if window.label() != LABEL {
-        return Err("Expected the desktop pet window".into());
+    if window.label() != LABEL && window.label() != "main" {
+        return Err("Expected the main or desktop pet window".into());
     }
     let app = window.app_handle();
     let path = app
@@ -507,19 +689,40 @@ pub(crate) async fn load_desktop_pet_sprite(
 pub(crate) async fn show_desktop_pet_reminder(
     window: WebviewWindow,
     input: PetReminder,
-) -> Result<(), String> {
+    delivery_key: Option<String>,
+) -> Result<bool, String> {
     if !cfg!(target_os = "windows") || window.label() != "main" {
         return Err("Desktop pet reminders are only available from the Windows main window".into());
     }
     update_queue(window.app_handle().clone(), move |app, queue| {
+        if delivery_key.as_ref().is_some_and(|key| queue.displayed.contains(key)) {
+            return Ok(true);
+        }
         let window = app
             .get_webview_window(LABEL)
             .filter(|_| queue.enabled && !queue.hidden)
             .ok_or_else(|| std::io::Error::other("Desktop pet is unavailable"))?;
-        queue.push(input);
-        queue.publish(&window)
+        queue.enqueue(input, delivery_key);
+        queue.publish(&window)?;
+        Ok(false)
     })
     .await
+}
+
+#[tauri::command]
+pub(crate) async fn confirm_desktop_pet_reminder_shown(window: WebviewWindow, id: u32) -> Result<bool, String> {
+    if window.label() != LABEL {
+        return Err("Expected the desktop pet window".into());
+    }
+    update_queue(window.app_handle().clone(), move |app, queue| {
+        if queue.enabled && !queue.hidden && !queue.is_dragging() && window.is_visible()? && !window.is_minimized()? {
+            if let Some(key) = queue.mark_displayed(id) {
+                app.emit("desktop-pet-reminder-shown", key)?;
+            }
+            return Ok(true);
+        }
+        Ok(false)
+    }).await
 }
 
 #[tauri::command]
@@ -533,6 +736,7 @@ pub(crate) async fn desktop_pet_ready(
     update_queue(window.app_handle().clone(), move |_, queue| {
         queue.view = Some(on_change);
         queue.drag_offset = None;
+        queue.hit_regions = None;
         queue.behavior.interrupt(false);
         queue.publish(&window)
     })
@@ -597,6 +801,8 @@ pub(crate) async fn drag_desktop_pet(
             let anchor = anchor.filter(|value| (0.0..=1.0).contains(&value.x) && (0.0..=1.0).contains(&value.y))
                 .ok_or_else(|| std::io::Error::other("Invalid desktop pet drag anchor"))?;
             queue.behavior.interrupt(true);
+            queue.resting_position = None;
+            queue.dock = None;
             queue.drag_offset = Some(PhysicalPosition::new(anchor.x, anchor.y));
             return Ok(());
         }
@@ -675,7 +881,9 @@ pub(crate) fn handle_menu_event(app: &AppHandle, id: &str) {
                 SHOW_PET => queue.hidden = false,
                 HIDE_PET => queue.hidden = true,
                 RESET_PET_POSITION => {
-                    adjust_window(&window, &mut queue.resting_position, false)?;
+                    queue.dock = None;
+                    queue.resting_position = None;
+                    window.set_size(LogicalSize::new(PET_SIZE, PET_SIZE))?;
                     position_on_work_area(&window)?;
                     app.emit(POSITION_EVENT, Option::<PetPosition>::None)?;
                 }
@@ -738,8 +946,61 @@ pub(crate) async fn finish_desktop_pet_snooze(window: WebviewWindow, id: u32, sa
 
 #[cfg(test)]
 mod tests {
-    use super::{PetReminder, Queue, ReminderKind};
-    use tauri::PhysicalPosition;
+    use super::{dock_side, pet_layout, reminder_bounds, DockSide, PetReminder, Queue, ReminderKind};
+    use tauri::{PhysicalPosition, PhysicalSize};
+
+    #[test]
+    fn mini_only_docks_near_a_horizontal_edge() {
+        assert_eq!(dock_side(500, 0, 1000, 88, 1.0), None);
+        assert_eq!(dock_side(12, 0, 1000, 88, 1.0), Some(DockSide::Left));
+        assert_eq!(dock_side(900, 0, 1000, 88, 1.0), Some(DockSide::Right));
+        assert_eq!(dock_side(13, 0, 1000, 88, 1.0), None);
+        assert_eq!(dock_side(899, 0, 1000, 88, 1.0), None);
+        assert_eq!(dock_side(-1, 0, 1000, 88, 1.0), None);
+        assert_eq!(dock_side(-1582, -1600, 0, 132, 1.5), Some(DockSide::Left));
+        assert_eq!(dock_side(-151, -1600, 0, 132, 1.5), None);
+    }
+
+    #[test]
+    fn docked_geometry_keeps_the_full_viewport_anchored_to_either_edge() {
+        let rest = PhysicalPosition::new(500, 400);
+        let size = PhysicalSize::new(88, 88);
+        assert_eq!(pet_layout(rest, 0, 1000, Some(DockSide::Left), false, 1.0), (PhysicalPosition::new(0, 400), size));
+        assert_eq!(pet_layout(rest, 0, 1000, Some(DockSide::Right), false, 1.0), (PhysicalPosition::new(912, 400), size));
+        let (alert, expanded) = pet_layout(rest, 0, 1000, Some(DockSide::Right), true, 1.0);
+        assert_eq!(alert, PhysicalPosition::new(700, 270));
+        assert_eq!(expanded, PhysicalSize::new(300, 218));
+        assert_eq!(pet_layout(rest, 0, 1000, Some(DockSide::Left), true, 1.0),
+            (PhysicalPosition::new(0, 270), expanded));
+        let (undocked, _) = pet_layout(rest, 0, 1000, None, false, 1.0);
+        assert_eq!(undocked, rest);
+    }
+
+    #[test]
+    fn expanded_geometry_is_recalculated_at_the_current_dpi_from_the_same_anchor() {
+        let rest = PhysicalPosition::new(500, 400);
+        let (_, old_size) = reminder_bounds(rest, true, 1.0);
+        let (origin, size) = reminder_bounds(rest, true, 1.5);
+        assert_ne!(old_size, size);
+        assert_eq!(size, PhysicalSize::new(450, 327));
+        assert_eq!(origin, PhysicalPosition::new(182, 205));
+    }
+
+    #[test]
+    fn queued_reviews_keep_their_receipt_after_the_displayed_bubble_is_closed() {
+        let mut queue = Queue::default();
+        let key = "review:d:2026-11-21".to_owned();
+        let review = PetReminder { kind: ReminderKind::DailyReview, title: "Review".into(), body: String::new() };
+        queue.enqueue(review.clone(), Some(key.clone()));
+        queue.enqueue(review, Some(key.clone()));
+        assert_eq!(queue.items.len(), 1);
+        let id = queue.items[0].id;
+        assert!(queue.displayed.is_empty());
+        assert_eq!(queue.mark_displayed(id + 1), None);
+        assert_eq!(queue.mark_displayed(id), Some(key.clone()));
+        queue.take_current(id);
+        assert!(queue.displayed.contains(&key));
+    }
 
     #[test]
     fn defers_the_reminder_view_while_dragging_without_consuming_the_queue() {
