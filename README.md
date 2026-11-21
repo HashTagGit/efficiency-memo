@@ -4,7 +4,7 @@ A local-first desktop toolkit for deliberate focus and healthier work rhythms. I
 
 ## About
 
-EfficiencyMemo is a pnpm monorepo with independent tools behind one desktop workspace. CoreHour records and reviews focus time; Pause & Hydrate provides local break and hydration reminders. WebDAV sync code is retained but outside the current product scope.
+EfficiencyMemo is a pnpm monorepo with independent tools behind one desktop workspace. CoreHour records and reviews focus time; Pause & Hydrate provides local break and hydration reminders. An optional Windows desktop pet can surface those reminders instead of system notifications. WebDAV sync code is retained but outside the current product scope.
 
 ## Features
 
@@ -26,6 +26,13 @@ EfficiencyMemo is a pnpm monorepo with independent tools behind one desktop work
 - Complete, postpone for 10 minutes, or mute a reminder for the day
 - Defer due reminders while a CoreHour session is active
 - Review today's completed actions from timestamped local events
+
+### Desktop pet (Windows)
+- Choose Amber Cat, Clawd, Lantern Moth, Mole Baby, or Pocket Robot, or import a Codex Pet package
+- Show due reminders in a transparent, always-on-top pet instead of a system notification
+- React to focus state with idle, working, waiting, greeting, walk, and sleep poses; V2 pets follow the nearby pointer
+- Drag the pet, dock it to a screen edge, and recover its window from Pet Assistant
+- Clawd and Mole Baby are third-party characters with separate notices under `apps/desktop/src/assets/pets/`; they are not covered by the MIT license
 
 ### Appearance
 - Choose System, Light, or Dark mode independently from the color palette
@@ -79,7 +86,8 @@ On first launch the app creates its database in `%APPDATA%/com.efficiency-memo.a
 6. **Review the week** — Open **CoreHour → Insights** to compare confirmed focus with last week, inspect goal consistency, and review activity and tag trends. Plans never enter these totals.
 7. **Set healthy reminders** — Open **Pause & Hydrate**, enable either reminder, choose its interval, and save. Due reminders wait while CoreHour is active.
 8. **Adjust appearance** — Open **Settings** to choose a mode, color palette, and language. Changes preview and persist immediately.
-9. **Control your data** — Open **Settings → Data & privacy** to create a portable backup, preview a restore, export readable module JSON, or reset local records.
+9. **Choose a desktop pet** — Open **Pet Assistant** to enable the Windows pet, pick a bundled or imported Codex Pet package, and send a test reminder.
+10. **Control your data** — Open **Settings → Data & privacy** to create a portable backup, preview a restore, export readable module JSON, or reset local records.
 
 Use the native Tauri window opened by `tauri:dev`; `http://localhost:1420` is only the Vite development server and does not provide the Tauri SQLite bridge.
 
@@ -123,6 +131,7 @@ Key design choices:
 - **Appearance preferences** — System/light/dark mode and Ember/Grove/Tide palettes are persisted locally; the workspace shell retains a quick mode toggle.
 - **Data control** — Portable .ememo files are validated SQLite snapshots with stable appearance preferences; restores are staged and applied before the next database connection opens.
 - **Native notifications** — `tauri-plugin-notification` handles due CoreHour check-ins and Pause & Hydrate reminders.
+- **Desktop pets** — Bundled Codex Pet packages live in `apps/desktop/src/assets/pets/` and follow the V1/V2 cell contract in `src/lib/codex-pet-atlas.json`; the Windows-only pet window in `src-tauri/src/desktop_pet.rs` renders reminders, poses, docking, and pointer gaze. Third-party packages keep their notices beside the package and in the installed `src-tauri/resources/THIRD-PARTY-NOTICES.md`.
 - **Local archive** — retired experiments may be kept under the ignored root `bak/` directory and are not part of the product or active repository tree. WebDAV sync is not part of the current product scope.
 
 ### Shared packages

@@ -1,0 +1,7 @@
+{
+  "id": "clawd",
+  "displayName": "Clawd",
+  "description": "The original pixel crab from clawd-on-desk, with theme-accurate poses and pointer gaze.",
+  "spriteVersionNumber": 2,
+  "spritesheetPath": "spritesheet.png"
+}

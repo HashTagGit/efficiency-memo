@@ -126,6 +126,20 @@ _Avoid_: Automatic schedule, performance quota
 An optional once-per-period prompt for a due Daily Review or Weekly Review; active focus, shared quiet hours, and supported system interruption state may defer it without marking it delivered.
 _Avoid_: Reminder Event, forced review, recurring alarm
 
+## Desktop pet
+
+**Desktop Pet**:
+The optional Windows-only, transparent, always-on-top character window that shows due reminders in a speech bubble.
+_Avoid_: Widget, overlay app
+
+**Pet Package**:
+A Codex Pet bundle of `pet.json` plus its spritesheet, either bundled in `apps/desktop/src/assets/pets/` or imported by the user.
+_Avoid_: Skin, theme, avatar file
+
+**Pet Pose**:
+One named frame set from a Pet Package's atlas, such as idle, greeting, working, waiting, walking, or sleeping; it never changes recorded focus time.
+_Avoid_: State machine, animation library
+
 ## Data control
 
 **Portable Backup**:

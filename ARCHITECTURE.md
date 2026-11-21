@@ -75,6 +75,14 @@ The desktop app lives in `apps/desktop/` and is the recommended deployable surfa
 - CoreHour and Pause & Hydrate manifests are enabled. Retired experiments live only in the ignored local `bak/` archive; WebDAV sync code is outside the current product focus.
 - React Router handles SPA routing (`BrowserRouter` with `<Routes>`).
 
+### Desktop Pet
+
+- `components/desktop-pet.tsx` renders the Windows-only, always-on-top pet window; `desktop-pet-behavior.ts`, `desktop-pet-gestures.ts`, and `desktop-pet-hit-test.ts` own sampled poses, dragging, and per-pixel window hit testing.
+- `lib/desktop-pet-catalog.ts` discovers bundled packages from `src/assets/pets/<id>/`, loads imported packs from `desktop_pet_packs`, and persists the selected pet.
+- Packages follow the Codex Pet contract in `lib/codex-pet-atlas.json`: `pet.json` plus a spritesheet of 8 × 192 × 208 cells. V1 has nine animation tracks; V2 adds sixteen gaze cells. `src-tauri/src/desktop_pet.rs` owns the window, reminder queue, docking position, and native behavior sampling.
+- Five packages ship: Amber Cat, Clawd, Lantern Moth, Mole Baby, and Pocket Robot. Clawd (clawd-on-desk) and Mole Baby (mole-baby) are third-party artwork with notices in `apps/desktop/src/assets/pets/<id>/NOTICE.md`; they are not covered by the MIT license, and the bundling decision is recorded in `docs/adr/0009-bundle-third-party-pet-artwork.md`. The Tauri bundle installs `src-tauri/resources/THIRD-PARTY-NOTICES.md`.
+- Users can import their own packs from Pet Assistant. `scripts/prepare-desktop-pet.py` packages new atlases or frame folders, and `scripts/render-clawd-pet.mjs` renders an animated SVG theme into the V2 frame layout.
+
 ### Appearance
 
 - `lib/appearance.tsx` owns persisted color mode, resolved system mode, and palette state.

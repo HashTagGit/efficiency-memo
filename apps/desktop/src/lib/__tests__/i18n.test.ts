@@ -21,4 +21,10 @@ describe("i18n", () => {
     expect(translate("zh-CN", "sync.title")).toBe("同步设置");
     expect(translate("zh-CN", "sync.back")).toBe("返回工作台");
   });
+
+  it("labels the bundled mole-baby and clawd pets in both languages", () => {
+    expect(translate("en-US", "desktopPet.pet.mole-baby")).toBe("Mole Baby");
+    expect(translate("zh-CN", "desktopPet.pet.mole-baby")).toBe("拉姆");
+    expect(translate("en-US", "desktopPet.pet.clawd")).toBe("Clawd");
+  });
 });

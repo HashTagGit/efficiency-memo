@@ -45,9 +45,9 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
-function renderApp(path: string) {
+function renderApp(path: string, locale: "en-US" | "zh-CN" = "en-US") {
   window.history.replaceState(null, "", path);
-  return render(<I18nProvider initialLocale="en-US"><AppearanceProvider><App /></AppearanceProvider></I18nProvider>);
+  return render(<I18nProvider initialLocale={locale}><AppearanceProvider><App /></AppearanceProvider></I18nProvider>);
 }
 
 it("opens the separate pet page from Tools and keeps pet controls out of app settings", async () => {
@@ -69,6 +69,14 @@ it("opens the separate pet page from Tools and keeps pet controls out of app set
   fireEvent.click(robot);
   await waitFor(() => expect(saveDesktopPetSelection).toHaveBeenCalledWith("pocket-robot"));
   await waitFor(() => expect((robot as HTMLInputElement).checked).toBe(true));
+  const mole = screen.getByRole<HTMLInputElement>("radio", { name: "Mole Baby" });
+  fireEvent.click(mole);
+  await waitFor(() => expect(saveDesktopPetSelection).toHaveBeenCalledWith("mole-baby"));
+  await waitFor(() => expect(mole.checked).toBe(true));
+  const clawd = screen.getByRole<HTMLInputElement>("radio", { name: "Clawd" });
+  fireEvent.click(clawd);
+  await waitFor(() => expect(saveDesktopPetSelection).toHaveBeenCalledWith("clawd"));
+  await waitFor(() => expect(clawd.checked).toBe(true));
   const working = await screen.findByRole("button", { name: "Working" });
   fireEvent.click(working);
   expect(working.getAttribute("aria-pressed")).toBe("true");
@@ -76,6 +84,13 @@ it("opens the separate pet page from Tools and keeps pet controls out of app set
   expect(screen.getByRole("button", { name: "Import a pet pack" })).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Send a test reminder" }));
   await waitFor(() => expect(showDesktopPetReminder).toHaveBeenCalledWith(expect.objectContaining({ kind: "preview" })));
+});
+
+it("shows localized labels for the bundled third-party pets", async () => {
+  await discoverTools();
+  renderApp("/tools/pet-assistant", "zh-CN");
+  expect(await screen.findByRole("radio", { name: "拉姆" })).toBeTruthy();
+  expect(screen.getByRole("radio", { name: "Clawd" })).toBeTruthy();
 });
 
 it("handles a direct pet page link when the desktop pet is unavailable", async () => {

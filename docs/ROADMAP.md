@@ -29,6 +29,7 @@ EfficiencyMemo is a local-first personal work-rhythm desktop suite. The roadmap 
 - Optional daily and weekly Review Reminders with persisted once-per-period delivery, active-focus deferral, shared quiet hours, and supported system DND handling.
 - Module locator colors for CoreHour, Pause & Hydrate, and Settings, while primary actions remain governed by the selected palette.
 - Semantic Alert containers plus explicit button pressed and disabled reactions without component-level product hues.
+- Windows desktop pet with selectable Codex Pet packages, reminder bubbles, focus poses, edge docking, and pointer gaze.
 
 ## Delivery roadmap
 
