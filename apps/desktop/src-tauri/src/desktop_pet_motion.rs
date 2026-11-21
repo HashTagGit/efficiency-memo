@@ -3,7 +3,7 @@ use std::time::{Duration, Instant};
 use serde::{Deserialize, Serialize};
 use tauri::{Monitor, PhysicalPosition, WebviewWindow};
 
-use super::{clamp_to_work_area, set_pet_bounds};
+use super::{clamp_to_work_area, set_pet_bounds, DockSide};
 
 const IDLE_TO_SLEEP_SECONDS: u64 = 300;
 const WALK_DELAY: Duration = Duration::from_secs(18);
@@ -147,6 +147,25 @@ impl Behavior {
         }
         Ok(Sample::default())
     }
+
+    pub(super) fn sample_peek(&mut self, window: &WebviewWindow, input: SampleInput, side: DockSide) -> tauri::Result<Sample> {
+        if input.held || input.reduced_motion || !input.supports_look || !self.preferences.look_enabled {
+            self.gaze = None;
+            return Ok(Sample::default());
+        }
+        let origin = window.inner_position()?;
+        let size = window.inner_size()?;
+        let cursor = window.cursor_position()?;
+        let dpi = window.scale_factor()?;
+        let x = (cursor.x - f64::from(origin.x)) / dpi;
+        let inward = match side {
+            DockSide::Left => x,
+            DockSide::Right => f64::from(size.width) / dpi - x,
+        };
+        let y = (cursor.y - f64::from(origin.y) - f64::from(size.height)) / dpi + 40.0;
+        self.gaze = peek_gaze(inward, y, side, self.gaze);
+        Ok(Sample { gaze: self.gaze, ..Sample::default() })
+    }
 }
 
 fn should_sleep(focus: Focus, idle_seconds: Option<u64>, recently_interacted: bool) -> bool {
@@ -163,6 +182,31 @@ fn gaze_direction(x: f64, y: f64, previous: Option<u8>) -> Option<u8> {
     // Codex starts at twelve o'clock and numbers frames clockwise.
     let angle = x.atan2(-y).to_degrees().rem_euclid(360.0);
     Some((angle / 22.5).round() as u8 % 16)
+}
+
+fn peek_gaze(inward: f64, y: f64, side: DockSide, previous: Option<u8>) -> Option<u8> {
+    if inward < 0.0 {
+        return None;
+    }
+    // The visible half of the face is about 12 logical pixels from the edge.
+    let x = inward - 12.0;
+    let radius = x.hypot(y);
+    if radius > if previous.is_some() { 180.0 } else { 140.0 } {
+        return None;
+    }
+    let forward: u8 = if side == DockSide::Left { 4 } else { 12 };
+    if radius < 12.0 {
+        return Some(forward);
+    }
+    let offset = y.atan2(x.max(0.0)).to_degrees().clamp(-67.5, 67.5);
+    let angle = f64::from(forward) * 22.5 + if side == DockSide::Left { offset } else { -offset };
+    // Keep the last atlas direction for a few degrees past each sector boundary.
+    if let Some(frame) = previous {
+        if (angle - f64::from(frame) * 22.5).abs() <= 15.0 {
+            return Some(frame);
+        }
+    }
+    Some((angle / 22.5).round() as u8)
 }
 
 fn monitor_geometry(window: &WebviewWindow) -> tauri::Result<Vec<MonitorGeometry>> {
@@ -223,6 +267,18 @@ mod tests {
         assert_eq!(gaze_direction(160.0, 0.0, None), None);
         assert_eq!(gaze_direction(160.0, 0.0, Some(4)), Some(4));
         assert_eq!(gaze_direction(181.0, 0.0, Some(4)), None);
+    }
+
+    #[test]
+    fn docked_gaze_tracks_inward_with_distance_and_angle_hysteresis() {
+        assert_eq!(peek_gaze(70.0, -60.0, DockSide::Left, None), Some(2));
+        assert_eq!(peek_gaze(70.0, -60.0, DockSide::Right, None), Some(14));
+        assert_eq!(peek_gaze(-1.0, 0.0, DockSide::Left, Some(4)), None);
+        assert_eq!(peek_gaze(170.0, 0.0, DockSide::Left, None), None);
+        assert_eq!(peek_gaze(170.0, 0.0, DockSide::Left, Some(4)), Some(4));
+        assert_eq!(peek_gaze(193.0, 0.0, DockSide::Left, Some(4)), None);
+        assert_eq!(peek_gaze(112.0, -24.0, DockSide::Left, None), Some(3));
+        assert_eq!(peek_gaze(112.0, -24.0, DockSide::Left, Some(4)), Some(4));
     }
 
     #[test]

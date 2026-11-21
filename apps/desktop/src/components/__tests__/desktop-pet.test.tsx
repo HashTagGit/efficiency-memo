@@ -86,7 +86,7 @@ it("shows working and waiting poses, and returns to idle when focus is paused", 
   const [publish] = connect.mock.lastCall ?? [];
   const sprite = () => screen.getByRole("img").querySelector("[data-pose]");
   const state = { current: null, count: 0, petId: "amber-cat" };
-  act(() => publish({ ...state, focus: "working" }));
+  await act(async () => { publish({ ...state, focus: "working" }); });
   expect(sprite()?.getAttribute("data-pose")).toBe("working");
   act(() => publish({ ...state, focus: "waiting" }));
   expect(sprite()?.getAttribute("data-pose")).toBe("waiting");
@@ -126,28 +126,43 @@ it("asks the native behavior sampler to suppress motion when reduced motion is e
   }));
 });
 
-it("uses the visible mini pet as a peek control without starting a drag", () => {
+it("uses the visible mini pet as a peek control without starting a drag", async () => {
   render(<DesktopPet />);
   const [publish] = connect.mock.lastCall ?? [];
-  act(() => publish({ current: null, count: 0, petId: "amber-cat", mini: "right" }));
+  await act(async () => { publish({ current: null, count: 0, petId: "amber-cat", mini: "right" }); });
   expect(screen.getByRole("img").querySelector('[data-pose="peeking"]')).toBeTruthy();
   fireEvent.click(screen.getByRole("button", { name: "Show full desktop pet" }));
   expect(invoke).toHaveBeenCalledWith("peek_desktop_pet");
   expect(invoke).not.toHaveBeenCalledWith("drag_desktop_pet", expect.anything());
 });
 
-it("gives a docked pet an inward gaze and briefly glances up while preserving its sprite element", () => {
+it("keeps an inward gaze until a nearby cursor changes it and preserves the sprite element", () => {
   vi.useFakeTimers();
   const { container, rerender } = render(<PetSprite pet={DEFAULT_PET} animated peekSide="left" />);
   const sprite = container.querySelector("[data-pet-frame]");
   expect(sprite?.getAttribute("data-pet-frame")).toBe("9:4");
-  act(() => vi.advanceTimersByTime(4200));
+  rerender(<PetSprite pet={DEFAULT_PET} animated peekSide="left" gaze={3} />);
   expect(sprite?.getAttribute("data-pet-frame")).toBe("9:3");
-  act(() => vi.advanceTimersByTime(240));
+  rerender(<PetSprite pet={DEFAULT_PET} animated peekSide="left" />);
   expect(sprite?.getAttribute("data-pet-frame")).toBe("9:4");
   rerender(<PetSprite pet={DEFAULT_PET} animated peekSide="right" />);
   expect(container.querySelector("[data-pet-frame]")).toBe(sprite);
   expect(sprite?.getAttribute("data-pet-frame")).toBe("10:4");
+});
+
+it("updates the gaze near a docked pet without opening it", async () => {
+  vi.mocked(invoke).mockImplementation(async (command) => command === "sample_desktop_pet_behavior"
+    ? { sleeping: false, gaze: 14, walking: null } : undefined);
+  render(<DesktopPet />);
+  const [publish] = connect.mock.lastCall ?? [];
+  act(() => publish({
+    current: null, count: 0, petId: "amber-cat", mini: "right", dock: "right",
+    preferences: { lookEnabled: true, walkEnabled: true, miniEnabled: true },
+  }));
+  const sprite = screen.getByRole("img").querySelector("[data-pet-frame]");
+  await waitFor(() => expect(sprite?.getAttribute("data-pet-frame")).toBe("10:6"));
+  expect(screen.getByRole("button", { name: "Show full desktop pet" })).toBeTruthy();
+  expect(invoke).not.toHaveBeenCalledWith("peek_desktop_pet");
 });
 
 it("uses a small nod for a V1 pet in place of direction frames and skips it in reduced motion", () => {

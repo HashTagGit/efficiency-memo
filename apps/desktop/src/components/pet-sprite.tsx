@@ -9,7 +9,7 @@ const animationRows: Record<PetPose, number> = {
 };
 const closedEyePets = new Set(["amber-cat", "lantern-moth", "pocket-robot"]);
 const PEEK_PAUSE = 4200;
-const PEEK_GLANCE = 240;
+const PEEK_NOD = 240;
 
 export function PetSprite({ pet, animated = false, pose = "idle", gaze = null, repeat = false, peekSide }: {
   pet: DesktopPetSprite;
@@ -20,26 +20,27 @@ export function PetSprite({ pet, animated = false, pose = "idle", gaze = null, r
   peekSide?: "left" | "right" | null;
 }) {
   const firstRow = animationRows[pose];
-  const look = gaze !== null && gaze >= 0 && gaze < 16 && pet.manifest.spriteVersionNumber === 2;
+  const supportsLook = pet.manifest.spriteVersionNumber === 2;
+  const look = gaze !== null && gaze >= 0 && gaze < 16 && supportsLook;
   const stationary = Boolean(peekSide) || look || pose === "sleeping";
   const [cell, setCell] = useState({ row: firstRow, column: 0 });
-  const [glancing, setGlancing] = useState(false);
+  const [nodding, setNodding] = useState(false);
   const backgroundImage = useMemo(() => `url(${JSON.stringify(pet.atlas)})`, [pet.atlas]);
   useEffect(() => {
-    if (!animated || !peekSide) return;
+    if (!animated || !peekSide || supportsLook) return;
     const motion = window.matchMedia?.("(prefers-reduced-motion: reduce)");
     let timer: number | undefined;
 
     function pause() {
-      setGlancing(false);
+      setNodding(false);
       timer = window.setTimeout(() => {
-        setGlancing(true);
-        timer = window.setTimeout(pause, PEEK_GLANCE);
+        setNodding(true);
+        timer = window.setTimeout(pause, PEEK_NOD);
       }, PEEK_PAUSE);
     }
     function sync() {
       window.clearTimeout(timer);
-      setGlancing(false);
+      setNodding(false);
       if (!document.hidden && !motion?.matches) pause();
     }
     sync();
@@ -50,7 +51,7 @@ export function PetSprite({ pet, animated = false, pose = "idle", gaze = null, r
       motion?.removeEventListener("change", sync);
       document.removeEventListener("visibilitychange", sync);
     };
-  }, [animated, peekSide]);
+  }, [animated, peekSide, supportsLook]);
 
   useEffect(() => {
     if (!animated || stationary) return;
@@ -88,8 +89,7 @@ export function PetSprite({ pet, animated = false, pose = "idle", gaze = null, r
   }, [pose, animated, firstRow, stationary, repeat]);
 
   const rows = petAtlasRows(pet.manifest.spriteVersionNumber);
-  const peekGaze = peekSide === "left" ? (glancing ? 3 : 4) : (glancing ? 13 : 12);
-  const direction = peekSide ? (pet.manifest.spriteVersionNumber === 2 ? peekGaze : null) : look ? gaze : null;
+  const direction = look ? gaze : peekSide && supportsLook ? (peekSide === "left" ? 4 : 12) : null;
   const frame = direction !== null
     ? { row: PET_TRACKS.length + Math.floor(direction / PET_COLUMNS), column: direction % PET_COLUMNS }
     : peekSide ? { row: 0, column: 0 }
@@ -98,7 +98,7 @@ export function PetSprite({ pet, animated = false, pose = "idle", gaze = null, r
     <span
       aria-hidden="true"
       data-pose={peekSide ? "peeking" : look ? "looking" : pose}
-      data-peek-nod={peekSide && glancing && direction === null ? "" : undefined}
+      data-peek-nod={peekSide && nodding && !supportsLook ? "" : undefined}
       data-pet-frame={`${frame.row}:${frame.column}`}
       className="block h-full aspect-[12/13] [image-rendering:pixelated] bg-no-repeat"
       style={{

@@ -9,13 +9,8 @@ function rectFor(element: Element | null): Rect | null {
   return bounds?.width && bounds.height ? { x: bounds.x, y: bounds.y, width: bounds.width, height: bounds.height } : null;
 }
 
-function alphaAtFrame(context: CanvasRenderingContext2D, image: HTMLImageElement, frame: HTMLElement) {
-  const rect = rectFor(frame);
-  const cell = frame.dataset.petFrame;
-  if (!rect || !cell) return null;
+function alphaAtFrame(context: CanvasRenderingContext2D, image: HTMLImageElement, cell: string, width: number, height: number) {
   const [row, column] = cell.split(":").map(Number);
-  const width = Math.min(100, Math.ceil(rect.width));
-  const height = Math.min(100, Math.ceil(rect.height));
   context.canvas.width = width;
   context.canvas.height = height;
   context.imageSmoothingEnabled = false;
@@ -23,7 +18,7 @@ function alphaAtFrame(context: CanvasRenderingContext2D, image: HTMLImageElement
   const data = context.getImageData(0, 0, width, height).data;
   let pixels = "";
   for (let index = 3; index < data.length; index += 4) pixels += data[index] > 8 ? "1" : "0";
-  return { rect, width, height, pixels };
+  return { width, height, pixels };
 }
 
 export function useDesktopPetHitTest(
@@ -36,31 +31,51 @@ export function useDesktopPetHitTest(
     let context: CanvasRenderingContext2D | null | undefined;
     let frameId = 0;
     let previous = "";
+    const masks = new Map<string, ReturnType<typeof alphaAtFrame>>();
 
     function report() {
+      frameId = 0;
       const frame = target.querySelector<HTMLElement>("[data-pet-frame]");
+      const rect = rectFor(frame);
+      const cell = frame?.dataset.petFrame;
       let sprite = null;
-      if (image.complete && image.naturalWidth && frame) {
+      if (image.complete && image.naturalWidth && frame && rect && cell) {
         if (context === undefined) context = document.createElement("canvas").getContext("2d", { willReadFrequently: true });
-        try { if (context) sprite = alphaAtFrame(context, image, frame); } catch { /* Use the avatar bounds until raster data is available. */ }
+        try {
+          if (context) {
+            const width = Math.min(100, frame.offsetWidth);
+            const height = Math.min(100, frame.offsetHeight);
+            const key = `${cell}:${width}x${height}`;
+            if (width && height) {
+              let mask = masks.get(key);
+              if (!mask) {
+                mask = alphaAtFrame(context, image, cell, width, height);
+                masks.set(key, mask);
+              }
+              sprite = { rect, ...mask };
+            }
+          }
+        } catch { /* Use the avatar bounds until raster data is available. */ }
       }
       const bubbleRect = rectFor(bubble.current);
       const radius = bubble.current ? Number.parseFloat(window.getComputedStyle(bubble.current).borderTopLeftRadius) || 0 : 0;
       const regions = { avatar: rectFor(target), bubble: bubbleRect && { ...bubbleRect, radius }, held, sprite };
       const fingerprint = JSON.stringify(regions);
-      if (fingerprint === previous) return;
-      previous = fingerprint;
-      void invoke("update_desktop_pet_hit_regions", { regions }).catch(() => { previous = ""; });
+      if (fingerprint !== previous) {
+        previous = fingerprint;
+        void invoke("update_desktop_pet_hit_regions", { regions }).catch(() => { previous = ""; });
+      }
+      // CSS transforms do not trigger ResizeObserver. Sample only while the avatar is sliding.
+      if (target.getAnimations?.().some((animation) => animation.pending || animation.playState === "running")) schedule();
     }
 
-    const schedule = () => {
-      window.cancelAnimationFrame(frameId);
-      frameId = window.requestAnimationFrame(report);
-    };
+    function schedule() {
+      if (!frameId) frameId = window.requestAnimationFrame(report);
+    }
     const observer = new MutationObserver(schedule);
     observer.observe(target.parentElement ?? target, {
       subtree: true, childList: true, attributes: true,
-      attributeFilter: ["data-pet-frame", "data-mini", "data-peek-nod", "data-left-alert"],
+      attributeFilter: ["data-pet-frame", "data-mini", "data-peek-nod", "data-dock", "data-reminder"],
     });
     const resize = window.ResizeObserver ? new ResizeObserver(schedule) : null;
     resize?.observe(document.documentElement);

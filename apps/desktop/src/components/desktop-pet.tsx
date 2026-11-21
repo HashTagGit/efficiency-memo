@@ -119,8 +119,9 @@ export function DesktopPet() {
 
   const { sample, interrupt } = useDesktopPetBehavior({
     ready, held: held || menuOpen || Boolean(wave),
-    blocked: Boolean(current || view.mini) || view.focus === "working" || view.focus === "waiting",
+    blocked: Boolean(current) || view.focus === "working" || view.focus === "waiting",
     supportsLook: pet.manifest.spriteVersionNumber === 2, preferences: view.preferences,
+    peekSide: view.mini,
   });
   const pose: PetPose = current ? "alert" : wave ? "greeting" : view.focus === "waiting" ? "waiting"
     : view.focus === "working" ? "working" : sample.sleeping ? "sleeping"
@@ -166,7 +167,8 @@ export function DesktopPet() {
     <main
       aria-label={t("name")}
       data-mini={view.mini ?? undefined}
-      data-left-alert={current && view.dock === "left" ? "" : undefined}
+      data-dock={view.dock ?? view.mini ?? undefined}
+      data-reminder={current ? "" : undefined}
       onKeyDown={(event) => { if (event.key === "Escape" && revealedId === reminderId) void respond("dismiss"); }}
     >
       <button

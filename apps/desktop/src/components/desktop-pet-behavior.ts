@@ -11,26 +11,29 @@ interface BehaviorSample {
 const EMPTY_SAMPLE: BehaviorSample = { gaze: null, sleeping: false, walking: null };
 
 export function useDesktopPetBehavior({
-  ready, held, blocked, supportsLook, preferences,
+  ready, held, blocked, supportsLook, preferences, peekSide,
 }: {
   ready: boolean;
   held: boolean;
   blocked: boolean;
   supportsLook: boolean;
   preferences?: DesktopPetBehaviorPreferences;
+  peekSide?: "left" | "right" | null;
 }) {
-  const [sample, setSample] = useState(EMPTY_SAMPLE);
+  const [observation, setObservation] = useState<{ sample: BehaviorSample; side: typeof peekSide }>({
+    sample: EMPTY_SAMPLE, side: peekSide,
+  });
   const lookEnabled = Boolean(preferences?.lookEnabled && supportsLook);
   const walkEnabled = Boolean(preferences?.walkEnabled);
 
   const interrupt = useCallback(() => {
-    setSample(EMPTY_SAMPLE);
+    setObservation({ sample: EMPTY_SAMPLE, side: peekSide });
     void invoke("interrupt_desktop_pet_motion").catch((error) => console.warn("Desktop pet motion could not stop.", error));
-  }, []);
+  }, [peekSide]);
 
   useEffect(() => {
-    setSample(EMPTY_SAMPLE);
-    if (!ready || blocked || held) return;
+    setObservation({ sample: EMPTY_SAMPLE, side: peekSide });
+    if (!ready || blocked || held || (peekSide && !lookEnabled)) return;
     const motion = window.matchMedia?.("(prefers-reduced-motion: reduce)");
     let timer: number | undefined;
     let disposed = false;
@@ -40,6 +43,7 @@ export function useDesktopPetBehavior({
     async function poll() {
       window.clearTimeout(timer);
       if (document.hidden || disposed) return;
+      if (peekSide && motion?.matches) return;
       if (pending) {
         refresh = true;
         return;
@@ -53,12 +57,13 @@ export function useDesktopPetBehavior({
           input: { held: false, supportsLook, reducedMotion },
         });
         if (!disposed && !refresh && !document.hidden && next) {
-          setSample((previous) => previous.gaze === next.gaze && previous.walking === next.walking
-            && previous.sleeping === next.sleeping ? previous : next);
+          setObservation((previous) => previous.side === peekSide && previous.sample.gaze === next.gaze
+            && previous.sample.walking === next.walking && previous.sample.sleeping === next.sleeping
+            ? previous : { sample: next, side: peekSide });
           if (next.walking) delay = 50;
         }
       } catch (error) {
-        if (!disposed) setSample(EMPTY_SAMPLE);
+        if (!disposed) setObservation({ sample: EMPTY_SAMPLE, side: peekSide });
         console.warn("Desktop pet behavior could not be read.", error);
         delay = 1000;
       } finally {
@@ -68,7 +73,8 @@ export function useDesktopPetBehavior({
     }
 
     function refreshBehavior() {
-      setSample(EMPTY_SAMPLE);
+      refresh = true;
+      setObservation({ sample: EMPTY_SAMPLE, side: peekSide });
       if (document.hidden || motion?.matches) interrupt();
       void poll();
     }
@@ -82,7 +88,7 @@ export function useDesktopPetBehavior({
       motion?.removeEventListener("change", refreshBehavior);
       document.removeEventListener("visibilitychange", refreshBehavior);
     };
-  }, [ready, blocked, held, lookEnabled, walkEnabled, supportsLook, interrupt]);
+  }, [ready, blocked, held, lookEnabled, walkEnabled, supportsLook, interrupt, peekSide]);
 
-  return { sample: blocked || held ? EMPTY_SAMPLE : sample, interrupt };
+  return { sample: blocked || held || observation.side !== peekSide ? EMPTY_SAMPLE : observation.sample, interrupt };
 }

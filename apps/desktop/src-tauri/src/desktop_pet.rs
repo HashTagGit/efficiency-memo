@@ -218,6 +218,9 @@ impl Queue {
         adjust_window(window, &mut self.resting_position, &mut self.dock, expanded, mini)?;
         let next = if mini { self.dock } else { None };
         let changed = next != self.mini;
+        if changed {
+            self.behavior.interrupt(false);
+        }
         self.mini = next;
         Ok(changed)
     }
@@ -590,8 +593,14 @@ pub(crate) async fn sample_desktop_pet_behavior(
         return Err("Expected the desktop pet window".into());
     }
     update_queue(window.app_handle().clone(), move |_, queue| {
-        if !queue.enabled || queue.hidden || queue.is_dragging() || !queue.items.is_empty() || queue.dock.is_some() {
+        if !queue.enabled || queue.hidden || queue.is_dragging() || !queue.items.is_empty() {
             queue.behavior.interrupt(false);
+            return Ok(motion::Sample::default());
+        }
+        if let Some(side) = queue.mini {
+            return queue.behavior.sample_peek(&window, input, side);
+        }
+        if queue.dock.is_some() {
             return Ok(motion::Sample::default());
         }
         queue.behavior.sample(&window, input)

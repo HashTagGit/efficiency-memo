@@ -13,19 +13,35 @@ html.desktop-pet-window,
   display: grid;
   place-items: center;
   user-select: none;
+  transition: none;
 }
 
 .desktop-pet-avatar[data-draggable="true"] { cursor: grab; }
 .desktop-pet-avatar:active[data-draggable="true"] { cursor: grabbing; }
 
-[data-mini] .desktop-pet-avatar {
-  width: 64px;
-  height: 64px;
-  cursor: pointer;
+[data-dock="left"] .desktop-pet-avatar {
+  left: 8px;
+  right: auto;
+  transform-origin: left bottom;
 }
 
-[data-mini="left"] .desktop-pet-avatar { left: -28px; right: auto; }
-[data-mini="right"] .desktop-pet-avatar { right: -28px; }
+[data-dock="right"] .desktop-pet-avatar { transform-origin: right bottom; }
+
+[data-dock]:not([data-reminder]) .desktop-pet-avatar {
+  transition: transform var(--pet-slide-duration, 160ms) cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+
+[data-mini] .desktop-pet-avatar {
+  cursor: pointer;
+  --pet-slide-duration: 200ms;
+}
+
+[data-mini="left"] .desktop-pet-avatar { transform: translateX(-36px) scale(calc(8 / 9)); }
+[data-mini="right"] .desktop-pet-avatar { transform: translateX(36px) scale(calc(8 / 9)); }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-dock]:not([data-reminder]) .desktop-pet-avatar { transition: none; }
+}
 
 [data-mini="left"] [data-peek-nod] { transform: translate(2px, -2px); }
 [data-mini="right"] [data-peek-nod] { transform: translate(-2px, -2px); }
@@ -71,8 +87,7 @@ html.desktop-pet-window,
   border-bottom: 1px solid var(--control-border);
 }
 
-[data-left-alert] .desktop-pet-avatar { left: 8px; right: auto; }
-[data-left-alert] .desktop-pet-bubble::after { left: 36px; right: auto; }
+[data-dock="left"] .desktop-pet-bubble::after { left: 36px; right: auto; }
 
 .desktop-pet-actions {
   display: flex;
