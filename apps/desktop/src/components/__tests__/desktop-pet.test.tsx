@@ -61,9 +61,11 @@ it("waves after a tap and sends drag events only after crossing the movement thr
 
   fireEvent.pointerDown(avatar, { pointerId: 2, button: 0, screenX: 30, screenY: 30 });
   fireEvent.pointerMove(avatar, { pointerId: 2, screenX: 36, screenY: 30 });
+  expect(avatar.classList.contains("outline-none")).toBe(true);
   fireEvent.pointerUp(avatar, { pointerId: 2, screenX: 40, screenY: 30 });
   expect(invoke).toHaveBeenCalledWith("drag_desktop_pet", { phase: "start", anchor: { x: 0, y: 0 } });
   await waitFor(() => expect(invoke).toHaveBeenCalledWith("drag_desktop_pet", { phase: "end" }));
+  await waitFor(() => expect(avatar.classList.contains("focus-visible:outline-2")).toBe(true));
 });
 
 it("keeps a snoozed reminder visible until the owning tool confirms the action", async () => {

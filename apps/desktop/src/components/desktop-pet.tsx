@@ -172,7 +172,7 @@ export function DesktopPet() {
       <button
         ref={avatar}
         type="button"
-        className="desktop-pet-avatar touch-none rounded-md focus-visible:outline-2 focus-visible:outline-focus-ring"
+        className={`desktop-pet-avatar touch-none rounded-md ${held ? "outline-none" : "focus-visible:outline-2 focus-visible:outline-focus-ring"}`}
         aria-label={t(view.mini ? "peek" : "name")}
         data-draggable={!current && !view.mini}
         {...gestureHandlers}
