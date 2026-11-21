@@ -1,0 +1,5 @@
+# SQLite migration files are embedded into the binary with include_str! and their
+# bytes are hashed by sqlx as migration checksums. Pin one line ending so local
+# checkouts and release builds compute identical checksums. Never rewrite an
+# applied migration; additive numbered files keep existing databases valid.
+*.sql text eol=crlf
