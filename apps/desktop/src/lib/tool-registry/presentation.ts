@@ -3,6 +3,7 @@ import type { ToolManifest } from "@memo/shared";
 const translationKeys: Record<string, { name: string; description: string }> = {
   "core-hour": { name: "nav.coreHour", description: "nav.coreHourDescription" },
   "pause-hydrate": { name: "nav.pauseHydrate", description: "nav.pauseHydrateDescription" },
+  "pet-assistant": { name: "nav.petAssistant", description: "nav.petAssistantDescription" },
 };
 
 export function localizedToolCopy(

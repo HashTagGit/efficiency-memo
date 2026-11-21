@@ -1,9 +1,9 @@
 import {
   isPermissionGranted,
   requestPermission,
-  sendNotification,
 } from "@tauri-apps/plugin-notification";
-import type { ReminderNotificationPermission } from "./types";
+import { deliverDesktopReminder } from "../../lib/desktop-reminders";
+import type { ReminderKind, ReminderNotificationPermission } from "./types";
 
 export async function reminderNotificationPermission(): Promise<ReminderNotificationPermission> {
   try {
@@ -24,10 +24,6 @@ export async function requestReminderNotifications(): Promise<ReminderNotificati
   }
 }
 
-export async function sendReminderNotification(title: string, body: string): Promise<void> {
-  try {
-    if (await isPermissionGranted()) sendNotification({ title, body });
-  } catch {
-    // Pending state remains visible inside the app.
-  }
+export async function sendReminderNotification(kind: ReminderKind, title: string, body: string): Promise<void> {
+  await deliverDesktopReminder({ kind, title, body });
 }

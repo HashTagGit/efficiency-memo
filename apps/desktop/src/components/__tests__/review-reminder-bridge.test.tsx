@@ -6,7 +6,7 @@ import { cleanup, render, waitFor } from "@testing-library/react";
 import { I18nProvider } from "../../lib/i18n";
 import { ReviewReminderBridge } from "../review-reminder-bridge";
 import { acknowledgeReviewReminders, claimReviewReminders } from "../../features/core-hour/review-reminder";
-import { notifyCoreHour } from "../../features/core-hour/notifications";
+import { deliverDesktopReminder } from "../../lib/desktop-reminders";
 
 vi.mock("../../lib/auth", () => ({ getCurrentUser: () => ({ id: "local-user" }) }));
 vi.mock("../../lib/system-interruption", () => ({
@@ -16,9 +16,9 @@ vi.mock("../../features/core-hour/review-reminder", () => ({
   acknowledgeReviewReminders: vi.fn().mockResolvedValue(undefined),
   claimReviewReminders: vi.fn().mockResolvedValue([]),
 }));
-vi.mock("../../features/core-hour/notifications", () => ({
-  coreHourNotificationsGranted: vi.fn().mockResolvedValue(true),
-  notifyCoreHour: vi.fn().mockResolvedValue(false),
+vi.mock("../../lib/desktop-reminders", () => ({
+  canDeliverDesktopReminder: vi.fn().mockResolvedValue(true),
+  deliverDesktopReminder: vi.fn().mockResolvedValue(false),
 }));
 
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
@@ -29,27 +29,28 @@ describe("Review reminder bridge", () => {
     await waitFor(() => expect(claimReviewReminders).toHaveBeenCalledWith("local-user", false));
   });
 
-  it("acknowledges a period only after the native notification succeeds", async () => {
+  it("acknowledges a period only after its reminder is delivered", async () => {
     vi.mocked(claimReviewReminders).mockResolvedValueOnce([{
       kind: "weekly",
       acknowledgeKinds: ["weekly", "daily"],
     }]);
-    vi.mocked(notifyCoreHour).mockResolvedValueOnce(true);
+    vi.mocked(deliverDesktopReminder).mockResolvedValueOnce(true);
     render(<I18nProvider initialLocale="en-US"><ReviewReminderBridge /></I18nProvider>);
     await waitFor(() => expect(acknowledgeReviewReminders)
       .toHaveBeenCalledWith("local-user", ["weekly", "daily"]));
-    expect(vi.mocked(notifyCoreHour).mock.invocationCallOrder[0])
+    expect(deliverDesktopReminder).toHaveBeenCalledWith(expect.objectContaining({ kind: "weekly-review" }));
+    expect(vi.mocked(deliverDesktopReminder).mock.invocationCallOrder[0])
       .toBeLessThan(vi.mocked(acknowledgeReviewReminders).mock.invocationCallOrder[0]);
   });
 
-  it("keeps the period pending when the native notification fails", async () => {
+  it("keeps the period pending when delivery fails", async () => {
     vi.mocked(claimReviewReminders).mockResolvedValueOnce([{
       kind: "daily",
       acknowledgeKinds: ["daily"],
     }]);
-    vi.mocked(notifyCoreHour).mockResolvedValueOnce(false);
+    vi.mocked(deliverDesktopReminder).mockResolvedValueOnce(false);
     render(<I18nProvider initialLocale="en-US"><ReviewReminderBridge /></I18nProvider>);
-    await waitFor(() => expect(notifyCoreHour).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(deliverDesktopReminder).toHaveBeenCalledTimes(1));
     expect(acknowledgeReviewReminders).not.toHaveBeenCalled();
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { resolveFocusAction } from "../desktop-companion-bridge";
+import { resolveDesktopPetFocus, resolveFocusAction } from "../desktop-companion-bridge";
 
 describe("desktop companion focus commands", () => {
   it("keeps start/stop, pause/resume, and review semantics distinct", () => {
@@ -18,5 +18,13 @@ describe("desktop companion focus commands", () => {
     expect(resolveFocusAction("end-focus", {
       active: true, paused: false, reviewRequired: true,
     })).toBe("review");
+  });
+
+  it("reflects the real timer and review status in the pet pose", () => {
+    const running = { active: true, running: true, paused: false, reviewRequired: false };
+    expect(resolveDesktopPetFocus(running)).toBe("working");
+    expect(resolveDesktopPetFocus({ ...running, paused: true })).toBe("paused");
+    expect(resolveDesktopPetFocus({ ...running, reviewRequired: true, paused: true })).toBe("waiting");
+    expect(resolveDesktopPetFocus({ ...running, active: false })).toBe("idle");
   });
 });

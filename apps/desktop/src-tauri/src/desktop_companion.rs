@@ -30,6 +30,7 @@ pub struct DesktopCompanionState {
     open_today: MenuItem<Wry>,
     open_pause_hydrate: MenuItem<Wry>,
     open_settings: MenuItem<Wry>,
+    show_pet: MenuItem<Wry>,
     quit: MenuItem<Wry>,
 }
 
@@ -46,6 +47,7 @@ pub struct DesktopCompanionInput {
     open_today: String,
     open_pause_hydrate: String,
     open_settings: String,
+    show_pet: String,
     quit: String,
     tooltip: String,
 }
@@ -72,14 +74,17 @@ pub fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
     let open_pause_hydrate =
         MenuItemBuilder::with_id(OPEN_PAUSE_HYDRATE, "Open Pause & Hydrate").build(app)?;
     let open_settings = MenuItemBuilder::with_id(OPEN_SETTINGS, "Open settings").build(app)?;
+    let show_pet = MenuItemBuilder::with_id(crate::desktop_pet::SHOW_PET, "Show desktop pet")
+        .enabled(false).build(app)?;
     let quit = MenuItemBuilder::with_id(QUIT, "Quit EfficiencyMemo").build(app)?;
     let menu = MenuBuilder::new(app)
         .items(&[&focus_status, &focus_action, &end_focus])
         .separator()
         .items(&[&break_status, &hydration_status])
         .separator()
-        .items(&[&show_app, &open_today, &open_pause_hydrate, &open_settings])
-        .separator()
+        .items(&[&show_app, &open_today, &open_pause_hydrate, &open_settings]);
+    let menu = if cfg!(target_os = "windows") { menu.item(&show_pet) } else { menu };
+    let menu = menu.separator()
         .item(&quit)
         .build()?;
 
@@ -95,7 +100,7 @@ pub fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
             OPEN_PAUSE_HYDRATE => emit_command(app, "open-pause-hydrate", true),
             OPEN_SETTINGS => emit_command(app, "open-settings", true),
             QUIT => app.exit(0),
-            _ => {}
+            id => crate::desktop_pet::handle_menu_event(app, id),
         })
         .on_tray_icon_event(|tray, event| {
             if matches!(
@@ -125,6 +130,7 @@ pub fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
         open_today,
         open_pause_hydrate,
         open_settings,
+        show_pet,
         quit,
     });
     register_shortcuts(app.handle());
@@ -152,7 +158,7 @@ fn register_shortcuts<R: Runtime>(app: &AppHandle<R>) {
     }
 }
 
-fn emit_command<R: Runtime>(app: &AppHandle<R>, command: &str, show_window: bool) {
+pub(crate) fn emit_command<R: Runtime>(app: &AppHandle<R>, command: &str, show_window: bool) {
     if show_window {
         reveal_main_window(app);
     }
@@ -185,8 +191,12 @@ fn display_text(value: &str) -> String {
         .collect::<String>()
 }
 
-fn menu_text(value: &str) -> String {
+pub(crate) fn menu_text(value: &str) -> String {
     display_text(value).replace('&', "&&")
+}
+
+pub(crate) fn set_show_pet_enabled(app: &AppHandle, enabled: bool) -> tauri::Result<()> {
+    app.state::<DesktopCompanionState>().show_pet.set_enabled(enabled)
 }
 
 #[tauri::command]
@@ -199,6 +209,7 @@ pub fn update_desktop_companion(
     state: State<'_, DesktopCompanionState>,
     input: DesktopCompanionInput,
 ) -> Result<(), String> {
+    state.show_pet.set_text(menu_text(&input.show_pet)).map_err(|error| error.to_string())?;
     state
         .focus_status
         .set_text(menu_text(&input.focus_status))

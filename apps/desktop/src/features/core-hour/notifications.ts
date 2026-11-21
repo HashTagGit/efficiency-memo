@@ -1,8 +1,8 @@
 import {
   isPermissionGranted,
   requestPermission,
-  sendNotification,
 } from "@tauri-apps/plugin-notification";
+import { deliverDesktopReminder } from "../../lib/desktop-reminders";
 
 export async function requestCoreHourNotifications(): Promise<void> {
   try {
@@ -12,25 +12,8 @@ export async function requestCoreHourNotifications(): Promise<void> {
   }
 }
 
-export async function coreHourNotificationsGranted(): Promise<boolean> {
-  try {
-    return await isPermissionGranted();
-  } catch {
-    return false;
-  }
+export function notifyCheckIn(title: string, body: string): Promise<boolean> {
+  return deliverDesktopReminder({ kind: "check-in", title, body });
 }
 
-export async function notifyCoreHour(title: string, body: string): Promise<boolean> {
-  try {
-    if (await isPermissionGranted()) {
-      sendNotification({ title, body });
-      return true;
-    }
-  } catch {
-    // The in-app check-in remains available when notifications are unavailable.
-  }
-  return false;
-}
-
-export const notifyCheckIn = notifyCoreHour;
 export const requestCheckInNotifications = requestCoreHourNotifications;

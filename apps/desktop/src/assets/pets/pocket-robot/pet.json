@@ -1,0 +1,7 @@
+{
+  "id": "pocket-robot",
+  "displayName": "Pocket Robot",
+  "description": "A tin maintenance bot with cool mint lights.",
+  "spriteVersionNumber": 2,
+  "spritesheetPath": "spritesheet.webp"
+}

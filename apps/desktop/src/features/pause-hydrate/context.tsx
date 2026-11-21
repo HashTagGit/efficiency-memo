@@ -132,6 +132,7 @@ export function PauseHydrateProvider({ children }: { children: React.ReactNode }
         );
         for (const kind of kinds) {
           await sendReminderNotification(
+            kind,
             t(`pauseHydrate.${kind}`),
             t(`pauseHydrate.${kind}Notification`),
           );

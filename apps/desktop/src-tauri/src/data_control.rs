@@ -5,7 +5,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
 
-pub(crate) const SCHEMA_VERSION: i64 = 18;
+pub(crate) const SCHEMA_VERSION: i64 = 22;
 const MIN_SUPPORTED_SCHEMA_VERSION: i64 = 7;
 pub(crate) const DB_FILENAME: &str = "efficiency-memo.db";
 pub(crate) const SIDECAR_FILENAME: &str = "efficiency-memo.db.next";
@@ -328,6 +328,19 @@ fn validate_required_schema(connection: &Connection, schema_version: i64) -> Res
             &["device_id", "last_notified_due_at", "snoozed_until", "updated_at"],
         )?;
     }
+    if schema_version >= 19 {
+        validate_table_columns(connection, "desktop_reminder_preferences", &["id", "pet_enabled"])?;
+    }
+    if schema_version >= 20 {
+        validate_table_columns(connection, "desktop_reminder_preferences", &["selected_pet_id"])?;
+        validate_table_columns(connection, "desktop_pet_packs", &["id", "manifest", "atlas", "thumbnail"])?;
+    }
+    if schema_version >= 21 {
+        validate_table_columns(connection, "desktop_reminder_preferences", &["pet_x", "pet_y"])?;
+    }
+    if schema_version >= 22 {
+        validate_table_columns(connection, "desktop_reminder_preferences", &["look_enabled", "walk_enabled"])?;
+    }
     for version in 1..=schema_version {
         let applied: i64 = connection
             .query_row(
@@ -635,7 +648,7 @@ pub(crate) fn take_applied_restore_preferences(
 
 #[cfg(test)]
 mod tests {
-    use super::{create_backup_at, inspect_backup, reset_data, PortablePreferences, ResetScope};
+    use super::{create_backup_at, inspect_backup, reset_data, PortablePreferences, ResetScope, SCHEMA_VERSION};
     use rusqlite::Connection;
     use std::fs;
     use std::path::PathBuf;
@@ -670,6 +683,10 @@ mod tests {
             include_str!("../migrations/0016_ch_weekly_reviews.sql"),
             include_str!("../migrations/0017_ch_review_reminders.sql"),
             include_str!("../migrations/0018_cr_notification_state.sql"),
+            include_str!("../migrations/0019_desktop_reminder_preferences.sql"),
+            include_str!("../migrations/0020_desktop_pet_catalog.sql"),
+            include_str!("../migrations/0021_desktop_pet_position.sql"),
+            include_str!("../migrations/0022_desktop_pet_behavior.sql"),
         ] {
             connection.execute_batch(migration).unwrap();
         }
@@ -699,7 +716,11 @@ mod tests {
                     (15, 'migration', 'installed', 1, X'', 0),
                     (16, 'migration', 'installed', 1, X'', 0),
                     (17, 'migration', 'installed', 1, X'', 0),
-                    (18, 'migration', 'installed', 1, X'', 0);
+                    (18, 'migration', 'installed', 1, X'', 0),
+                    (19, 'migration', 'installed', 1, X'', 0),
+                    (20, 'migration', 'installed', 1, X'', 0),
+                    (21, 'migration', 'installed', 1, X'', 0),
+                    (22, 'migration', 'installed', 1, X'', 0);
                 INSERT INTO users VALUES ('local-user', 'local@example.test', 'created', 'updated');
                 INSERT INTO ch_tags VALUES ('tag-1', 'local-user', 'Focus', '#000000', 0, 'created', 0);
                 INSERT INTO ch_sessions (
@@ -744,7 +765,7 @@ mod tests {
         drop(database(&source));
 
         let preview = create_backup_at(&source, &destination, preferences()).unwrap();
-        assert_eq!(preview.schema_version, 18);
+        assert_eq!(preview.schema_version, SCHEMA_VERSION);
         assert_eq!(preview.preferences, preferences());
         assert_eq!(preview.counts.core_hour_sessions, 1);
         assert_eq!(preview.counts.core_hour_plans, 1);
@@ -754,8 +775,37 @@ mod tests {
         assert_eq!(preview.counts.daily_reviews, 1);
         assert_eq!(preview.counts.weekly_reviews, 1);
 
+        let legacy_v19_destination = temp_path("backup-v19");
+        fs::copy(&destination, &legacy_v19_destination).unwrap();
+        let legacy_v19 = Connection::open(&legacy_v19_destination).unwrap();
+        legacy_v19.execute_batch(
+            "UPDATE em_backup_metadata SET schema_version = 19;
+             DELETE FROM _sqlx_migrations WHERE version > 19;
+             DROP TABLE desktop_pet_packs;
+             ALTER TABLE desktop_reminder_preferences DROP COLUMN selected_pet_id;
+             ALTER TABLE desktop_reminder_preferences DROP COLUMN pet_x;
+             ALTER TABLE desktop_reminder_preferences DROP COLUMN pet_y;
+             ALTER TABLE desktop_reminder_preferences DROP COLUMN look_enabled;
+             ALTER TABLE desktop_reminder_preferences DROP COLUMN walk_enabled;",
+        ).unwrap();
+        drop(legacy_v19);
+        assert_eq!(inspect_backup(&legacy_v19_destination).unwrap().schema_version, 19);
+
+        let legacy_v18_destination = temp_path("backup-v18");
+        fs::copy(&legacy_v19_destination, &legacy_v18_destination).unwrap();
+        let legacy_v18 = Connection::open(&legacy_v18_destination).unwrap();
+        legacy_v18
+            .execute("UPDATE em_backup_metadata SET schema_version = 18", [])
+            .unwrap();
+        legacy_v18
+            .execute("DELETE FROM _sqlx_migrations WHERE version = 19", [])
+            .unwrap();
+        legacy_v18.execute("DROP TABLE desktop_reminder_preferences", []).unwrap();
+        drop(legacy_v18);
+        assert_eq!(inspect_backup(&legacy_v18_destination).unwrap().schema_version, 18);
+
         let legacy_v17_destination = temp_path("backup-v17");
-        fs::copy(&destination, &legacy_v17_destination).unwrap();
+        fs::copy(&legacy_v18_destination, &legacy_v17_destination).unwrap();
         let legacy_v17 = Connection::open(&legacy_v17_destination).unwrap();
         legacy_v17
             .execute("UPDATE em_backup_metadata SET schema_version = 17", [])
@@ -919,7 +969,7 @@ mod tests {
 
         let backup = Connection::open(&destination).unwrap();
         backup
-            .execute("UPDATE em_backup_metadata SET schema_version = 19", [])
+            .execute("UPDATE em_backup_metadata SET schema_version = ?1", [SCHEMA_VERSION + 1])
             .unwrap();
         drop(backup);
         assert_eq!(inspect_backup(&destination).unwrap_err(), "future-schema");
@@ -949,6 +999,8 @@ mod tests {
 
         let _ = fs::remove_file(source);
         let _ = fs::remove_file(destination);
+        let _ = fs::remove_file(legacy_v19_destination);
+        let _ = fs::remove_file(legacy_v18_destination);
         let _ = fs::remove_file(legacy_v17_destination);
         let _ = fs::remove_file(legacy_v16_destination);
         let _ = fs::remove_file(legacy_v15_destination);

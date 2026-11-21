@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Alert, Button, EmptyState, PageHeader } from "@memo/ui";
+import { Alert, Button, EmptyState, PageHeader, PetIcon } from "@memo/ui";
 import { getRegisteredTools } from "../../lib/tool-registry/registry";
 import { useI18n } from "../../lib/i18n";
 import { localizedToolCopy } from "../../lib/tool-registry/presentation";
@@ -447,7 +447,7 @@ export function DashboardPage() {
                 className="inline-flex min-h-10 items-center gap-2 rounded-md border border-control-border bg-surface px-3 py-2 text-sm font-medium text-foreground hover:bg-surface-strong focus:outline-none focus-visible:ring-2 focus-visible:ring-focus-ring"
                 data-testid={`dashboard-tool-card-${tool.id}`}
               >
-                <span className="text-muted"><ToolIcon name={tool.name} /></span>
+                <span className="text-muted">{tool.icon === "paw" ? <PetIcon size={24} /> : <ToolIcon name={tool.name} />}</span>
                 {copy.name}
               </button>
             );

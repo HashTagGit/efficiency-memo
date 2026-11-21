@@ -1,5 +1,6 @@
 // Learn more about Tauri commands at https://v2.tauri.app/develop/calling-rust/
 
+use tauri::Manager;
 use tauri_plugin_sql::{Migration, MigrationKind};
 
 mod activity_assist;
@@ -8,6 +9,7 @@ mod data_control;
 mod daily_review;
 mod local_schedule;
 mod desktop_companion;
+mod desktop_pet;
 mod foreground_application;
 mod pause_hydrate;
 mod review_time;
@@ -129,9 +131,34 @@ pub fn run() {
             sql: include_str!("../migrations/0018_cr_notification_state.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 19,
+            description: "create desktop reminder preferences",
+            sql: include_str!("../migrations/0019_desktop_reminder_preferences.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 20,
+            description: "create desktop pet catalog",
+            sql: include_str!("../migrations/0020_desktop_pet_catalog.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 21,
+            description: "remember desktop pet position",
+            sql: include_str!("../migrations/0021_desktop_pet_position.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 22,
+            description: "desktop pet behavior preferences",
+            sql: include_str!("../migrations/0022_desktop_pet_behavior.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
+        .manage(desktop_pet::PetQueue::default())
         .plugin(desktop_companion::shortcut_plugin())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())
@@ -154,6 +181,16 @@ pub fn run() {
             activity_assist::setup(app.handle().clone());
             Ok(())
         })
+        .on_window_event(|window, event| {
+            if window.label() == desktop_pet::LABEL {
+                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                    api.prevent_close();
+                }
+            }
+            if window.label() == "main" && matches!(event, tauri::WindowEvent::Destroyed) {
+                desktop_pet::destroy_window(window.app_handle());
+            }
+        })
         .invoke_handler(tauri::generate_handler![
             sync::sync_export,
             sync::sync_import,
@@ -170,6 +207,20 @@ pub fn run() {
             system_interruption::get_system_interruption_state,
             desktop_companion::show_main_window,
             desktop_companion::update_desktop_companion,
+            desktop_pet::show_desktop_pet_reminder,
+            desktop_pet::desktop_pet_ready,
+            desktop_pet::respond_to_desktop_pet_reminder,
+            desktop_pet::set_desktop_pet_enabled,
+            desktop_pet::select_desktop_pet,
+            desktop_pet::load_desktop_pet_sprite,
+            desktop_pet::drag_desktop_pet,
+            desktop_pet::open_desktop_pet_menu,
+            desktop_pet::snooze_desktop_pet_reminder,
+            desktop_pet::finish_desktop_pet_snooze,
+            desktop_pet::set_desktop_pet_behavior,
+            desktop_pet::set_desktop_pet_focus,
+            desktop_pet::sample_desktop_pet_behavior,
+            desktop_pet::interrupt_desktop_pet_motion,
             core_hour::save_core_hour_session_block,
             pause_hydrate::save_pause_hydrate_preferences,
             pause_hydrate::refresh_pause_hydrate_schedule,

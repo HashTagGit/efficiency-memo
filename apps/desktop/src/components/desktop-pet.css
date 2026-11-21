@@ -1,0 +1,67 @@
+html.desktop-pet-window,
+.desktop-pet-window body {
+  background: transparent;
+  overflow: hidden;
+}
+
+.desktop-pet-avatar {
+  position: absolute;
+  right: 8px;
+  bottom: 8px;
+  width: 72px;
+  height: 72px;
+  display: grid;
+  place-items: center;
+  user-select: none;
+}
+
+.desktop-pet-avatar[data-draggable="true"] { cursor: grab; }
+.desktop-pet-avatar:active[data-draggable="true"] { cursor: grabbing; }
+
+.desktop-pet-character {
+  display: grid;
+  justify-items: center;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.desktop-pet-sleep {
+  position: absolute;
+  top: 3px;
+  right: 5px;
+  border-radius: 4px;
+  padding: 0 4px;
+  background: var(--surface);
+  color: var(--foreground);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.desktop-pet-bubble {
+  position: absolute;
+  inset: auto 8px 88px;
+  padding: 10px 12px 7px;
+  border: 1px solid var(--control-border);
+  border-radius: 13px;
+}
+
+.desktop-pet-bubble::after {
+  content: "";
+  position: absolute;
+  right: 36px;
+  bottom: -6px;
+  width: 10px;
+  height: 10px;
+  transform: rotate(45deg);
+  background: var(--surface);
+  border-right: 1px solid var(--control-border);
+  border-bottom: 1px solid var(--control-border);
+}
+
+.desktop-pet-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 5px;
+}

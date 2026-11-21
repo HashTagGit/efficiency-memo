@@ -8,6 +8,7 @@ import { DataPrivacyPage } from "./pages/settings/data-privacy-page";
 import { useI18n } from "./lib/i18n";
 import { DesktopCompanionBridge } from "./components/desktop-companion-bridge";
 import { ReviewReminderBridge } from "./components/review-reminder-bridge";
+import { loadPetAssistantPage, PET_ASSISTANT_ROUTE } from "./features/pet-assistant";
 
 // Lazy-load tool pages
 const CoreHourPage = lazy(() =>
@@ -21,6 +22,7 @@ const PauseHydratePage = lazy(() =>
     default: module.default ?? (() => null),
   }))
 );
+const PetAssistantPage = lazy(loadPetAssistantPage);
 
 function ToolFallback() {
   const { t } = useI18n();
@@ -59,6 +61,14 @@ function App() {
                   element={
                     <Suspense fallback={<ToolFallback />}>
                       <PauseHydratePage />
+                    </Suspense>
+                  }
+                />
+                <Route
+                  path={PET_ASSISTANT_ROUTE}
+                  element={
+                    <Suspense fallback={<ToolFallback />}>
+                      <PetAssistantPage />
                     </Suspense>
                   }
                 />

@@ -45,6 +45,17 @@ EfficiencyMemo/
 
 Keep the user workflow local: session timer, check-ins, plans, reviews, recovery reminders, tags, and settings. Charger Reminder is retired to the ignored local `bak/` archive; do not restore it without an explicit product decision. WebDAV sync remains outside the current product scope.
 
+## Desktop Pet Packages
+
+Place a finished Codex Pet package in `apps/desktop/src/assets/pets/<id>/`. Keep `pet.json` beside its PNG or WebP spritesheet and match the folder name to `pet.json`'s `id`. The Pet Assistant picker discovers packages from this directory and displays their `displayName` when there is no localized label. Select the pet and send a test reminder in the Windows Tauri app before publishing. Keep the applicable license and attribution with any third-party package and include its notice in the distribution.
+
+The optional `scripts/prepare-desktop-pet.py` helper uses Python and Pillow. It reads local raster files and writes the standard `pet.json` and `spritesheet.png` package into a new directory. Use a temporary output location to inspect the result before bundling.
+
+- For a Codex-sized atlas such as a mole-baby-style export, use `--atlas path/to/atlas.png --version 1`. The helper checks the required cells and clears any pixels in unused cells.
+- For separate animations such as a Clawd-style theme, render the selected poses to transparent 192 × 208 PNGs outside the app. Then use `--frames path/to/frames --version 1` or `--version 2`. Use the state directory names and frame counts in [the atlas contract](apps/desktop/src/lib/codex-pet-atlas.json) and name each state's frames `01.png`, `02.png`, and so on. For V2, add `look/01.png` through `look/16.png` clockwise from up, in steps of 22.5 degrees.
+
+Both commands take `--output path/to/packages --id my-pet --name "My Pet"` and an optional `--description`. The running app accepts the resulting raster atlases through its existing import picker.
+
 ## Code Conventions
 
 - Path aliases: `@/*` -> `apps/desktop/src/*`, `@memo/shared` -> `packages/shared/src`, `@memo/ui` -> `packages/ui/src`

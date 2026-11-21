@@ -3,7 +3,7 @@ import { getCurrentUser } from "../lib/auth";
 import { useI18n } from "../lib/i18n";
 import { readSystemInterruptionState } from "../lib/system-interruption";
 import { acknowledgeReviewReminders, claimReviewReminders } from "../features/core-hour/review-reminder";
-import { coreHourNotificationsGranted, notifyCoreHour } from "../features/core-hour/notifications";
+import { canDeliverDesktopReminder, deliverDesktopReminder } from "../lib/desktop-reminders";
 
 export function ReviewReminderBridge() {
   const { t } = useI18n();
@@ -17,7 +17,7 @@ export function ReviewReminderBridge() {
       if (polling.current) return;
       polling.current = true;
       try {
-        if (!(await coreHourNotificationsGranted())) return;
+        if (!(await canDeliverDesktopReminder())) return;
         const interruption = await readSystemInterruptionState();
         const notificationsAllowed = interruption === null || interruption?.reason === "unsupported"
           ? null
@@ -25,10 +25,11 @@ export function ReviewReminderBridge() {
         const kinds = await claimReviewReminders(userId, notificationsAllowed);
         if (disposed) return;
         for (const claim of kinds) {
-          const delivered = await notifyCoreHour(
-            t(claim.kind === "daily" ? "reviewReminder.dailyTitle" : "reviewReminder.weeklyTitle"),
-            t(claim.kind === "daily" ? "reviewReminder.dailyBody" : "reviewReminder.weeklyBody"),
-          );
+          const delivered = await deliverDesktopReminder({
+            kind: claim.kind === "daily" ? "daily-review" : "weekly-review",
+            title: t(claim.kind === "daily" ? "reviewReminder.dailyTitle" : "reviewReminder.weeklyTitle"),
+            body: t(claim.kind === "daily" ? "reviewReminder.dailyBody" : "reviewReminder.weeklyBody"),
+          });
           if (delivered) await acknowledgeReviewReminders(userId, claim.acknowledgeKinds);
         }
       } catch (error) {

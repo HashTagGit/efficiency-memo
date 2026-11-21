@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 import { useNavigate } from "react-router-dom";
+import { PET_ASSISTANT_ROUTE } from "../features/pet-assistant";
 import { useCoreHourTimer } from "../features/core-hour/runtime";
 import { useSession } from "../features/core-hour/hooks/use-session";
 import { requestCheckInNotifications } from "../features/core-hour/notifications";
@@ -9,12 +10,21 @@ import { loadCheckInInterval } from "../features/core-hour/settings";
 import { loadLatestActivity } from "../features/core-hour/today-data";
 import { usePauseHydrate } from "../features/pause-hydrate/context";
 import { effectiveReminderDueAt } from "../features/pause-hydrate/reminder-logic";
-import type { ReminderState } from "../features/pause-hydrate/types";
+import type { ReminderKind, ReminderState } from "../features/pause-hydrate/types";
 import { getCurrentUser } from "../lib/auth";
+import { saveDesktopPetPosition, supportsDesktopPet, type DesktopPetFocus, type DesktopPetPosition } from "../lib/desktop-reminders";
 import { useI18n } from "../lib/i18n";
 
 type FocusCommand = "primary-focus" | "start-stop-focus" | "end-focus";
-type DesktopCommand = FocusCommand | "open-today" | "open-pause-hydrate" | "open-settings";
+const desktopRoutes = {
+  "open-today": "/tools/core-hour",
+  "open-pause-hydrate": "/tools/pause-hydrate",
+  "open-settings": "/settings",
+  "open-daily-review": "/tools/core-hour/review",
+  "open-weekly-review": "/tools/core-hour/review/week",
+  "open-pet-assistant": PET_ASSISTANT_ROUTE,
+} as const;
+type DesktopCommand = FocusCommand | keyof typeof desktopRoutes;
 type FocusAction = "start-latest" | "pause" | "resume" | "end" | "review" | "none";
 
 interface DesktopCompanionInput {
@@ -28,6 +38,7 @@ interface DesktopCompanionInput {
   openToday: string;
   openPauseHydrate: string;
   openSettings: string;
+  showPet: string;
   quit: string;
   tooltip: string;
 }
@@ -48,6 +59,14 @@ export function resolveFocusAction(
   return state.paused ? "resume" : "pause";
 }
 
+export function resolveDesktopPetFocus(state: {
+  active: boolean; running: boolean; paused: boolean; reviewRequired: boolean;
+}): DesktopPetFocus {
+  if (!state.active) return "idle";
+  if (state.reviewRequired) return "waiting";
+  return state.running && !state.paused ? "working" : "paused";
+}
+
 export function DesktopCompanionBridge() {
   const navigate = useNavigate();
   const { locale, t } = useI18n();
@@ -57,9 +76,22 @@ export function DesktopCompanionBridge() {
     state: pauseHydrate,
     systemInterruption,
     refresh: refreshPauseHydrate,
+    act: actOnPauseHydrate,
   } = usePauseHydrate();
   const commandHandler = useRef<(command: DesktopCommand) => void>(() => undefined);
   const focusCommandBusy = useRef(false);
+  const savingPetPosition = useRef(Promise.resolve());
+  const updatingPetFocus = useRef(Promise.resolve());
+  const petFocus = resolveDesktopPetFocus({
+    active: Boolean(activeSession), running: timer.isRunning, paused: timer.isPaused,
+    reviewRequired: Boolean(pendingCheckIn || timer.uncertainInterval),
+  });
+
+  useEffect(() => {
+    if (!supportsDesktopPet()) return;
+    updatingPetFocus.current = updatingPetFocus.current.then(() => invoke<void>("set_desktop_pet_focus", { focus: petFocus }))
+      .catch((error) => console.warn("Desktop pet focus state could not be updated.", error));
+  }, [petFocus]);
   const timeFormatter = useMemo(
     () => new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit" }),
     [locale],
@@ -120,10 +152,10 @@ export function DesktopCompanionBridge() {
   };
 
   commandHandler.current = (command) => {
-    if (command === "open-today") navigate("/tools/core-hour");
-    if (command === "open-pause-hydrate") navigate("/tools/pause-hydrate");
-    if (command === "open-settings") navigate("/settings");
-    if (command === "open-today" || command === "open-pause-hydrate" || command === "open-settings") return;
+    if (command !== "primary-focus" && command !== "start-stop-focus" && command !== "end-focus") {
+      navigate(desktopRoutes[command]);
+      return;
+    }
     const action = resolveFocusAction(command, {
       active: Boolean(activeSession),
       paused: timer.isPaused,
@@ -150,6 +182,38 @@ export function DesktopCompanionBridge() {
       stopListening?.();
     };
   }, []);
+
+  useEffect(() => {
+    let disposed = false;
+    const unlisten: (() => void)[] = [];
+    function register(pending: Promise<() => void>) {
+      void pending.then((stop) => {
+        if (disposed) stop();
+        else unlisten.push(stop);
+      }).catch((error) => console.warn("Desktop pet listener is unavailable.", error));
+    }
+    register(listen<DesktopPetPosition | null>("desktop-pet-position", ({ payload }) => {
+      savingPetPosition.current = savingPetPosition.current.then(() => saveDesktopPetPosition(payload))
+        .catch((error) => console.warn("Desktop pet position could not be saved.", error));
+    }));
+    register(listen<{ id: number; kind: ReminderKind }>("desktop-pet-snooze", async ({ payload }) => {
+      let saved = false;
+      try {
+        if (getCurrentUser() && (payload.kind === "break" || payload.kind === "hydration")) {
+          await actOnPauseHydrate(payload.kind, "snoozed");
+          saved = true;
+        }
+      } catch (error) {
+        console.warn("Desktop pet reminder could not be snoozed.", error);
+      }
+      await invoke("finish_desktop_pet_snooze", { id: payload.id, saved })
+        .catch((error) => console.warn("Desktop pet snooze result could not be sent.", error));
+    }));
+    return () => {
+      disposed = true;
+      unlisten.forEach((stop) => stop());
+    };
+  }, [actOnPauseHydrate]);
 
   const reminderStatus = (reminder: ReminderState | undefined): string => {
     if (!reminder) return t("app.loading");
@@ -213,6 +277,7 @@ export function DesktopCompanionBridge() {
   const openToday = t("desktopCompanion.openToday");
   const openPauseHydrate = t("desktopCompanion.openPauseHydrate");
   const openSettings = t("desktopCompanion.openSettings");
+  const showPet = t("desktopPet.show");
   const quit = t("desktopCompanion.quit");
   const pendingReminder = pauseHydrate?.reminders.break.pendingAt
     ? t("pauseHydrate.break")
@@ -247,13 +312,14 @@ export function DesktopCompanionBridge() {
       openToday,
       openPauseHydrate,
       openSettings,
+      showPet,
       quit,
       tooltip,
     };
     void invoke("update_desktop_companion", { input })
       .catch((error) => console.warn("Desktop companion status could not be updated.", error));
   }, [breakStatus, endFocus, endFocusEnabled, focusAction, focusStatus, hydrationStatus,
-    openPauseHydrate, openSettings, openToday, quit, showApp, tooltip]);
+    openPauseHydrate, openSettings, openToday, quit, showApp, showPet, tooltip]);
 
   return null;
 }
