@@ -31,9 +31,12 @@ it("keeps the character on screen before, during, and after a reminder", async (
     count: 1,
   }));
   expect(await screen.findByRole("region", { name: "Hydration" }, { timeout: 2000 })).toBeTruthy();
+  expect(screen.getByRole("heading", { name: "Hydration" }).classList.contains("sr-only")).toBe(true);
   expect(screen.getByRole("img")).toBe(pet);
 
-  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Dismiss" })); });
+  const close = screen.getByRole("button", { name: "Dismiss" });
+  expect(close.textContent).toBe("");
+  await act(async () => { fireEvent.click(close); });
   expect(invoke).toHaveBeenCalledWith("respond_to_desktop_pet_reminder", { id: 7, open: false });
   act(() => publish({ current: null, count: 0 }));
   expect(screen.queryByRole("region")).toBeNull();

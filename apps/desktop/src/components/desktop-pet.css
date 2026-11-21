@@ -69,9 +69,26 @@ html.desktop-pet-window,
 .desktop-pet-bubble {
   position: absolute;
   inset: auto 8px 88px;
-  padding: 10px 12px 7px;
+  padding: 8px;
   border: 1px solid var(--control-border);
   border-radius: 13px;
+}
+
+.desktop-pet-bubble .desktop-pet-close {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 28px;
+  height: 28px;
+}
+
+.desktop-pet-message {
+  display: grid;
+  align-content: center;
+  gap: 2px;
+  min-height: 24px;
+  padding: 0 28px 0 2px;
+  overflow-wrap: anywhere;
 }
 
 .desktop-pet-bubble::after {
@@ -91,7 +108,11 @@ html.desktop-pet-window,
 
 .desktop-pet-actions {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   align-items: center;
   gap: 4px;
-  margin-top: 5px;
+  margin-top: 4px;
 }
+
+.desktop-pet-status:not(:empty) { margin: 4px 2px 0; }

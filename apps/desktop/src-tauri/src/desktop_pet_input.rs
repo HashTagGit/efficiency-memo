@@ -19,12 +19,15 @@ pub(super) mod windows {
         fn SetLastError(code: u32);
     }
 
-    pub(super) fn cursor_style(style: i32, ignore: bool) -> i32 {
+    pub(super) fn cursor_style(style: i32, ignore: bool, reminder: bool) -> i32 {
+        if reminder {
+            return style & !(LAYERED | TRANSPARENT);
+        }
         let layered_style = style | LAYERED;
         if ignore { layered_style | TRANSPARENT } else { layered_style & !TRANSPARENT }
     }
 
-    pub(in crate::desktop_pet) fn set_cursor_passthrough(window: &tauri::WebviewWindow, ignore: bool) -> tauri::Result<()> {
+    pub(in crate::desktop_pet) fn set_cursor_passthrough(window: &tauri::WebviewWindow, ignore: bool, reminder: bool) -> tauri::Result<()> {
         let hwnd = window.hwnd()?.0;
         unsafe { SetLastError(0) };
         let style = unsafe { GetWindowLongW(hwnd, GWL_EXSTYLE) };
@@ -32,7 +35,7 @@ pub(super) mod windows {
             let error = io::Error::last_os_error();
             if error.raw_os_error() != Some(0) { return Err(error.into()); }
         }
-        let updated = cursor_style(style, ignore);
+        let updated = cursor_style(style, ignore, reminder);
         if style != updated {
             // Keep composition on the same layered surface and avoid a frame redraw on hover.
             unsafe { SetLastError(0) };
@@ -118,11 +121,12 @@ mod tests {
     fn cursor_crossing_the_sprite_keeps_the_window_layered() {
         use super::windows::{cursor_style, LAYERED, TRANSPARENT};
         let topmost = 0x0008;
-        let outside = cursor_style(topmost, true);
+        let outside = cursor_style(topmost, true, false);
         assert_eq!(outside, topmost | LAYERED | TRANSPARENT);
-        let inside = cursor_style(outside, false);
+        let inside = cursor_style(outside, false, false);
         assert_eq!(outside ^ inside, TRANSPARENT);
-        assert_eq!(cursor_style(inside, true), outside);
+        assert_eq!(cursor_style(inside, true, false), outside);
+        assert_eq!(cursor_style(outside, false, true), topmost);
     }
 
     #[test]

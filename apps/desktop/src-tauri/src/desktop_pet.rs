@@ -18,7 +18,7 @@ mod input;
 
 pub(crate) const LABEL: &str = "desktop-pet";
 const PET_SIZE: f64 = 88.0;
-const BUBBLE_WIDTH: f64 = 300.0;
+const BUBBLE_WIDTH: f64 = 224.0;
 const BUBBLE_HEIGHT: f64 = 218.0;
 const MINI_EDGE_DISTANCE: f64 = 12.0;
 pub(crate) const SHOW_PET: &str = "show-desktop-pet";
@@ -196,6 +196,7 @@ impl Queue {
             self.reconcile_geometry(window)?;
         }
         let Some(snapshot) = self.snapshot() else { return Ok(()); };
+        self.reconcile_pointer(window)?;
         if let Some(view) = &self.view {
             view.send(snapshot)?;
         }
@@ -226,8 +227,8 @@ impl Queue {
     }
 
     fn reconcile_pointer(&mut self, window: &WebviewWindow) -> tauri::Result<()> {
-        let following_input = match &self.hit_regions {
-            Some(regions) if !self.is_dragging() => {
+        let following_input = match self.pointer_regions() {
+            Some(regions) => {
                 let cursor = window.cursor_position()?;
                 let client = window.inner_position()?;
                 let dpi = window.scale_factor()?;
@@ -237,13 +238,20 @@ impl Queue {
         };
         let ignore = !following_input;
         #[cfg(target_os = "windows")]
-        input::windows::set_cursor_passthrough(window, ignore)?;
+        input::windows::set_cursor_passthrough(window, ignore, !self.items.is_empty())?;
         #[cfg(not(target_os = "windows"))]
         if ignore != self.ignoring_cursor {
             window.set_ignore_cursor_events(ignore)?;
             self.ignoring_cursor = ignore;
         }
         Ok(())
+    }
+
+    fn pointer_regions(&self) -> Option<&input::HitRegions> {
+        if self.is_dragging() || !self.items.is_empty() {
+            return None;
+        }
+        self.hit_regions.as_ref()
     }
 }
 
@@ -533,7 +541,7 @@ pub(crate) async fn set_desktop_pet_enabled(
             .visible(false)
             .build()?;
         #[cfg(target_os = "windows")]
-        input::windows::set_cursor_passthrough(&window, false)?;
+        input::windows::set_cursor_passthrough(&window, false, false)?;
         window.set_size(LogicalSize::new(PET_SIZE, PET_SIZE))?;
         if let Some(position) = position {
             if let Some(monitor) = window.monitor_from_point(f64::from(position.x), f64::from(position.y))? {
@@ -977,8 +985,8 @@ mod tests {
         assert_eq!(pet_layout(rest, 0, 1000, Some(DockSide::Left), false, 1.0), (PhysicalPosition::new(0, 400), size));
         assert_eq!(pet_layout(rest, 0, 1000, Some(DockSide::Right), false, 1.0), (PhysicalPosition::new(912, 400), size));
         let (alert, expanded) = pet_layout(rest, 0, 1000, Some(DockSide::Right), true, 1.0);
-        assert_eq!(alert, PhysicalPosition::new(700, 270));
-        assert_eq!(expanded, PhysicalSize::new(300, 218));
+        assert_eq!(alert, PhysicalPosition::new(776, 270));
+        assert_eq!(expanded, PhysicalSize::new(224, 218));
         assert_eq!(pet_layout(rest, 0, 1000, Some(DockSide::Left), true, 1.0),
             (PhysicalPosition::new(0, 270), expanded));
         let (undocked, _) = pet_layout(rest, 0, 1000, None, false, 1.0);
@@ -991,8 +999,26 @@ mod tests {
         let (_, old_size) = reminder_bounds(rest, true, 1.0);
         let (origin, size) = reminder_bounds(rest, true, 1.5);
         assert_ne!(old_size, size);
-        assert_eq!(size, PhysicalSize::new(450, 327));
-        assert_eq!(origin, PhysicalPosition::new(182, 205));
+        assert_eq!(size, PhysicalSize::new(336, 327));
+        assert_eq!(origin, PhysicalPosition::new(296, 205));
+    }
+
+    #[test]
+    fn reminder_accepts_mouse_input_before_webview_hit_regions_update() {
+        let mut queue = Queue {
+            hit_regions: Some(serde_json::from_str(r#"{"held":false}"#).unwrap()),
+            ..Queue::default()
+        };
+        assert!(queue.pointer_regions().is_some());
+        queue.enqueue(PetReminder {
+            kind: ReminderKind::Preview,
+            title: String::new(),
+            body: String::new(),
+        }, None);
+        assert!(queue.pointer_regions().is_none());
+        let id = queue.items[0].id;
+        assert!(queue.take_current(id).is_some());
+        assert!(queue.pointer_regions().is_some());
     }
 
     #[test]
