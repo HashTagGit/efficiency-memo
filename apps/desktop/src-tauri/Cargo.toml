@@ -1,6 +1,6 @@
 [package]
 name = "efficiency-memo"
-version = "0.4.1"
+version = "0.5.0"
 description = "EfficiencyMemo Desktop - A unified tool gallery for daily productivity"
 authors = ["JunYe Lin <junyelin2000@163.com>"]
 edition = "2021"

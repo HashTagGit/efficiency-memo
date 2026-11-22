@@ -2,9 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
-## Unreleased
+## [0.5.0] - 2026-11-23
 
 ### Changed
+- Pet Assistant now groups multi-variant packages into one pet card with a variant picker, and the selected form persists across restarts.
+- Bundled desktop pets are now three single-sheet packages (Amber Cat, Lantern Moth, Pocket Robot) plus two multi-form collections: Clawd on Desk and Mole Baby.
+- Multi-form pet imports (V3) now require a ZIP so every variant sheet arrives together; single-sheet V1/V2 imports are unchanged.
+- Sleep frame selection validates the atlas cell, and V1/V2 imports keep filenames with spaces.
 - SQLite snapshots, restore sidecars, and retained WebDAV helpers now resolve the same Tauri application-config directory used by tauri-plugin-sql.
 - Ember, Grove, and Tide now expose consistent focus, planned, actual, recovery, hydration, privacy, and suggestion color roles in both light and dark modes.
 - Global Settings now opens a dedicated appearance and language workspace instead of the deferred WebDAV sync page.
@@ -15,8 +19,10 @@ All notable changes to this project will be documented in this file.
 - The desktop workspace now supports persisted light and dark themes with reorganized navigation and consistent action styling.
 
 ### Added
+- Multi-variant V3 Codex Pet packages: one pet identity can carry 2–64 named variants, each with its own V1/V2 sheet and optional sleeping frame.
+- Clawd on Desk collection with the Clawd crab, Calico, and Cloudling themes under one pet; Mole Baby collection with seed, junior, middle, senior, classic, super, water, wood, and fire forms under one pet.
 - Windows desktop pet with selectable Codex Pet packages, reminder bubbles, focus poses, edge docking, and pointer gaze.
-- Bundled Mole Baby (拉姆 from mole-baby) and Clawd (clawd-on-desk) Codex Pet packages, with per-package notices, an installed third-party notice, and a reproducible SVG-to-frame renderer.
+- Bundled Mole Baby (拉姆 from mole-baby) and Clawd on Desk (clawd-on-desk) Codex Pet artworks, with per-package notices, an installed third-party notice, and reproducible collection builders.
 - CoreHour uncertain-time review for suspend/background timer gaps and Windows system idle, with keep, trim, or discard decisions that persist across restart.
 - A privacy-limited Windows last-input clock adapter; no key, window, application, or content events are collected.
 - CoreHour direct planning with pointer/keyboard movement, cross-day Week moves, start/end resize handles, 15-minute snapping, and bilingual failure feedback.
