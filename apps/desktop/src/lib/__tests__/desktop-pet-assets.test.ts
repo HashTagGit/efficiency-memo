@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { Buffer } from "node:buffer";
 import { describe, expect, it } from "vitest";
-import { BUNDLED_PETS } from "../desktop-pet-catalog";
+import { BUNDLED_COLLECTIONS, BUNDLED_PETS } from "../desktop-pet-catalog";
 import { PET_COLUMNS, PET_FRAME_HEIGHT, PET_FRAME_WIDTH, petAtlasRows } from "../codex-pet";
 
 interface ImageSize {
@@ -34,14 +34,36 @@ function imageSize(bytes: Buffer): ImageSize {
   throw new Error("Unsupported spritesheet format");
 }
 
+interface SheetCase {
+  id: string;
+  folder: string;
+  spritesheetPath: string;
+  version: 1 | 2;
+}
+
+const sheets: SheetCase[] = [
+  ...BUNDLED_PETS.map((pet) => ({
+    id: pet.manifest.id,
+    folder: pet.manifest.id,
+    spritesheetPath: pet.manifest.spritesheetPath,
+    version: pet.manifest.spriteVersionNumber,
+  })),
+  ...BUNDLED_COLLECTIONS.flatMap((collection) => collection.variants.map((variant) => ({
+    id: `${collection.manifest.id}/${variant.id}`,
+    folder: collection.manifest.id,
+    spritesheetPath: variant.manifest.spritesheetPath,
+    version: variant.manifest.spriteVersionNumber,
+  }))),
+];
+
 describe("bundled desktop pet spritesheets", () => {
   it("match the Codex Pet cell grid declared by each manifest", () => {
-    for (const pet of BUNDLED_PETS) {
-      const folder = new URL(`../../assets/pets/${pet.manifest.id}/`, import.meta.url);
-      const bytes = readFileSync(new URL(pet.manifest.spritesheetPath, folder));
+    for (const sheet of sheets) {
+      const folder = new URL(`../../assets/pets/${sheet.folder}/`, import.meta.url);
+      const bytes = readFileSync(new URL(sheet.spritesheetPath, folder));
       const { width, height } = imageSize(bytes);
-      expect(width, pet.manifest.id).toBe(PET_COLUMNS * PET_FRAME_WIDTH);
-      expect(height, pet.manifest.id).toBe(petAtlasRows(pet.manifest.spriteVersionNumber) * PET_FRAME_HEIGHT);
+      expect(width, sheet.id).toBe(PET_COLUMNS * PET_FRAME_WIDTH);
+      expect(height, sheet.id).toBe(petAtlasRows(sheet.version) * PET_FRAME_HEIGHT);
     }
   });
 });

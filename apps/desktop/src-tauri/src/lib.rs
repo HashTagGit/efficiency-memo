@@ -161,6 +161,12 @@ pub fn run() {
             sql: include_str!("../migrations/0023_desktop_pet_mini_mode.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 24,
+            description: "remember desktop pet variant",
+            sql: include_str!("../migrations/0024_desktop_pet_variant.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()

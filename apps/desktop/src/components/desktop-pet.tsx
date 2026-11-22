@@ -16,6 +16,7 @@ interface PetView {
   current: (DesktopReminder & { id: number }) | null;
   count: number;
   petId: string | null;
+  petVariant?: string | null;
   snoozing?: boolean;
   snoozeFailed?: boolean;
   focus?: DesktopPetFocus;
@@ -63,16 +64,17 @@ export function DesktopPet() {
   }, []);
 
   const petId = view.petId ?? DEFAULT_PET.manifest.id;
+  const petVariant = view.petVariant ?? null;
   useEffect(() => {
     let active = true;
-    void loadDesktopPetSprite(petId).then((selected) => {
+    void loadDesktopPetSprite(petId, petVariant).then((selected) => {
       if (active) setPet(selected);
     }).catch((error) => {
       if (active) setPet(DEFAULT_PET);
       console.warn("Could not load the selected desktop pet.", error);
     });
     return () => { active = false; };
-  }, [petId]);
+  }, [petId, petVariant]);
 
   const reminderId = current?.id;
   useEffect(() => {

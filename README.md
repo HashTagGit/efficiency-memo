@@ -28,7 +28,8 @@ EfficiencyMemo is a pnpm monorepo with independent tools behind one desktop work
 - Review today's completed actions from timestamped local events
 
 ### Desktop pet (Windows)
-- Choose Amber Cat, Clawd, Lantern Moth, Mole Baby, or Pocket Robot, or import a Codex Pet package
+- Choose Amber Cat, Lantern Moth, or Pocket Robot; Clawd on Desk groups its Clawd, Calico, and Cloudling themes under one pet with a theme picker, and Mole Baby groups its seed, growth, and five evolution forms under one pet with a form picker
+- Import a Codex Pet package; single-sheet V1/V2 packs and multi-form V3 ZIPs are supported
 - Show due reminders in a transparent, always-on-top pet instead of a system notification
 - React to focus state with idle, working, waiting, greeting, walk, and sleep poses; V2 pets follow the nearby pointer
 - Drag the pet, dock it to a screen edge, and recover its window from Pet Assistant
@@ -86,7 +87,7 @@ On first launch the app creates its database in `%APPDATA%/com.efficiency-memo.a
 6. **Review the week** — Open **CoreHour → Insights** to compare confirmed focus with last week, inspect goal consistency, and review activity and tag trends. Plans never enter these totals.
 7. **Set healthy reminders** — Open **Pause & Hydrate**, enable either reminder, choose its interval, and save. Due reminders wait while CoreHour is active.
 8. **Adjust appearance** — Open **Settings** to choose a mode, color palette, and language. Changes preview and persist immediately.
-9. **Choose a desktop pet** — Open **Pet Assistant** to enable the Windows pet, pick a bundled or imported Codex Pet package, and send a test reminder.
+9. **Choose a desktop pet** — Open **Pet Assistant** to enable the Windows pet, pick a bundled or imported Codex Pet package, and choose a form for multi-form pets such as Mole Baby. Send a test reminder to check the result.
 10. **Control your data** — Open **Settings → Data & privacy** to create a portable backup, preview a restore, export readable module JSON, or reset local records.
 
 Use the native Tauri window opened by `tauri:dev`; `http://localhost:1420` is only the Vite development server and does not provide the Tauri SQLite bridge.
@@ -131,7 +132,7 @@ Key design choices:
 - **Appearance preferences** — System/light/dark mode and Ember/Grove/Tide palettes are persisted locally; the workspace shell retains a quick mode toggle.
 - **Data control** — Portable .ememo files are validated SQLite snapshots with stable appearance preferences; restores are staged and applied before the next database connection opens.
 - **Native notifications** — `tauri-plugin-notification` handles due CoreHour check-ins and Pause & Hydrate reminders.
-- **Desktop pets** — Bundled Codex Pet packages live in `apps/desktop/src/assets/pets/` and follow the V1/V2 cell contract in `src/lib/codex-pet-atlas.json`; the Windows-only pet window in `src-tauri/src/desktop_pet.rs` renders reminders, poses, docking, and pointer gaze. Third-party packages keep their notices beside the package and in the installed `src-tauri/resources/THIRD-PARTY-NOTICES.md`.
+- **Desktop pets** — Bundled Codex Pet packages live in `apps/desktop/src/assets/pets/` and follow the V1/V2 cell contract in `src/lib/codex-pet-atlas.json`; the Windows-only pet window in `src-tauri/src/desktop_pet.rs` renders reminders, poses, docking, and pointer gaze. A V3 package can group multiple named forms under one pet identity (`docs/specs/desktop-pet-variants.md`). Third-party packages keep their notices beside the package and in the installed `src-tauri/resources/THIRD-PARTY-NOTICES.md`.
 - **Local archive** — retired experiments may be kept under the ignored root `bak/` directory and are not part of the product or active repository tree. WebDAV sync is not part of the current product scope.
 
 ### Shared packages

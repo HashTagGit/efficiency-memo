@@ -3,20 +3,27 @@
 - Character: 拉姆 (Lamu) from 《摩尔庄园》
 - Source project: [mole-baby](https://github.com/Vinci-217/mole-baby), commit
   `9e5ffa35c02812155b3782e8f0edeaa1be1c4cf2` (v0.34.0)
-- Artwork used: `public/assets/classic/middle-neutral.png`, an 8 × 9 Codex-sized cell atlas.
-  The upstream `public/assets/classic/SOURCE-RECORD.md` records that it is sampled from the
-  original client sprite sheets (`lamubone.swf`).
+- Artwork used: `public/assets/classic/*-neutral.png` for the eight adult forms and
+  `public/assets/original/seed/{body,pot}.png` for the seed stage. The upstream
+  `public/assets/classic/SOURCE-RECORD.md` records that these are sampled from the original
+  client sprite sheets (`lamubone.swf` and the element skill SWFs).
+- Package format: V3 collection (`spriteVersionNumber: 3`) with nine variants under one
+  pet id. See `docs/specs/desktop-pet-variants.md` in the EfficiencyMemo repository.
 - Conversion, run from the EfficiencyMemo repository root:
 
   ```bash
-  python scripts/prepare-desktop-pet.py \
-    --atlas path/to/mole-baby/public/assets/classic/middle-neutral.png \
-    --output apps/desktop/src/assets/pets \
-    --id mole-baby --name "Mole Baby" --version 1 \
-    --description "The round little Lamu mole from mole-baby, with a leafy sprout and a calm smile."
+  python scripts/build-mole-baby-collection.py \
+    --assets path/to/mole-baby/public/assets \
+    --output apps/desktop/src/assets/pets/mole-baby
   ```
 
-  The cells are copied unchanged into a Codex Pet V1 package; nothing is redrawn.
+  Adult atlases are copied with unused cells cleared, unchanged otherwise. The seed atlas
+  is 96×99 cells in a separate body layer plus a `pot.png` layer; the script composes them
+  onto the standard 192×208 grid, samples the upstream 61-frame loop across the nine
+  tracks, and marks the closed-eye frame as `sleepingFrame`. No artwork is redrawn. The
+  `classic` (经典超级拉姆) atlas inherits clipped top leaves and a few leftover unused cells
+  from the upstream export; the leftover cells are cleared here, but the clipped leaves
+  remain and should be re-exported before using that form alone.
 
 ## Rights
 

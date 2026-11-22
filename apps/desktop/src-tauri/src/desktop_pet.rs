@@ -95,6 +95,7 @@ pub(crate) struct PetView {
     current: Option<QueuedReminder>,
     count: usize,
     pet_id: Option<String>,
+    pet_variant: Option<String>,
     snoozing: bool,
     snooze_failed: bool,
     focus: motion::Focus,
@@ -114,6 +115,7 @@ struct Queue {
     view: Option<Channel<PetView>>,
     resting_position: Option<PhysicalPosition<i32>>,
     pet_id: Option<String>,
+    pet_variant: Option<String>,
     snoozing: Option<u32>,
     snooze_failed: bool,
     behavior: motion::Behavior,
@@ -181,6 +183,7 @@ impl Queue {
             current: self.items.front().cloned(),
             count: self.items.len(),
             pet_id: self.pet_id.clone(),
+            pet_variant: self.pet_variant.clone(),
             snoozing: self.snoozing.is_some(),
             snooze_failed: self.snooze_failed,
             focus: self.behavior.focus,
@@ -646,13 +649,26 @@ pub(crate) async fn interrupt_desktop_pet_motion(window: WebviewWindow) -> Resul
 }
 
 #[tauri::command]
-pub(crate) async fn select_desktop_pet(window: WebviewWindow, pet_id: String) -> Result<(), String> {
+pub(crate) async fn select_desktop_pet(
+    window: WebviewWindow,
+    pet_id: String,
+    variant_id: Option<String>,
+) -> Result<(), String> {
     if window.label() != "main" || pet_id.is_empty() || pet_id.chars().count() > 100 {
         return Err("Invalid desktop pet selection".into());
+    }
+    if let Some(variant) = variant_id.as_deref() {
+        if variant.is_empty()
+            || variant.chars().count() > 64
+            || !variant.chars().all(|character| character.is_alphanumeric() || character == '_' || character == '-')
+        {
+            return Err("Invalid desktop pet variant".into());
+        }
     }
     update_queue(window.app_handle().clone(), move |app, queue| {
         queue.behavior.interrupt(false);
         queue.pet_id = Some(pet_id);
+        queue.pet_variant = variant_id;
         if let Some(window) = app.get_webview_window(LABEL) {
             queue.publish(&window)?;
         }
@@ -1077,5 +1093,20 @@ mod tests {
         assert!(queue.take_current(first).is_none());
         assert_eq!(queue.items.front().unwrap().reminder.title, "Move");
         assert_eq!(queue.items.back().unwrap().reminder.title, "Water");
+    }
+
+    #[test]
+    fn snapshot_reports_the_selected_pet_and_variant() {
+        let mut queue = Queue {
+            pet_id: Some("mole-baby".into()),
+            pet_variant: Some("seed".into()),
+            ..Queue::default()
+        };
+        let view = queue.snapshot().expect("snapshot");
+        assert_eq!(view.pet_id.as_deref(), Some("mole-baby"));
+        assert_eq!(view.pet_variant.as_deref(), Some("seed"));
+
+        queue.pet_variant = None;
+        assert_eq!(queue.snapshot().expect("snapshot").pet_variant, None);
     }
 }

@@ -34,7 +34,7 @@ vi.mock("../../../lib/desktop-reminders", () => ({
 }));
 vi.mock("../../../lib/desktop-pet-catalog", async (importOriginal) => ({
   ...await importOriginal<typeof import("../../../lib/desktop-pet-catalog")>(),
-  loadDesktopPetSelection: vi.fn().mockResolvedValue("amber-cat"),
+  loadDesktopPetSelection: vi.fn().mockResolvedValue({ petId: "amber-cat", variantId: null }),
   loadImportedDesktopPets: vi.fn().mockResolvedValue([]),
   saveDesktopPetSelection: vi.fn().mockResolvedValue(undefined),
 }));
@@ -67,15 +67,15 @@ it("opens the separate pet page from Tools and keeps pet controls out of app set
   await waitFor(() => expect(saveDesktopPetBehavior).toHaveBeenCalledWith({ lookEnabled: true, walkEnabled: false, miniEnabled: false }));
   const robot = await screen.findByRole("radio", { name: "Pocket Robot" });
   fireEvent.click(robot);
-  await waitFor(() => expect(saveDesktopPetSelection).toHaveBeenCalledWith("pocket-robot"));
+  await waitFor(() => expect(saveDesktopPetSelection).toHaveBeenCalledWith("pocket-robot", null));
   await waitFor(() => expect((robot as HTMLInputElement).checked).toBe(true));
-  const mole = screen.getByRole<HTMLInputElement>("radio", { name: "Mole Baby" });
+  const mole = screen.getByRole<HTMLInputElement>("radio", { name: "Middle Lamu" });
   fireEvent.click(mole);
-  await waitFor(() => expect(saveDesktopPetSelection).toHaveBeenCalledWith("mole-baby"));
+  await waitFor(() => expect(saveDesktopPetSelection).toHaveBeenCalledWith("mole-baby", "middle"));
   await waitFor(() => expect(mole.checked).toBe(true));
   const clawd = screen.getByRole<HTMLInputElement>("radio", { name: "Clawd" });
   fireEvent.click(clawd);
-  await waitFor(() => expect(saveDesktopPetSelection).toHaveBeenCalledWith("clawd"));
+  await waitFor(() => expect(saveDesktopPetSelection).toHaveBeenCalledWith("clawd", "clawd"));
   await waitFor(() => expect(clawd.checked).toBe(true));
   const working = await screen.findByRole("button", { name: "Working" });
   fireEvent.click(working);
@@ -89,8 +89,10 @@ it("opens the separate pet page from Tools and keeps pet controls out of app set
 it("shows localized labels for the bundled third-party pets", async () => {
   await discoverTools();
   renderApp("/tools/pet-assistant", "zh-CN");
-  expect(await screen.findByRole("radio", { name: "拉姆" })).toBeTruthy();
+  expect(await screen.findByRole("radio", { name: "中级拉姆" })).toBeTruthy();
   expect(screen.getByRole("radio", { name: "Clawd" })).toBeTruthy();
+  expect(screen.getByRole("radio", { name: "三花猫" })).toBeTruthy();
+  expect(screen.getByRole("radio", { name: "云宝" })).toBeTruthy();
 });
 
 it("handles a direct pet page link when the desktop pet is unavailable", async () => {

@@ -1,7 +1,76 @@
 {
   "id": "mole-baby",
   "displayName": "Mole Baby",
-  "description": "The round little Lamu mole from mole-baby, with a leafy sprout and a calm smile.",
-  "spriteVersionNumber": 1,
-  "spritesheetPath": "spritesheet.png"
+  "description": "The round Lamu mole from mole-baby, across its seed, growth, and five evolution forms.",
+  "spriteVersionNumber": 3,
+  "defaultVariant": "middle",
+  "variants": [
+    {
+      "id": "seed",
+      "displayName": "种子期",
+      "description": "花盆中轻轻摆动的拉姆种子。",
+      "spriteVersionNumber": 1,
+      "spritesheetPath": "variants/seed.png",
+      "sleepingFrame": {
+        "row": 0,
+        "column": 3
+      }
+    },
+    {
+      "id": "junior",
+      "displayName": "初级拉姆",
+      "description": "离开花盆、还没有叶子的初级拉姆。",
+      "spriteVersionNumber": 1,
+      "spritesheetPath": "variants/junior.png"
+    },
+    {
+      "id": "middle",
+      "displayName": "中级拉姆",
+      "description": "长出两片嫩叶的中级拉姆。",
+      "spriteVersionNumber": 1,
+      "spritesheetPath": "variants/middle.png"
+    },
+    {
+      "id": "senior",
+      "displayName": "高级拉姆",
+      "description": "扇形叶片展开的高级拉姆。",
+      "spriteVersionNumber": 1,
+      "spritesheetPath": "variants/senior.png"
+    },
+    {
+      "id": "classic",
+      "displayName": "经典超级拉姆",
+      "description": "三片金色叶子的经典超级拉姆。",
+      "spriteVersionNumber": 1,
+      "spritesheetPath": "variants/classic.png"
+    },
+    {
+      "id": "super",
+      "displayName": "神力超级拉姆",
+      "description": "金色神力头冠的神力超级形态。",
+      "spriteVersionNumber": 1,
+      "spritesheetPath": "variants/super.png"
+    },
+    {
+      "id": "water",
+      "displayName": "神奇水系拉姆",
+      "description": "展开晶莹水花头冠的神奇水系形态。",
+      "spriteVersionNumber": 1,
+      "spritesheetPath": "variants/water.png"
+    },
+    {
+      "id": "wood",
+      "displayName": "弹力木系拉姆",
+      "description": "戴着翠绿木系头冠的弹力木系形态。",
+      "spriteVersionNumber": 1,
+      "spritesheetPath": "variants/wood.png"
+    },
+    {
+      "id": "fire",
+      "displayName": "霹雳火系拉姆",
+      "description": "顶着明亮火焰头冠的霹雳火系形态。",
+      "spriteVersionNumber": 1,
+      "spritesheetPath": "variants/fire.png"
+    }
+  ]
 }

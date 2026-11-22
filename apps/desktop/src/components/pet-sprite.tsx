@@ -90,10 +90,13 @@ export function PetSprite({ pet, animated = false, pose = "idle", gaze = null, r
 
   const rows = petAtlasRows(pet.manifest.spriteVersionNumber);
   const direction = look ? gaze : peekSide && supportsLook ? (peekSide === "left" ? 4 : 12) : null;
+  const sleepingFrame = pose === "sleeping"
+    ? pet.sleepingFrame ?? { row: 0, column: closedEyePets.has(pet.manifest.id) ? 3 : 0 }
+    : null;
   const frame = direction !== null
     ? { row: PET_TRACKS.length + Math.floor(direction / PET_COLUMNS), column: direction % PET_COLUMNS }
     : peekSide ? { row: 0, column: 0 }
-      : pose === "sleeping" ? { row: 0, column: closedEyePets.has(pet.manifest.id) ? 3 : 0 } : cell;
+      : sleepingFrame ?? cell;
   return (
     <span
       aria-hidden="true"

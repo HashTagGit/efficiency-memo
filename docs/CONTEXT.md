@@ -136,6 +136,14 @@ _Avoid_: Widget, overlay app
 A Codex Pet bundle of `pet.json` plus its spritesheet, either bundled in `apps/desktop/src/assets/pets/` or imported by the user.
 _Avoid_: Skin, theme, avatar file
 
+**Pet Collection**:
+A V3 Pet Package that groups two to sixty-four named variants under one pet identity, so forms share a single Pet Assistant entry and selection.
+_Avoid_: Separate pets per form, theme pack
+
+**Pet Variant**:
+One named form inside a Pet Collection, with its own spritesheet and optional sleeping frame; the selected variant is remembered per profile.
+_Avoid_: Independent pet, skin
+
 **Pet Pose**:
 One named frame set from a Pet Package's atlas, such as idle, greeting, working, waiting, walking, or sleeping; it never changes recorded focus time.
 _Avoid_: State machine, animation library

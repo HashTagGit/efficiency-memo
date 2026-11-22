@@ -1,7 +1,38 @@
 {
   "id": "clawd",
-  "displayName": "Clawd",
-  "description": "The original pixel crab from clawd-on-desk, with theme-accurate poses and pointer gaze.",
-  "spriteVersionNumber": 2,
-  "spritesheetPath": "spritesheet.png"
+  "displayName": "Clawd on Desk",
+  "description": "clawd-on-desk's three built-in companions: the Clawd crab, Calico, and Cloudling.",
+  "spriteVersionNumber": 3,
+  "defaultVariant": "clawd",
+  "variants": [
+    {
+      "id": "clawd",
+      "displayName": "Clawd",
+      "description": "The original pixel crab from clawd-on-desk.",
+      "spriteVersionNumber": 2,
+      "spritesheetPath": "variants/clawd.png"
+    },
+    {
+      "id": "calico",
+      "displayName": "Calico",
+      "description": "The calico cat theme: naps, typing, and rainbow celebrations.",
+      "spriteVersionNumber": 1,
+      "spritesheetPath": "variants/calico.webp",
+      "sleepingFrame": {
+        "row": 4,
+        "column": 1
+      }
+    },
+    {
+      "id": "cloudling",
+      "displayName": "Cloudling",
+      "description": "The soft cloud companion with bright, grumpy, and sleepy moods.",
+      "spriteVersionNumber": 1,
+      "spritesheetPath": "variants/cloudling.webp",
+      "sleepingFrame": {
+        "row": 3,
+        "column": 0
+      }
+    }
+  ]
 }

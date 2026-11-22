@@ -1,0 +1,1 @@
+ALTER TABLE desktop_reminder_preferences ADD COLUMN selected_pet_variant TEXT;

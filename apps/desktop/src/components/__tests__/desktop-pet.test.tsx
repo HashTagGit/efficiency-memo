@@ -181,3 +181,29 @@ it("uses a small nod for a V1 pet in place of direction frames and skips it in r
   act(() => vi.advanceTimersByTime(5000));
   expect(sprite?.hasAttribute("data-peek-nod")).toBe(false);
 });
+
+it("loads the selected variant atlas in the desktop pet window", async () => {
+  render(<DesktopPet />);
+  const pet = screen.getByRole("img");
+  const [publish] = connect.mock.lastCall ?? [];
+  await act(async () => { publish({ current: null, count: 0, petId: "mole-baby", petVariant: "seed" }); });
+  await waitFor(() => expect(pet.querySelector("span")?.style.backgroundImage).toContain("mole-baby/variants/seed.png"));
+  act(() => publish({ current: null, count: 0, petId: "mole-baby", petVariant: "middle" }));
+  await waitFor(() => expect(pet.querySelector("span")?.style.backgroundImage).toContain("mole-baby/variants/middle.png"));
+});
+
+it("sleeps a variant on its declared sleeping frame", async () => {
+  vi.mocked(invoke).mockImplementation(async (command) => command === "sample_desktop_pet_behavior"
+    ? { sleeping: true, gaze: null, walking: null } : undefined);
+  render(<DesktopPet />);
+  const [publish] = connect.mock.lastCall ?? [];
+  act(() => publish({ current: null, count: 0, petId: "mole-baby", petVariant: "seed" }));
+  await waitFor(() => expect(screen.getByRole("img").querySelector("[data-pose]")?.getAttribute("data-pose")).toBe("sleeping"));
+  expect(screen.getByRole("img").querySelector("[data-pet-frame]")?.getAttribute("data-pet-frame")).toBe("0:3");
+});
+
+it("honours a per-pet sleeping frame for a single-sheet pet", () => {
+  const pet = { ...DEFAULT_PET, sleepingFrame: { row: 0, column: 3 } };
+  const { container } = render(<PetSprite pet={pet} pose="sleeping" />);
+  expect(container.querySelector("[data-pet-frame]")?.getAttribute("data-pet-frame")).toBe("0:3");
+});

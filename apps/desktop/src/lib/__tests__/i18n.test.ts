@@ -25,6 +25,21 @@ describe("i18n", () => {
   it("labels the bundled mole-baby and clawd pets in both languages", () => {
     expect(translate("en-US", "desktopPet.pet.mole-baby")).toBe("Mole Baby");
     expect(translate("zh-CN", "desktopPet.pet.mole-baby")).toBe("拉姆");
-    expect(translate("en-US", "desktopPet.pet.clawd")).toBe("Clawd");
+    expect(translate("en-US", "desktopPet.pet.clawd")).toBe("Clawd on Desk");
+    expect(translate("zh-CN", "desktopPet.pet.clawd")).toBe("Clawd 桌宠");
+  });
+
+  it("labels every bundled Lamu variant form", () => {
+    expect(translate("en-US", "desktopPet.pet.mole-baby.variant.middle")).toBe("Middle Lamu");
+    expect(translate("zh-CN", "desktopPet.pet.mole-baby.variant.middle")).toBe("中级拉姆");
+    expect(translate("zh-CN", "desktopPet.pet.mole-baby.variant.classic")).toBe("经典超级拉姆");
+    expect(translate("zh-CN", "desktopPet.chooseVariant")).toBe("选择形态");
+  });
+
+  it("labels the Clawd on Desk theme variants", () => {
+    expect(translate("en-US", "desktopPet.pet.clawd")).toBe("Clawd on Desk");
+    expect(translate("en-US", "desktopPet.pet.clawd.variant.calico")).toBe("Calico");
+    expect(translate("zh-CN", "desktopPet.pet.clawd.variant.calico")).toBe("三花猫");
+    expect(translate("zh-CN", "desktopPet.pet.clawd.variant.cloudling")).toBe("云宝");
   });
 });

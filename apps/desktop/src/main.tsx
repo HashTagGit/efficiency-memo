@@ -12,7 +12,7 @@ import { PauseHydrateProvider } from "./features/pause-hydrate/context";
 import { AppearanceProvider, initializeAppearance } from "./lib/appearance";
 import { CoreHourRuntimeProvider } from "./features/core-hour/runtime";
 import { desktopPetEnabled, setDesktopPetEnabled } from "./lib/desktop-reminders";
-import { loadDesktopPetSelection, updateDesktopPetWindow } from "./lib/desktop-pet-catalog";
+import { resolveDesktopPetSelection, updateDesktopPetWindow } from "./lib/desktop-pet-catalog";
 import {
   applyPortablePreferences,
   takeAppliedRestorePreferences,
@@ -37,7 +37,8 @@ async function bootstrap() {
   await discoverTools();
   try {
     if (await desktopPetEnabled()) {
-      await updateDesktopPetWindow(await loadDesktopPetSelection());
+      const selection = await resolveDesktopPetSelection();
+      await updateDesktopPetWindow(selection.petId, selection.variantId);
       await setDesktopPetEnabled(true);
     }
   } catch (error) {
