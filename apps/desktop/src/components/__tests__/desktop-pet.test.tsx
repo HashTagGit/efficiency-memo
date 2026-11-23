@@ -37,7 +37,7 @@ it("keeps the character on screen before, during, and after a reminder", async (
   const close = screen.getByRole("button", { name: "Dismiss" });
   expect(close.textContent).toBe("");
   await act(async () => { fireEvent.click(close); });
-  expect(invoke).toHaveBeenCalledWith("respond_to_desktop_pet_reminder", { id: 7, open: false });
+  expect(invoke).toHaveBeenCalledWith("respond_to_desktop_pet_reminder", { id: 7 });
   act(() => publish({ current: null, count: 0 }));
   expect(screen.queryByRole("region")).toBeNull();
   expect(screen.getByRole("img")).toBe(pet);
@@ -51,6 +51,18 @@ it("applies a new pet selection to the existing window", async () => {
   act(() => publish({ current: null, count: 0, petId: "pocket-robot" }));
   await waitFor(() => expect(pet.querySelector("span")?.style.backgroundImage).not.toBe(initialAtlas));
   expect(screen.getByRole("img")).toBe(pet);
+});
+
+it("dismisses a review reminder from the pet without opening the main window", async () => {
+  render(<DesktopPet />);
+  const [publish] = connect.mock.lastCall ?? [];
+  act(() => publish({ current: { id: 14, kind: "daily-review", title: "Daily review", body: "Review today." }, count: 1 }));
+  const region = await screen.findByRole("region", { name: "Daily review" }, { timeout: 2000 });
+  const buttons = within(region).getAllByRole("button");
+  expect(buttons.map((button) => button.getAttribute("aria-label"))).toEqual(["Dismiss"]);
+  await act(async () => { fireEvent.click(buttons[0]); });
+  expect(invoke).toHaveBeenCalledWith("respond_to_desktop_pet_reminder", { id: 14 });
+  expect(invoke).not.toHaveBeenCalledWith("show_main_window");
 });
 
 it("waves after a tap and sends drag events only after crossing the movement threshold", async () => {
@@ -113,7 +125,7 @@ it.each([
   expect(bubble.querySelector(".desktop-pet-chat")?.textContent ?? null).toBe(label);
   expect(within(bubble).getAllByRole("button").map((button) => button.textContent)).toEqual(["Done", ">>10m", ""]);
   await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Done" })); });
-  expect(invoke).toHaveBeenCalledWith("respond_to_desktop_pet_reminder", { id: 13, open: false });
+  expect(invoke).toHaveBeenCalledWith("respond_to_desktop_pet_reminder", { id: 13 });
   expect(invoke).not.toHaveBeenCalledWith("apply_desktop_pet_reminder_action", expect.anything());
 });
 

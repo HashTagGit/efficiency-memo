@@ -1,12 +1,14 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { PageHeader } from "@memo/ui";
 import { PALETTES, useAppearance, type ThemeMode } from "../../lib/appearance";
 import { useI18n, type Locale } from "../../lib/i18n";
 import { SettingsNavigation } from "./settings-navigation";
 import { AppUpdates } from "./app-updates";
+import { loadWindowCloseBehavior, saveWindowCloseBehavior, supportsWindowCloseBehavior, type WindowCloseBehavior } from "../../lib/window-close";
 
 const themeModes: ThemeMode[] = ["light", "dark", "system"];
 const locales: Locale[] = ["en-US", "zh-CN"];
+const closeBehaviors = ["exit", "tray"] as const;
 const companionShortcuts = [
   { keys: ["Ctrl", "Shift", "M"], descriptionKey: "appSettings.companionShortcutToggle" },
   { keys: ["Ctrl", "Shift", "Space"], descriptionKey: "appSettings.companionShortcutStartStop" },
@@ -15,6 +17,34 @@ const companionShortcuts = [
 export function AppSettingsPage() {
   const { mode, theme, palette, setMode, setPalette } = useAppearance();
   const { locale, setLocale, t } = useI18n();
+  const supportsCloseBehavior = supportsWindowCloseBehavior();
+  const [closeBehavior, setCloseBehavior] = useState<WindowCloseBehavior | null>(null);
+  const [savingCloseBehavior, setSavingCloseBehavior] = useState(false);
+  const [closeBehaviorError, setCloseBehaviorError] = useState(false);
+
+  useEffect(() => {
+    if (!supportsCloseBehavior) return;
+    let active = true;
+    void loadWindowCloseBehavior().then((value) => {
+      if (active) setCloseBehavior(value);
+    }).catch(() => {
+      if (active) setCloseBehaviorError(true);
+    });
+    return () => { active = false; };
+  }, [supportsCloseBehavior]);
+
+  async function changeCloseBehavior(value: WindowCloseBehavior) {
+    setSavingCloseBehavior(true);
+    setCloseBehaviorError(false);
+    try {
+      await saveWindowCloseBehavior(value);
+      setCloseBehavior(value);
+    } catch {
+      setCloseBehaviorError(true);
+    } finally {
+      setSavingCloseBehavior(false);
+    }
+  }
 
   return (
     <div className="mx-auto max-w-4xl" data-testid="app-settings-page">
@@ -73,6 +103,22 @@ export function AppSettingsPage() {
           ))}
         </div>
       </section>
+
+      {supportsCloseBehavior && (
+        <fieldset className="border-t border-border py-6" aria-labelledby="window-close-heading" disabled={closeBehavior === null || savingCloseBehavior}>
+          <h2 id="window-close-heading" className="text-base font-semibold text-foreground">{t("appSettings.closeBehavior")}</h2>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {closeBehaviors.map((value) => (
+              <label key={value} className={`cursor-pointer rounded-md border px-3 py-1.5 text-sm font-medium focus-within:ring-2 focus-within:ring-focus-ring ${closeBehavior === value ? "border-accent bg-accent text-on-accent" : "border-control-border bg-surface text-foreground hover:bg-surface-strong"}`}>
+                <input className="sr-only" type="radio" name="close-behavior" checked={closeBehavior === value} onChange={() => void changeCloseBehavior(value)} />
+                {t(`appSettings.closeBehavior.${value}`)}
+              </label>
+            ))}
+          </div>
+          <p className="mt-2 text-sm text-muted">{t("appSettings.closeBehaviorHint")}</p>
+          {closeBehaviorError && <p className="mt-2 text-sm text-danger" role="alert">{t("appSettings.closeBehaviorError")}</p>}
+        </fieldset>
+      )}
 
       <AppUpdates />
 

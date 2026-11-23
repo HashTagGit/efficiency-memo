@@ -13,6 +13,7 @@ import { AppearanceProvider, initializeAppearance } from "./lib/appearance";
 import { CoreHourRuntimeProvider } from "./features/core-hour/runtime";
 import { desktopPetEnabled, setDesktopPetEnabled } from "./lib/desktop-reminders";
 import { resolveDesktopPetSelection, updateDesktopPetWindow } from "./lib/desktop-pet-catalog";
+import { applyWindowCloseBehavior, loadWindowCloseBehavior, supportsWindowCloseBehavior } from "./lib/window-close";
 import {
   applyPortablePreferences,
   takeAppliedRestorePreferences,
@@ -33,6 +34,13 @@ async function bootstrap() {
   }
   initializeAppearance();
   await setDbOnStartup();
+  if (supportsWindowCloseBehavior()) {
+    try {
+      await applyWindowCloseBehavior(await loadWindowCloseBehavior());
+    } catch (error) {
+      console.warn("Could not restore the window close behavior.", error);
+    }
+  }
   await ensureLocalUser();
   await discoverTools();
   try {

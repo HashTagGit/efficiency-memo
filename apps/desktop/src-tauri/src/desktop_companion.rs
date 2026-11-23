@@ -1,3 +1,5 @@
+use std::sync::atomic::{AtomicBool, Ordering};
+
 use serde::Deserialize;
 use tauri::{
     menu::{MenuBuilder, MenuItem, MenuItemBuilder},
@@ -21,6 +23,7 @@ pub fn shortcut_plugin() -> TauriPlugin<Wry> {
 
 pub struct DesktopCompanionState {
     tray: TrayIcon,
+    hide_on_close: AtomicBool,
     focus_status: MenuItem<Wry>,
     focus_action: MenuItem<Wry>,
     end_focus: MenuItem<Wry>,
@@ -121,6 +124,7 @@ pub fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
 
     app.manage(DesktopCompanionState {
         tray,
+        hide_on_close: AtomicBool::new(false),
         focus_status,
         focus_action,
         end_focus,
@@ -202,6 +206,19 @@ pub(crate) fn set_show_pet_enabled(app: &AppHandle, enabled: bool) -> tauri::Res
 #[tauri::command]
 pub fn show_main_window(app: AppHandle) {
     reveal_main_window(&app);
+}
+
+pub(crate) fn hide_on_close(app: &AppHandle) -> bool {
+    app.state::<DesktopCompanionState>().hide_on_close.load(Ordering::Relaxed)
+}
+
+#[tauri::command]
+pub(crate) fn set_main_window_close_behavior(window: tauri::WebviewWindow, hide_to_tray: bool) -> Result<(), String> {
+    if window.label() != "main" {
+        return Err("Expected the main window".into());
+    }
+    window.state::<DesktopCompanionState>().hide_on_close.store(hide_to_tray, Ordering::Relaxed);
+    Ok(())
 }
 
 #[tauri::command]

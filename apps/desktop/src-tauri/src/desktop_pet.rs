@@ -55,18 +55,6 @@ enum ReminderKind {
     PreviewBreak,
 }
 
-impl ReminderKind {
-    fn command(self) -> Option<&'static str> {
-        match self {
-            Self::Break | Self::Hydration => Some("open-pause-hydrate"),
-            Self::CheckIn => Some("open-today"),
-            Self::DailyReview => Some("open-daily-review"),
-            Self::WeeklyReview => Some("open-weekly-review"),
-            Self::Preview | Self::PreviewBreak => None,
-        }
-    }
-}
-
 #[derive(Clone, Deserialize, Serialize)]
 pub(crate) struct PetReminder {
     kind: ReminderKind,
@@ -781,21 +769,15 @@ pub(crate) async fn desktop_pet_ready(
 pub(crate) async fn respond_to_desktop_pet_reminder(
     window: WebviewWindow,
     id: u32,
-    open: bool,
 ) -> Result<(), String> {
     if window.label() != LABEL {
         return Err("Expected the desktop pet window".into());
     }
-    update_queue(window.app_handle().clone(), move |app, queue| {
+    update_queue(window.app_handle().clone(), move |_, queue| {
         if queue.saving_action == Some(id) {
             return Ok(());
         }
-        if let Some(reminder) = queue.take_current(id) {
-            if open {
-                if let Some(command) = reminder.kind.command() {
-                    crate::desktop_companion::emit_command(app, command, true);
-                }
-            }
+        if queue.take_current(id).is_some() {
             queue.publish(&window)?;
         }
         Ok(())

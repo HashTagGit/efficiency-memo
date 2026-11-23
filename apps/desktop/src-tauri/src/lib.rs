@@ -201,9 +201,17 @@ pub fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            if window.label() == desktop_pet::LABEL {
-                if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                if window.label() == desktop_pet::LABEL {
                     api.prevent_close();
+                } else if cfg!(target_os = "windows")
+                    && window.label() == "main"
+                    && desktop_companion::hide_on_close(window.app_handle())
+                {
+                    api.prevent_close();
+                    if let Err(error) = window.hide() {
+                        eprintln!("WARN: Could not hide the main window: {error}");
+                    }
                 }
             }
             if window.label() == "main" && matches!(event, tauri::WindowEvent::Destroyed) {
@@ -225,6 +233,7 @@ pub fn run() {
             system_idle::get_system_idle_seconds,
             system_interruption::get_system_interruption_state,
             desktop_companion::show_main_window,
+            desktop_companion::set_main_window_close_behavior,
             desktop_companion::update_desktop_companion,
             desktop_pet::show_desktop_pet_reminder,
             desktop_pet::confirm_desktop_pet_reminder_shown,

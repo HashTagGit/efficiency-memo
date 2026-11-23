@@ -155,13 +155,13 @@ export function DesktopPet() {
       .finally(() => setMenuOpen(false));
   }
 
-  async function respond(action: "dismiss" | "open" | "snoozed" | "completed") {
+  async function respond(action: "dismiss" | "snoozed" | "completed") {
     if (!current || busy || view.savingAction) return;
     setBusy(true);
     setFailed(false);
     try {
-      if (action === "dismiss" || action === "open") {
-        await invoke("respond_to_desktop_pet_reminder", { id: current.id, open: action === "open" });
+      if (action === "dismiss") {
+        await invoke("respond_to_desktop_pet_reminder", { id: current.id });
       } else {
         await invoke("apply_desktop_pet_reminder_action", { id: current.id, action });
       }
@@ -226,11 +226,11 @@ export function DesktopPet() {
             )}
             <p className={iconReminder ? "sr-only" : "text-xs leading-[1.45] text-muted"}>{current.body}</p>
           </div>
-          <div className="desktop-pet-actions" data-segmented={iconReminder || undefined}>
-            <Button size="sm" disabled={busy || view.savingAction} onClick={() => void respond(preview ? "dismiss" : iconReminder ? "completed" : "open")}>
-              {iconReminder ? translate(locale, "pauseHydrate.complete") : t("open")}
-            </Button>
-            {iconReminder && (
+          {iconReminder && (
+            <div className="desktop-pet-actions" data-segmented>
+              <Button size="sm" disabled={busy || view.savingAction} onClick={() => void respond(preview ? "dismiss" : "completed")}>
+                {translate(locale, "pauseHydrate.complete")}
+              </Button>
               <Button
                 variant="secondary"
                 size="sm"
@@ -242,8 +242,8 @@ export function DesktopPet() {
               >
                 {">>10m"}
               </Button>
-            )}
-          </div>
+            </div>
+          )}
           <Button
             variant="ghost"
             size="icon"
