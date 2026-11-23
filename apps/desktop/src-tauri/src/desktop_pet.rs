@@ -26,7 +26,7 @@ const OPEN_PET_ASSISTANT: &str = "open-pet-assistant";
 const HIDE_PET: &str = "hide-desktop-pet";
 const RESET_PET_POSITION: &str = "reset-desktop-pet-position";
 const POSITION_EVENT: &str = "desktop-pet-position";
-const SNOOZE_EVENT: &str = "desktop-pet-snooze";
+const REMINDER_ACTION_EVENT: &str = "desktop-pet-reminder-action";
 
 #[cfg(target_os = "windows")]
 #[link(name = "user32")]
@@ -52,6 +52,7 @@ enum ReminderKind {
     DailyReview,
     WeeklyReview,
     Preview,
+    PreviewBreak,
 }
 
 impl ReminderKind {
@@ -61,7 +62,7 @@ impl ReminderKind {
             Self::CheckIn => Some("open-today"),
             Self::DailyReview => Some("open-daily-review"),
             Self::WeeklyReview => Some("open-weekly-review"),
-            Self::Preview => None,
+            Self::Preview | Self::PreviewBreak => None,
         }
     }
 }
@@ -96,8 +97,8 @@ pub(crate) struct PetView {
     count: usize,
     pet_id: Option<String>,
     pet_variant: Option<String>,
-    snoozing: bool,
-    snooze_failed: bool,
+    saving_action: bool,
+    action_failed: bool,
     focus: motion::Focus,
     preferences: motion::Preferences,
     mini: Option<DockSide>,
@@ -116,8 +117,8 @@ struct Queue {
     resting_position: Option<PhysicalPosition<i32>>,
     pet_id: Option<String>,
     pet_variant: Option<String>,
-    snoozing: Option<u32>,
-    snooze_failed: bool,
+    saving_action: Option<u32>,
+    action_failed: bool,
     behavior: motion::Behavior,
     dock: Option<DockSide>,
     mini: Option<DockSide>,
@@ -167,7 +168,7 @@ impl Queue {
         if self.items.front()?.id != id {
             return None;
         }
-        self.snooze_failed = false;
+        self.action_failed = false;
         self.items.pop_front().map(|item| item.reminder)
     }
 
@@ -184,8 +185,8 @@ impl Queue {
             count: self.items.len(),
             pet_id: self.pet_id.clone(),
             pet_variant: self.pet_variant.clone(),
-            snoozing: self.snoozing.is_some(),
-            snooze_failed: self.snooze_failed,
+            saving_action: self.saving_action.is_some(),
+            action_failed: self.action_failed,
             focus: self.behavior.focus,
             preferences: self.behavior.preferences,
             mini: self.mini,
@@ -508,8 +509,8 @@ pub(crate) async fn set_desktop_pet_enabled(
         crate::desktop_companion::set_show_pet_enabled(app, enabled)?;
         if !enabled {
             queue.items.clear();
-            queue.snoozing = None;
-            queue.snooze_failed = false;
+            queue.saving_action = None;
+            queue.action_failed = false;
             queue.drag_offset = None;
             if let Some(window) = app.get_webview_window(LABEL) {
                 set_visible_without_activation(&window, false)?;
@@ -786,7 +787,7 @@ pub(crate) async fn respond_to_desktop_pet_reminder(
         return Err("Expected the desktop pet window".into());
     }
     update_queue(window.app_handle().clone(), move |app, queue| {
-        if queue.snoozing == Some(id) {
+        if queue.saving_action == Some(id) {
             return Ok(());
         }
         if let Some(reminder) = queue.take_current(id) {
@@ -930,27 +931,39 @@ pub(crate) fn handle_menu_event(app: &AppHandle, id: &str) {
     });
 }
 
+#[derive(Clone, Deserialize, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum ReminderAction {
+    Snoozed,
+    Completed,
+}
+
 #[derive(Clone, Serialize)]
-struct SnoozeRequest {
+struct ReminderActionRequest {
     id: u32,
     kind: ReminderKind,
+    action: ReminderAction,
 }
 
 #[tauri::command]
-pub(crate) async fn snooze_desktop_pet_reminder(window: WebviewWindow, id: u32) -> Result<(), String> {
+pub(crate) async fn apply_desktop_pet_reminder_action(
+    window: WebviewWindow,
+    id: u32,
+    action: ReminderAction,
+) -> Result<(), String> {
     if window.label() != LABEL {
         return Err("Expected the desktop pet window".into());
     }
     update_queue(window.app_handle().clone(), move |app, queue| {
         let Some(item) = queue.items.front().filter(|item| item.id == id) else { return Ok(()); };
         let kind = item.reminder.kind;
-        if queue.snoozing.is_some() || !matches!(kind, ReminderKind::Break | ReminderKind::Hydration) {
+        if queue.saving_action.is_some() || !matches!(kind, ReminderKind::Break | ReminderKind::Hydration) {
             return Ok(());
         }
-        queue.snoozing = Some(id);
-        queue.snooze_failed = false;
-        if let Err(error) = app.emit(SNOOZE_EVENT, SnoozeRequest { id, kind }) {
-            queue.snoozing = None;
+        queue.saving_action = Some(id);
+        queue.action_failed = false;
+        if let Err(error) = app.emit(REMINDER_ACTION_EVENT, ReminderActionRequest { id, kind, action }) {
+            queue.saving_action = None;
             return Err(error);
         }
         queue.publish(&window)
@@ -958,14 +971,14 @@ pub(crate) async fn snooze_desktop_pet_reminder(window: WebviewWindow, id: u32) 
 }
 
 #[tauri::command]
-pub(crate) async fn finish_desktop_pet_snooze(window: WebviewWindow, id: u32, saved: bool) -> Result<(), String> {
+pub(crate) async fn finish_desktop_pet_reminder_action(window: WebviewWindow, id: u32, saved: bool) -> Result<(), String> {
     if window.label() != "main" {
         return Err("Expected the main window".into());
     }
     update_queue(window.app_handle().clone(), move |app, queue| {
-        if queue.snoozing == Some(id) {
-            queue.snoozing = None;
-            queue.snooze_failed = !saved;
+        if queue.saving_action == Some(id) {
+            queue.saving_action = None;
+            queue.action_failed = !saved;
             if saved {
                 queue.take_current(id);
             }

@@ -3,7 +3,7 @@ import { isPermissionGranted, sendNotification } from "@tauri-apps/plugin-notifi
 import { dbExecute, dbSelect } from "./db";
 
 export interface DesktopReminder {
-  kind: "break" | "hydration" | "check-in" | "daily-review" | "weekly-review" | "preview";
+  kind: "break" | "hydration" | "check-in" | "daily-review" | "weekly-review" | "preview" | "preview-break";
   title: string;
   body: string;
 }
@@ -28,33 +28,52 @@ export async function saveDesktopPetEnabled(enabled: boolean): Promise<void> {
 }
 
 export interface DesktopPetPosition { x: number; y: number }
-export interface DesktopPetBehaviorPreferences { lookEnabled: boolean; walkEnabled: boolean; miniEnabled: boolean }
+export const DESKTOP_PET_BUBBLE_STYLES = ["classic", "argos", "shimeji", "pixel"] as const;
+export type DesktopPetBubbleStyle = typeof DESKTOP_PET_BUBBLE_STYLES[number];
+export interface DesktopPetBehaviorPreferences {
+  lookEnabled: boolean;
+  walkEnabled: boolean;
+  miniEnabled: boolean;
+  bubbleStyle: DesktopPetBubbleStyle;
+}
+export const DEFAULT_DESKTOP_PET_BEHAVIOR: DesktopPetBehaviorPreferences = {
+  lookEnabled: false,
+  walkEnabled: false,
+  miniEnabled: false,
+  bubbleStyle: "classic",
+};
 export type DesktopPetFocus = "idle" | "working" | "paused" | "waiting";
 
-type BehaviorRow = { look_enabled: number; walk_enabled: number; mini_enabled: number };
+type BehaviorRow = { look_enabled: number; walk_enabled: number; mini_enabled: number; bubble_style: DesktopPetBubbleStyle };
 
 function behaviorPreferences(row?: BehaviorRow): DesktopPetBehaviorPreferences {
-  return { lookEnabled: row?.look_enabled === 1, walkEnabled: row?.walk_enabled === 1, miniEnabled: row?.mini_enabled === 1 };
+  if (!row) return DEFAULT_DESKTOP_PET_BEHAVIOR;
+  return {
+    lookEnabled: row.look_enabled === 1,
+    walkEnabled: row.walk_enabled === 1,
+    miniEnabled: row.mini_enabled === 1,
+    bubbleStyle: row.bubble_style,
+  };
 }
 
 export async function loadDesktopPetBehavior(): Promise<DesktopPetBehaviorPreferences> {
   const [row] = await dbSelect<BehaviorRow>(
-    "SELECT look_enabled, walk_enabled, mini_enabled FROM desktop_reminder_preferences WHERE id = 1",
+    "SELECT look_enabled, walk_enabled, mini_enabled, bubble_style FROM desktop_reminder_preferences WHERE id = 1",
   );
   return behaviorPreferences(row);
 }
 
 export async function saveDesktopPetBehavior(preferences: DesktopPetBehaviorPreferences): Promise<void> {
   await dbExecute(
-    "INSERT INTO desktop_reminder_preferences (id, pet_enabled, look_enabled, walk_enabled, mini_enabled) VALUES (1, 1, $1, $2, $3) ON CONFLICT(id) DO UPDATE SET look_enabled = excluded.look_enabled, walk_enabled = excluded.walk_enabled, mini_enabled = excluded.mini_enabled",
-    [Number(preferences.lookEnabled), Number(preferences.walkEnabled), Number(preferences.miniEnabled)],
+    "INSERT INTO desktop_reminder_preferences (id, pet_enabled, look_enabled, walk_enabled, mini_enabled, bubble_style) VALUES (1, 1, $1, $2, $3, $4) ON CONFLICT(id) DO UPDATE SET look_enabled = excluded.look_enabled, walk_enabled = excluded.walk_enabled, mini_enabled = excluded.mini_enabled, bubble_style = excluded.bubble_style",
+    [Number(preferences.lookEnabled), Number(preferences.walkEnabled), Number(preferences.miniEnabled), preferences.bubbleStyle],
   );
   await invoke("set_desktop_pet_behavior", { preferences });
 }
 
 export async function setDesktopPetEnabled(enabled: boolean, recover?: boolean): Promise<void> {
   const [row] = enabled ? await dbSelect<BehaviorRow & { pet_x: number | null; pet_y: number | null }>(
-    "SELECT pet_x, pet_y, look_enabled, walk_enabled, mini_enabled FROM desktop_reminder_preferences WHERE id = 1",
+    "SELECT pet_x, pet_y, look_enabled, walk_enabled, mini_enabled, bubble_style FROM desktop_reminder_preferences WHERE id = 1",
   ) : [];
   const position = row?.pet_x != null && row.pet_y != null ? { x: row.pet_x, y: row.pet_y } : null;
   await invoke("set_desktop_pet_enabled", { enabled, position, preferences: behaviorPreferences(row), recover });

@@ -167,6 +167,12 @@ pub fn run() {
             sql: include_str!("../migrations/0024_desktop_pet_variant.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 25,
+            description: "remember desktop pet bubble style",
+            sql: include_str!("../migrations/0025_desktop_pet_bubble_style.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     tauri::Builder::default()
@@ -229,8 +235,8 @@ pub fn run() {
             desktop_pet::load_desktop_pet_sprite,
             desktop_pet::drag_desktop_pet,
             desktop_pet::open_desktop_pet_menu,
-            desktop_pet::snooze_desktop_pet_reminder,
-            desktop_pet::finish_desktop_pet_snooze,
+            desktop_pet::apply_desktop_pet_reminder_action,
+            desktop_pet::finish_desktop_pet_reminder_action,
             desktop_pet::set_desktop_pet_behavior,
             desktop_pet::set_desktop_pet_focus,
             desktop_pet::sample_desktop_pet_behavior,

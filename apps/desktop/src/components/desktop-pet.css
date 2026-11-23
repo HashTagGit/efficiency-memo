@@ -67,11 +67,32 @@ html.desktop-pet-window,
 }
 
 .desktop-pet-bubble {
+  --bubble-radius: 13px;
+  --bubble-padding: 8px;
+  --bubble-border-width: 1px;
+  --control-radius: max(0px, calc(var(--bubble-radius) - var(--bubble-padding) - var(--bubble-border-width)));
+  --action-height: 34px;
+  --bubble-surface: color-mix(in srgb, var(--surface) 92%, var(--accent));
+  --bubble-border: color-mix(in srgb, var(--border) 65%, var(--accent));
   position: absolute;
   inset: auto 8px 88px;
-  padding: 8px;
-  border: 1px solid var(--control-border);
-  border-radius: 13px;
+  padding: var(--bubble-padding);
+  background: var(--bubble-surface);
+  border: var(--bubble-border-width) solid var(--bubble-border);
+  border-radius: var(--bubble-radius);
+}
+
+.desktop-pet-bubble button { border-radius: var(--control-radius); }
+
+.desktop-pet-bubble[data-compact] {
+  left: auto;
+  width: max-content;
+  max-width: calc(100% - 16px);
+}
+
+[data-dock="left"] .desktop-pet-bubble[data-compact] {
+  left: 8px;
+  right: auto;
 }
 
 .desktop-pet-bubble .desktop-pet-close {
@@ -91,6 +112,12 @@ html.desktop-pet-window,
   overflow-wrap: anywhere;
 }
 
+.desktop-pet-hydration-icon { color: var(--hydration); }
+
+.desktop-pet-water {
+  fill: color-mix(in srgb, currentColor 42%, var(--bubble-surface));
+}
+
 .desktop-pet-bubble::after {
   content: "";
   position: absolute;
@@ -99,20 +126,148 @@ html.desktop-pet-window,
   width: 10px;
   height: 10px;
   transform: rotate(45deg);
-  background: var(--surface);
-  border-right: 1px solid var(--control-border);
-  border-bottom: 1px solid var(--control-border);
+  background: var(--bubble-surface);
+  border-right: 1px solid var(--bubble-border);
+  border-bottom: 1px solid var(--bubble-border);
 }
 
 [data-dock="left"] .desktop-pet-bubble::after { left: 36px; right: auto; }
 
 .desktop-pet-actions {
   display: flex;
-  flex-wrap: wrap;
   justify-content: flex-end;
-  align-items: center;
-  gap: 4px;
-  margin-top: 4px;
+  gap: 5px;
+  margin-top: 6px;
 }
 
+.desktop-pet-actions > button {
+  min-height: var(--action-height);
+  padding-inline: 8px;
+  font-size: 12px;
+  line-height: 16px;
+}
+
+.desktop-pet-actions .desktop-pet-snooze:not(:disabled) {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--control-border));
+}
+
+.desktop-pet-actions .desktop-pet-snooze:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 19%, var(--surface));
+  border-color: var(--accent);
+}
+
+.desktop-pet-actions .desktop-pet-snooze:active:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 26%, var(--surface));
+}
+
+.desktop-pet-actions[data-segmented] {
+  --segment-border: color-mix(in srgb, var(--accent) 25%, var(--control-border));
+  --segment-radius: max(0px, calc(var(--control-radius) - 1px));
+  width: max-content;
+  margin-inline-start: auto;
+  gap: 0;
+  border: 1px solid var(--segment-border);
+  border-radius: var(--control-radius);
+}
+
+.desktop-pet-actions[data-segmented] > button {
+  min-width: 38px;
+  border: 0;
+}
+
+.desktop-pet-actions[data-segmented] > button:first-child {
+  border-radius: 0;
+  border-start-start-radius: var(--segment-radius);
+  border-end-start-radius: var(--segment-radius);
+}
+
+.desktop-pet-actions[data-segmented] > .desktop-pet-snooze {
+  border-radius: 0;
+  border-start-end-radius: var(--segment-radius);
+  border-end-end-radius: var(--segment-radius);
+  border-inline-start: 1px solid var(--segment-border);
+}
+
+.desktop-pet-actions[data-segmented] > button:active { scale: none; }
+.desktop-pet-actions[data-segmented] > button:focus-visible { position: relative; z-index: 1; }
+
 .desktop-pet-status:not(:empty) { margin: 4px 2px 0; }
+
+.desktop-pet-bubble[data-bubble-style="argos"] {
+  --bubble-radius: 15px;
+  --bubble-surface: color-mix(in srgb, var(--surface) 92%, var(--success));
+  --bubble-border: color-mix(in srgb, var(--border) 55%, var(--success));
+  --accent: var(--success);
+  --accent-strong: color-mix(in srgb, var(--success) 88%, var(--foreground));
+  --accent-pressed: color-mix(in srgb, var(--success) 75%, var(--foreground));
+  --on-accent: var(--surface);
+}
+
+.desktop-pet-bubble[data-bubble-style="shimeji"] {
+  --bubble-radius: 19px;
+  --bubble-surface: color-mix(in srgb, var(--surface) 89%, var(--accent));
+}
+
+.desktop-pet-bubble[data-bubble-style="pixel"] {
+  --bubble-radius: 2px;
+  --bubble-border-width: 2px;
+  --bubble-border: color-mix(in srgb, var(--control-border) 36%, var(--accent));
+}
+
+.desktop-pet-bubble[data-bubble-style="pixel"]::after {
+  right: 35px;
+  bottom: -8px;
+  width: 12px;
+  height: 8px;
+  transform: none;
+  border: 0;
+  background: var(--bubble-border);
+  clip-path: polygon(0 0, 100% 0, 100% 33%, 75% 33%, 75% 67%, 58% 67%, 58% 100%, 42% 100%, 42% 67%, 25% 67%, 25% 33%, 0 33%);
+}
+
+[data-dock="left"] .desktop-pet-bubble[data-bubble-style="pixel"]::after { left: 35px; right: auto; }
+
+.desktop-pet-bubble[data-compact] {
+  --bubble-padding: 6px;
+  --action-height: 30px;
+  display: grid;
+  grid-template-columns: minmax(0, auto) auto auto;
+  align-items: center;
+  column-gap: 4px;
+  bottom: 83px;
+}
+
+.desktop-pet-bubble[data-compact] .desktop-pet-message {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  min-height: calc(var(--action-height) + 2px);
+  padding: 0;
+}
+
+.desktop-pet-bubble[data-compact] .desktop-pet-message svg {
+  width: var(--action-height);
+  height: var(--action-height);
+  flex: none;
+}
+.desktop-pet-bubble[data-compact] .desktop-pet-actions { margin: 0; }
+.desktop-pet-bubble[data-compact] .desktop-pet-actions > button {
+  padding-inline: 6px;
+  white-space: nowrap;
+}
+.desktop-pet-bubble[data-compact] .desktop-pet-close { position: static; width: 26px; height: calc(var(--action-height) + 2px); }
+.desktop-pet-bubble[data-compact] .desktop-pet-status { grid-column: 1 / -1; }
+
+.desktop-pet-bubble[data-compact][data-bubble-style="shimeji"] { --action-height: 34px; column-gap: 3px; }
+.desktop-pet-bubble[data-compact][data-bubble-style="shimeji"] .desktop-pet-actions > button { padding-inline: 4px; }
+.desktop-pet-bubble[data-compact][data-bubble-style="shimeji"] .desktop-pet-close { width: 24px; }
+
+.desktop-pet-chat {
+  overflow: hidden;
+  color: var(--foreground);
+  font-size: 11px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import React from "react";
-import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { invoke } from "@tauri-apps/api/core";
 import { afterEach, expect, it, vi } from "vitest";
 import { DEFAULT_PET } from "../../lib/desktop-pet-catalog";
@@ -71,17 +71,50 @@ it("waves after a tap and sends drag events only after crossing the movement thr
   await waitFor(() => expect(avatar.classList.contains("focus-visible:outline-2")).toBe(true));
 });
 
-it("keeps a snoozed reminder visible until the owning tool confirms the action", async () => {
+it.each([
+  { kind: "break", action: "snoozed", buttonName: "Snooze for 10 minutes" },
+  { kind: "break", action: "completed", buttonName: "Done" },
+  { kind: "hydration", action: "completed", buttonName: "Done" },
+])("keeps the $kind reminder visible while $action is saved and allows retry on failure", async ({ kind, action, buttonName }) => {
   render(<DesktopPet />);
   const [publish] = connect.mock.lastCall ?? [];
-  const current = { id: 12, kind: "break", title: "Break", body: "Time to stretch." };
+  const current = { id: 12, kind, title: "Reminder", body: "Time for a reminder." };
   act(() => publish({ current, count: 1 }));
-  const button = await screen.findByRole("button", { name: "Snooze for 10 minutes" }, { timeout: 2000 });
+  const button = await screen.findByRole<HTMLButtonElement>("button", { name: buttonName }, { timeout: 2000 });
+  expect(screen.getByRole("button", { name: "Snooze for 10 minutes" }).textContent).toBe(">>10m");
   await act(async () => { fireEvent.click(button); });
-  expect(invoke).toHaveBeenCalledWith("snooze_desktop_pet_reminder", { id: 12 });
-  expect(screen.getByRole("region", { name: "Break" })).toBeTruthy();
-  act(() => publish({ current, count: 1, snoozeFailed: true }));
+  expect(invoke).toHaveBeenCalledWith("apply_desktop_pet_reminder_action", { id: 12, action });
+  expect(invoke).not.toHaveBeenCalledWith("respond_to_desktop_pet_reminder", expect.anything());
+  act(() => publish({ current, count: 1, savingAction: true }));
+  expect(screen.getByRole("region", { name: "Reminder" })).toBeTruthy();
+  expect(button.disabled).toBe(true);
+  act(() => publish({ current, count: 1, actionFailed: true }));
   expect(screen.getByText("Try again")).toBeTruthy();
+  expect(button.disabled).toBe(false);
+  act(() => publish({ current: null, count: 0 }));
+  expect(screen.queryByRole("region", { name: "Reminder" })).toBeNull();
+});
+
+it.each([
+  ["preview", null],
+  ["preview-break", "Move"],
+] as const)("previews the single-row Shimeji bubble for %s without recording an action", async (kind, label) => {
+  render(<DesktopPet />);
+  const [publish] = connect.mock.lastCall ?? [];
+  act(() => publish({
+    current: { id: 13, kind, title: "Test reminder", body: "Reminder preview." },
+    count: 1,
+    preferences: { lookEnabled: false, walkEnabled: false, miniEnabled: false, bubbleStyle: "shimeji" },
+  }));
+  const bubble = await screen.findByRole("region", { name: "Test reminder" }, { timeout: 2000 });
+  expect(bubble.hasAttribute("data-compact")).toBe(true);
+  const [actions] = bubble.querySelectorAll("[data-segmented]");
+  expect(actions).toBeTruthy();
+  expect(bubble.querySelector(".desktop-pet-chat")?.textContent ?? null).toBe(label);
+  expect(within(bubble).getAllByRole("button").map((button) => button.textContent)).toEqual(["Done", ">>10m", ""]);
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Done" })); });
+  expect(invoke).toHaveBeenCalledWith("respond_to_desktop_pet_reminder", { id: 13, open: false });
+  expect(invoke).not.toHaveBeenCalledWith("apply_desktop_pet_reminder_action", expect.anything());
 });
 
 it("shows working and waiting poses, and returns to idle when focus is paused", async () => {
@@ -160,7 +193,7 @@ it("updates the gaze near a docked pet without opening it", async () => {
   const [publish] = connect.mock.lastCall ?? [];
   act(() => publish({
     current: null, count: 0, petId: "amber-cat", mini: "right", dock: "right",
-    preferences: { lookEnabled: true, walkEnabled: true, miniEnabled: true },
+    preferences: { lookEnabled: true, walkEnabled: true, miniEnabled: true, bubbleStyle: "classic" },
   }));
   const sprite = screen.getByRole("img").querySelector("[data-pet-frame]");
   await waitFor(() => expect(sprite?.getAttribute("data-pet-frame")).toBe("10:6"));

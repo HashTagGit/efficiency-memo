@@ -10,7 +10,7 @@ import { loadCheckInInterval } from "../features/core-hour/settings";
 import { loadLatestActivity } from "../features/core-hour/today-data";
 import { usePauseHydrate } from "../features/pause-hydrate/context";
 import { effectiveReminderDueAt } from "../features/pause-hydrate/reminder-logic";
-import type { ReminderKind, ReminderState } from "../features/pause-hydrate/types";
+import type { ReminderAction, ReminderKind, ReminderState } from "../features/pause-hydrate/types";
 import { getCurrentUser } from "../lib/auth";
 import { saveDesktopPetPosition, supportsDesktopPet, type DesktopPetFocus, type DesktopPetPosition } from "../lib/desktop-reminders";
 import { useI18n } from "../lib/i18n";
@@ -196,18 +196,18 @@ export function DesktopCompanionBridge() {
       savingPetPosition.current = savingPetPosition.current.then(() => saveDesktopPetPosition(payload))
         .catch((error) => console.warn("Desktop pet position could not be saved.", error));
     }));
-    register(listen<{ id: number; kind: ReminderKind }>("desktop-pet-snooze", async ({ payload }) => {
+    register(listen<{ id: number; kind: ReminderKind; action: Exclude<ReminderAction, "muted"> }>("desktop-pet-reminder-action", async ({ payload }) => {
       let saved = false;
       try {
-        if (getCurrentUser() && (payload.kind === "break" || payload.kind === "hydration")) {
-          await actOnPauseHydrate(payload.kind, "snoozed");
-          saved = true;
+        if (getCurrentUser() && (payload.kind === "break" || payload.kind === "hydration")
+          && (payload.action === "snoozed" || payload.action === "completed")) {
+          saved = await actOnPauseHydrate(payload.kind, payload.action);
         }
       } catch (error) {
-        console.warn("Desktop pet reminder could not be snoozed.", error);
+        console.warn("Desktop pet reminder action could not be saved.", error);
       }
-      await invoke("finish_desktop_pet_snooze", { id: payload.id, saved })
-        .catch((error) => console.warn("Desktop pet snooze result could not be sent.", error));
+      await invoke("finish_desktop_pet_reminder_action", { id: payload.id, saved })
+        .catch((error) => console.warn("Desktop pet reminder action result could not be sent.", error));
     }));
     return () => {
       disposed = true;

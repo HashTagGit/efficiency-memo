@@ -15,6 +15,18 @@ pub(crate) struct Preferences {
     pub(super) look_enabled: bool,
     pub(super) walk_enabled: bool,
     pub(super) mini_enabled: bool,
+    #[serde(default)]
+    pub(super) bubble_style: BubbleStyle,
+}
+
+#[derive(Clone, Copy, Default, Deserialize, PartialEq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub(crate) enum BubbleStyle {
+    #[default]
+    Classic,
+    Argos,
+    Shimeji,
+    Pixel,
 }
 
 #[derive(Clone, Copy, Default, Deserialize, PartialEq, Serialize)]

@@ -17,8 +17,8 @@ interface PetView {
   count: number;
   petId: string | null;
   petVariant?: string | null;
-  snoozing?: boolean;
-  snoozeFailed?: boolean;
+  savingAction?: boolean;
+  actionFailed?: boolean;
   focus?: DesktopPetFocus;
   preferences?: DesktopPetBehaviorPreferences;
   mini?: "left" | "right" | null;
@@ -42,7 +42,10 @@ export function DesktopPet() {
   const bubble = useRef<HTMLElement>(null);
   const avatar = useRef<HTMLButtonElement>(null);
   const { current, count } = view;
-  const iconReminder = current?.kind === "break" || current?.kind === "hydration";
+  const bubbleStyle = view.preferences?.bubbleStyle ?? "classic";
+  const preview = current?.kind === "preview" || current?.kind === "preview-break";
+  const hydrationIcon = current?.kind === "hydration" || current?.kind === "preview";
+  const iconReminder = hydrationIcon || current?.kind === "break" || current?.kind === "preview-break";
   const locale = detectInitialLocale();
   const t = (key: string) => translate(locale, `desktopPet.${key}`);
   useDesktopPetHitTest(ready, avatar, bubble, pet.atlas, held || menuOpen);
@@ -152,13 +155,16 @@ export function DesktopPet() {
       .finally(() => setMenuOpen(false));
   }
 
-  async function respond(action: "dismiss" | "open" | "snooze") {
-    if (!current || busy || view.snoozing) return;
+  async function respond(action: "dismiss" | "open" | "snoozed" | "completed") {
+    if (!current || busy || view.savingAction) return;
     setBusy(true);
     setFailed(false);
     try {
-      if (action === "snooze") await invoke("snooze_desktop_pet_reminder", { id: current.id });
-      else await invoke("respond_to_desktop_pet_reminder", { id: current.id, open: action === "open" });
+      if (action === "dismiss" || action === "open") {
+        await invoke("respond_to_desktop_pet_reminder", { id: current.id, open: action === "open" });
+      } else {
+        await invoke("apply_desktop_pet_reminder_action", { id: current.id, action });
+      }
     } catch {
       setFailed(true);
     } finally {
@@ -198,43 +204,61 @@ export function DesktopPet() {
         </span>
       </button>
       {current && revealedId === current.id ? (
-        <section ref={bubble} className="desktop-pet-bubble bg-surface text-foreground" aria-labelledby="pet-reminder-title">
+        <section ref={bubble} className="desktop-pet-bubble text-foreground" data-compact={iconReminder || undefined}
+          data-bubble-style={bubbleStyle}
+          aria-labelledby="pet-reminder-title">
+          <div className="desktop-pet-message" aria-live="polite" aria-atomic="true">
+            <h1 id="pet-reminder-title" className={iconReminder ? "sr-only" : "text-sm font-semibold leading-5"}>{current.title}</h1>
+            {iconReminder && (
+              <svg aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" className={hydrationIcon ? "desktop-pet-hydration-icon" : "text-accent"} fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                {hydrationIcon ? (
+                  <>
+                    <path className="desktop-pet-water" d="M6 11c2-2 4-2 6 0s4 2 6 0l-1 8a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1Z" />
+                    <path d="M5 4h14l-2 15a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1L5 4Z" />
+                  </>
+                ) : (
+                  <><circle cx="12" cy="5" r="2" /><path d="m4 7 5 4h6l5-4M12 11v4m0 0-5 6m5-6 5 6" /></>
+                )}
+              </svg>
+            )}
+            {iconReminder && !hydrationIcon && bubbleStyle === "shimeji" && (
+              <span className="desktop-pet-chat" aria-hidden="true">{t("chatBreak")}</span>
+            )}
+            <p className={iconReminder ? "sr-only" : "text-xs leading-[1.45] text-muted"}>{current.body}</p>
+          </div>
+          <div className="desktop-pet-actions" data-segmented={iconReminder || undefined}>
+            <Button size="sm" disabled={busy || view.savingAction} onClick={() => void respond(preview ? "dismiss" : iconReminder ? "completed" : "open")}>
+              {iconReminder ? translate(locale, "pauseHydrate.complete") : t("open")}
+            </Button>
+            {iconReminder && (
+              <Button
+                variant="secondary"
+                size="sm"
+                className="desktop-pet-snooze"
+                aria-label={t("snooze")}
+                title={t("snooze")}
+                disabled={busy || view.savingAction}
+                onClick={() => void respond(preview ? "dismiss" : "snoozed")}
+              >
+                {">>10m"}
+              </Button>
+            )}
+          </div>
           <Button
             variant="ghost"
             size="icon"
             className="desktop-pet-close hover:bg-surface-strong"
             aria-label={t("dismiss")}
             title={t("dismiss")}
-            disabled={busy || view.snoozing}
+            disabled={busy || view.savingAction}
             onClick={() => void respond("dismiss")}
           >
             <svg aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
               <path d="m6 6 12 12M18 6 6 18" />
             </svg>
           </Button>
-          <div className="desktop-pet-message" aria-live="polite" aria-atomic="true">
-            <h1 id="pet-reminder-title" className={iconReminder || current.kind === "preview" ? "sr-only" : "text-sm font-semibold leading-5"}>{current.title}</h1>
-            {iconReminder && (
-              <svg aria-hidden="true" width="30" height="30" viewBox="0 0 24 24" className="text-accent" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                {current.kind === "hydration" ? (
-                  <path d="M5 4h14l-2 15a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1L5 4Zm1 7c2-2 4-2 6 0s4 2 6 0" />
-                ) : (
-                  <><circle cx="12" cy="5" r="2" /><path d="m4 7 5 4h6l5-4M12 11v4m0 0-5 6m5-6 5 6" /></>
-                )}
-              </svg>
-            )}
-            <p className={iconReminder ? "sr-only" : "text-xs leading-[1.45] text-muted"}>{current.body}</p>
-          </div>
-          {current.kind !== "preview" && (
-            <div className="desktop-pet-actions">
-              {iconReminder && (
-                <Button variant="ghost" size="sm" disabled={busy || view.snoozing} onClick={() => void respond("snooze")}>{t("snooze")}</Button>
-              )}
-              <Button size="sm" disabled={busy || view.snoozing} onClick={() => void respond("open")}>{t("open")}</Button>
-            </div>
-          )}
           <div className="desktop-pet-status text-xs text-muted" role="status">
-            {failed || view.snoozeFailed ? t("actionError") : count > 1 ? translate(locale, "desktopPet.waiting", { count: count - 1 }) : ""}
+            {failed || view.actionFailed ? t("actionError") : count > 1 ? translate(locale, "desktopPet.waiting", { count: count - 1 }) : ""}
           </div>
         </section>
       ) : null}

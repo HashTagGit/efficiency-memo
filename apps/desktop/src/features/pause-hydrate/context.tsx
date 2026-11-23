@@ -42,7 +42,7 @@ interface PauseHydrateContextValue {
   refresh: () => Promise<void>;
   requestNotificationPermission: () => Promise<void>;
   savePreferences: (preferences: ReminderPreferenceInput[], policy: SchedulePolicy) => Promise<void>;
-  act: (kind: ReminderKind, action: ReminderAction) => Promise<void>;
+  act: (kind: ReminderKind, action: ReminderAction) => Promise<boolean>;
 }
 
 const PauseHydrateContext = createContext<PauseHydrateContextValue | null>(null);
@@ -159,9 +159,10 @@ export function PauseHydrateProvider({ children }: { children: React.ReactNode }
   }, [refresh, userId]);
 
   const act = useCallback(async (kind: ReminderKind, action: ReminderAction) => {
-    if (!userId) return;
-    await actOnReminder(userId, kind, action);
+    if (!userId) return false;
+    const saved = await actOnReminder(userId, kind, action);
     await refresh();
+    return saved;
   }, [refresh, userId]);
 
   return (

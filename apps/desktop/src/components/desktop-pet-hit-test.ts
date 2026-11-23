@@ -75,7 +75,7 @@ export function useDesktopPetHitTest(
     const observer = new MutationObserver(schedule);
     observer.observe(target.parentElement ?? target, {
       subtree: true, childList: true, attributes: true,
-      attributeFilter: ["data-pet-frame", "data-mini", "data-peek-nod", "data-dock", "data-reminder"],
+      attributeFilter: ["data-pet-frame", "data-mini", "data-peek-nod", "data-dock", "data-reminder", "data-bubble-style"],
     });
     const resize = window.ResizeObserver ? new ResizeObserver(schedule) : null;
     resize?.observe(document.documentElement);

@@ -291,12 +291,12 @@ export async function actOnReminder(
   kind: ReminderKind,
   action: ReminderAction,
   now = new Date(),
-): Promise<void> {
+): Promise<boolean> {
   const [row] = await dbSelect<ReminderRow>(
     "SELECT kind, enabled, interval_minutes, next_due_at, pending_at, muted_until FROM ph_reminders WHERE user_id = $1 AND kind = $2",
     [userId, kind],
   );
-  if (!row || !row.enabled) return;
+  if (!row || !row.enabled) return false;
   const interval = normalizeReminderInterval(kind, row.interval_minutes);
   const schedule = (await loadPauseHydrateState(userId, now)).schedulePolicy;
   const next = action === "snoozed"
@@ -316,6 +316,7 @@ export async function actOnReminder(
       timezone_offset_minutes: timezoneOffsetMinutes(now),
     },
   });
+  return true;
 }
 
 export async function markNewPendingReminders(

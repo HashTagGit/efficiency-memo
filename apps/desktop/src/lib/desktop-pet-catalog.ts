@@ -260,6 +260,11 @@ export function findBundledCollection(petId: string): DesktopPetCollection | und
 
 export async function resolveDesktopPetSelection(): Promise<DesktopPetSelection> {
   const selection = await loadDesktopPetSelection();
+  const imported = isBundledId(selection.petId) ? [] : await loadImportedDesktopPets().catch(() => []);
+  return normalizeDesktopPetSelection(selection, imported);
+}
+
+export function normalizeDesktopPetSelection(selection: DesktopPetSelection, imported: ImportedDesktopEntry[]): DesktopPetSelection {
   const bundled = findBundledCollection(selection.petId);
   if (bundled) {
     const variant = bundled.variants.find((entry) => entry.id === selection.variantId) ?? bundled.variants.find((entry) => entry.id === bundled.defaultVariant) ?? bundled.variants[0];
@@ -268,7 +273,6 @@ export async function resolveDesktopPetSelection(): Promise<DesktopPetSelection>
   if (BUNDLED_PETS.some((pet) => pet.manifest.id === selection.petId)) {
     return { petId: selection.petId, variantId: null };
   }
-  const imported = await loadImportedDesktopPets().catch(() => [] as ImportedDesktopEntry[]);
   const importedCollection = imported.find((entry): entry is ImportedDesktopCollection => entry.kind === "collection" && entry.id === selection.petId);
   if (importedCollection) {
     const variant = importedCollection.variants.find((entry) => entry.id === selection.variantId) ?? importedCollection.variants.find((entry) => entry.id === importedCollection.defaultVariant) ?? importedCollection.variants[0];

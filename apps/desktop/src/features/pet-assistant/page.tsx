@@ -15,6 +15,7 @@ import {
   loadDesktopPetSelection,
   loadDesktopPetSprite,
   loadImportedDesktopPets,
+  normalizeDesktopPetSelection,
   saveDesktopPetSelection,
   saveImportedDesktopPet,
   updateDesktopPetWindow,
@@ -27,6 +28,8 @@ import {
   type ImportedDesktopPet,
 } from "../../lib/desktop-pet-catalog";
 import {
+  DEFAULT_DESKTOP_PET_BEHAVIOR,
+  DESKTOP_PET_BUBBLE_STYLES,
   desktopPetEnabled,
   loadDesktopPetBehavior,
   saveDesktopPetBehavior,
@@ -52,7 +55,7 @@ function isImportedDesktopPet(entry: ImportedDesktopEntry): entry is ImportedDes
   return entry.kind === "pet";
 }
 
-function PetActionPreview({ petId, variantId }: { petId: string; variantId: string | null }) {
+function PetActionPreview({ petId, variantId, name }: DesktopPetSelection & { name: string }) {
   const { t } = useI18n();
   const [pet, setPet] = useState<DesktopPetSprite | null>(null);
   const [failed, setFailed] = useState(false);
@@ -70,21 +73,24 @@ function PetActionPreview({ petId, variantId }: { petId: string; variantId: stri
 
   return (
     <fieldset className="mt-4 rounded-md border border-border bg-surface p-3">
-      <legend className="px-1 text-sm font-medium text-foreground">{t("desktopPet.motionPreview")}</legend>
+      <legend className="px-1 text-sm font-medium text-foreground">{t("desktopPet.current")}</legend>
       <div className="flex flex-wrap items-center gap-3">
         <div className="grid h-20 w-20 shrink-0 place-items-center rounded-md bg-background">
           {pet ? <PetSprite key={pose} pet={pet} animated pose={pose} repeat /> : null}
         </div>
-        {pet ? (
-          <div className="flex flex-wrap gap-2" role="group" aria-label={t("desktopPet.motionPreview")}>
-            {previewPoses.map((action) => (
-              <Button key={action} size="sm" variant={pose === action ? "primary" : "ghost"}
-                aria-pressed={pose === action} onClick={() => setPose(action)}>
-                {t(`desktopPet.pose.${action}`)}
-              </Button>
-            ))}
-          </div>
-        ) : <p role="status" className="text-sm text-muted">{t(failed ? "desktopPet.motionPreviewError" : "app.loading")}</p>}
+        <div className="min-w-0 flex-1">
+          <p className="mb-2 break-words text-sm font-semibold text-foreground" aria-live="polite">{name}</p>
+          {pet ? (
+            <div className="flex flex-wrap gap-2" role="group" aria-label={t("desktopPet.motionPreview")}>
+              {previewPoses.map((action) => (
+                <Button key={action} size="sm" variant={pose === action ? "primary" : "ghost"}
+                  aria-pressed={pose === action} onClick={() => setPose(action)}>
+                  {t(`desktopPet.pose.${action}`)}
+                </Button>
+              ))}
+            </div>
+          ) : <p role="status" className="text-sm text-muted">{t(failed ? "desktopPet.motionPreviewError" : "app.loading")}</p>}
+        </div>
       </div>
     </fieldset>
   );
@@ -103,14 +109,7 @@ export default function PetAssistantPage() {
 interface SingleOption {
   id: string;
   label: string;
-  pet?: DesktopPetSprite;
-  thumbnail?: string;
-}
-
-interface VariantOption {
-  id: string;
-  label: string;
-  description: string;
+  description?: string;
   pet?: DesktopPetSprite;
   thumbnail?: string;
 }
@@ -119,8 +118,27 @@ interface CollectionOption {
   id: string;
   label: string;
   description: string;
-  defaultVariant: string;
-  variants: VariantOption[];
+  variants: SingleOption[];
+}
+
+const optionGrid = "grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3";
+
+function PetOption({ option, checked, onSelect }: {
+  option: SingleOption;
+  checked: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <label
+      className={`flex min-w-0 cursor-pointer items-center gap-2 rounded-md border py-1.5 pe-2 text-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-focus-ring ${checked ? "border-accent bg-active font-semibold" : "border-control-border bg-surface hover:bg-surface-strong"}`}
+    >
+      <input className="sr-only" type="radio" name="desktop-pet-selection" checked={checked} onChange={onSelect} />
+      <span className="grid h-11 w-11 shrink-0 place-items-center" aria-hidden="true">
+        {option.pet ? <PetSprite pet={option.pet} /> : <img className="h-full [image-rendering:pixelated]" src={option.thumbnail} alt="" />}
+      </span>
+      <span className="min-w-0 break-words text-foreground" title={option.description || option.label}>{option.label}</span>
+    </label>
+  );
 }
 
 function petLabel(t: (key: string) => string, manifest: Pick<CodexPetSingleManifest, "id" | "displayName">): string {
@@ -135,66 +153,53 @@ function variantLabel(t: (key: string) => string, petId: string, variant: Pick<D
   return label === key ? variant.displayName : label;
 }
 
-function normalizeSelection(selection: DesktopPetSelection, imported: ImportedDesktopEntry[]): DesktopPetSelection {
-  const bundled = BUNDLED_COLLECTIONS.find((collection) => collection.manifest.id === selection.petId);
-  if (bundled) {
-    const variant = bundled.variants.find((entry) => entry.id === selection.variantId) ? selection.variantId : bundled.defaultVariant;
-    return { petId: selection.petId, variantId: variant };
-  }
-  const importedCollection = imported.find((entry): entry is ImportedDesktopCollection => isImportedDesktopCollection(entry) && entry.id === selection.petId);
-  if (importedCollection) {
-    const variant = importedCollection.variants.find((entry) => entry.id === selection.variantId) ? selection.variantId : importedCollection.defaultVariant;
-    return { petId: selection.petId, variantId: variant };
-  }
-  const known = BUNDLED_PETS.some((pet) => pet.manifest.id === selection.petId)
-    || imported.some((entry) => entry.id === selection.petId);
-  return known ? { petId: selection.petId, variantId: null } : { petId: DEFAULT_PET.manifest.id, variantId: null };
-}
-
-function collectionOptions(t: (key: string) => string, imported: ImportedDesktopEntry[]): CollectionOption[] {
+function collectionOptions(t: (key: string) => string, imported: ImportedDesktopEntry[]) {
   const bundled: CollectionOption[] = BUNDLED_COLLECTIONS.map((collection: DesktopPetCollection) => ({
     id: collection.manifest.id,
     label: petLabel(t, collection.manifest),
-    description: collection.manifest.description,
-    defaultVariant: collection.defaultVariant,
+    description: t(`desktopPet.pet.${collection.manifest.id}.description`),
     variants: collection.variants.map((variant) => ({
       id: variant.id,
       label: variantLabel(t, collection.manifest.id, variant),
-      description: variant.description,
+      description: t(`desktopPet.pet.${collection.manifest.id}.variant.${variant.id}.description`),
       pet: { manifest: variant.manifest, atlas: variant.atlas, sleepingFrame: variant.sleepingFrame },
     })),
   }));
   const downloaded: CollectionOption[] = imported.filter(isImportedDesktopCollection).map((collection) => ({
     id: collection.id,
-    label: petLabel(t, { id: collection.id, displayName: collection.displayName }),
+    label: collection.displayName,
     description: collection.description,
-    defaultVariant: collection.defaultVariant,
     variants: collection.variants.map((variant) => ({
       id: variant.id,
-      label: variantLabel(t, collection.id, variant),
+      label: variant.displayName,
       description: variant.description,
       thumbnail: variant.thumbnail,
     })),
   }));
-  return [...bundled, ...downloaded];
+  return { bundled, downloaded };
 }
 
 function PetSettings() {
   const { t } = useI18n();
   const [enabled, setEnabled] = useState<boolean | null>(null);
-  const [behavior, setBehavior] = useState<DesktopPetBehaviorPreferences>({ lookEnabled: false, walkEnabled: false, miniEnabled: false });
+  const [behavior, setBehavior] = useState<DesktopPetBehaviorPreferences>(DEFAULT_DESKTOP_PET_BEHAVIOR);
   const [selected, setSelected] = useState<DesktopPetSelection>({ petId: DEFAULT_PET.manifest.id, variantId: null });
   const [imported, setImported] = useState<ImportedDesktopEntry[]>([]);
   const [busy, setBusy] = useState(false);
   const [errorKey, setErrorKey] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set());
   const fileInput = useRef<HTMLInputElement>(null);
+  const library = useRef<HTMLFieldSetElement>(null);
+  const pendingOptionFocus = useRef<"selection" | "import" | null>(null);
 
   useEffect(() => {
     let active = true;
     void Promise.all([desktopPetEnabled(), loadDesktopPetSelection(), loadImportedDesktopPets(), loadDesktopPetBehavior()]).then(([value, selection, packs, preferences]) => {
       if (!active) return;
       setEnabled(value);
-      setSelected(normalizeSelection(selection, packs));
+      const normalized = normalizeDesktopPetSelection(selection, packs);
+      setSelected(normalized);
+      if (normalized.variantId) setExpanded(new Set([normalized.petId]));
       setImported(packs);
       setBehavior(preferences);
     }).catch(() => {
@@ -202,6 +207,15 @@ function PetSettings() {
     });
     return () => { active = false; };
   }, []);
+
+  useEffect(() => {
+    if (busy || !pendingOptionFocus.current) return;
+    const shouldReveal = pendingOptionFocus.current === "import";
+    pendingOptionFocus.current = null;
+    const option = library.current?.querySelector<HTMLInputElement>("input:checked");
+    option?.focus({ preventScroll: true });
+    if (shouldReveal) option?.labels?.[0]?.scrollIntoView?.({ block: "nearest", inline: "nearest" });
+  }, [busy]);
 
   async function run(action: () => Promise<unknown>) {
     setErrorKey(null);
@@ -230,22 +244,66 @@ function PetSettings() {
       setImported(await loadImportedDesktopPets());
       if (isImportedCollection(pack)) await select(pack.manifest.id, pack.manifest.defaultVariant);
       else await select(pack.manifest.id, null);
+      setExpanded((previous) => new Set([...previous, pack.manifest.id]));
+      pendingOptionFocus.current = "import";
     });
   }
 
   const collections = collectionOptions(t, imported);
-  const singles: SingleOption[] = [
-    ...BUNDLED_PETS.map((pet) => ({ id: pet.manifest.id, label: petLabel(t, pet.manifest), pet })),
-    ...imported.filter(isImportedDesktopPet).map((entry) => ({
-      id: entry.id,
-      label: petLabel(t, entry.manifest),
-      thumbnail: entry.thumbnail,
-    })),
-  ];
+  const singles = BUNDLED_PETS.map((pet) => ({ id: pet.manifest.id, label: petLabel(t, pet.manifest), pet }));
+  const importedSingles = imported.filter(isImportedDesktopPet).map((entry) => ({
+    id: entry.id, label: entry.manifest.displayName, description: entry.manifest.description, thumbnail: entry.thumbnail,
+  }));
+  const activeCollection = [...collections.bundled, ...collections.downloaded].find((entry) => entry.id === selected.petId);
+  const activeForm = activeCollection?.variants.find((entry) => entry.id === selected.variantId);
+  const currentName = activeCollection && activeForm
+    ? t("desktopPet.currentForm", { collection: activeCollection.label, form: activeForm.label })
+    : [...singles, ...importedSingles].find((entry) => entry.id === selected.petId)?.label ?? "";
+
+  function choose(petId: string, variantId: string | null) {
+    pendingOptionFocus.current = "selection";
+    void run(() => select(petId, variantId));
+  }
+
+  function renderSingle(option: SingleOption) {
+    return <PetOption key={option.id} option={option} checked={selected.petId === option.id && selected.variantId === null}
+      onSelect={() => choose(option.id, null)} />;
+  }
+
+  function renderCollection(collection: CollectionOption) {
+    const open = expanded.has(collection.id);
+    const contentId = `desktop-pet-collection-${collection.id}`;
+    return (
+      <section key={collection.id} className="rounded-md border border-border">
+        <h3>
+          <button type="button" className="flex w-full items-center justify-between gap-2 rounded-md px-3 py-2 text-start text-sm font-medium text-foreground hover:bg-surface-strong focus-visible:outline-2 focus-visible:outline-focus-ring"
+            aria-expanded={open} aria-controls={contentId} onClick={() => setExpanded((previous) => {
+              const next = new Set(previous);
+              if (next.has(collection.id)) next.delete(collection.id);
+              else next.add(collection.id);
+              return next;
+            })}>
+            <span className="min-w-0 break-words">{collection.label}</span>
+            <svg aria-hidden="true" viewBox="0 0 16 16" className={`size-4 shrink-0 ${open ? "rotate-180" : ""}`} fill="none" stroke="currentColor" strokeWidth="1.5"><path d="m4 6 4 4 4-4" /></svg>
+          </button>
+        </h3>
+        <div id={contentId} hidden={!open} className="px-3 pb-3">
+          {collection.description && <p className="mb-2 text-xs text-muted">{collection.description}</p>}
+          <div className={optionGrid}>
+            {collection.variants.map((option) => (
+              <PetOption key={option.id} option={option} checked={selected.petId === collection.id && selected.variantId === option.id}
+                onSelect={() => choose(collection.id, option.id)} />
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <div className="mt-4">
-      <label className="inline-flex items-center gap-2 text-sm font-medium text-foreground">
+      {enabled !== null && <PetActionPreview key={`${selected.petId}:${selected.variantId ?? ""}`} {...selected} name={currentName} />}
+      <label className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-foreground">
         <input
           type="checkbox"
           className="size-4 accent-accent focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-focus-ring"
@@ -288,55 +346,40 @@ function PetSettings() {
         ))}
       </fieldset>
 
-      <fieldset className="mt-5" disabled={busy || enabled === null}>
-        <legend className="text-sm font-medium text-foreground">{t("desktopPet.choose")}</legend>
-        <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {singles.map((option) => (
-            <label
-              key={option.id}
-              className={`flex min-w-0 cursor-pointer items-center gap-2 rounded-md border py-1.5 pe-2 text-sm focus-within:ring-2 focus-within:ring-focus-ring ${selected.petId === option.id ? "border-accent bg-active font-semibold" : "border-control-border bg-surface hover:bg-surface-strong"}`}
-            >
-              <input className="sr-only" type="radio" name="desktop-pet-type" checked={selected.petId === option.id} onChange={() => void run(() => select(option.id, null))} />
-              <span className="grid h-11 w-11 shrink-0 place-items-center" aria-hidden="true">
-                {option.pet ? <PetSprite pet={option.pet} /> : <img className="h-full [image-rendering:pixelated]" src={option.thumbnail} alt="" />}
-              </span>
-              <span className="min-w-0 truncate text-foreground" title={option.label}>{option.label}</span>
-            </label>
+      <label className="mt-5 grid w-fit gap-1.5 text-sm font-medium text-foreground">
+        {t("desktopPet.bubbleStyle")}
+        <select
+          className="rounded-md border border-control-border bg-surface px-2 py-1.5 text-foreground focus:outline-none focus:ring-2 focus:ring-focus-ring"
+          value={behavior.bubbleStyle}
+          disabled={busy || enabled === null}
+          onChange={(event) => {
+            const bubbleStyle = DESKTOP_PET_BUBBLE_STYLES.find((style) => style === event.currentTarget.value);
+            if (!bubbleStyle) return;
+            const next = { ...behavior, bubbleStyle };
+            void run(async () => { await saveDesktopPetBehavior(next); setBehavior(next); });
+          }}
+        >
+          {DESKTOP_PET_BUBBLE_STYLES.map((style) => (
+            <option key={style} value={style}>{t(`desktopPet.bubbleStyle.${style}`)}</option>
           ))}
-        </div>
+        </select>
+      </label>
+
+      <fieldset ref={library} className="mt-5 space-y-3" disabled={busy || enabled === null}>
+        <legend className="text-sm font-semibold text-foreground">{t("desktopPet.library")}</legend>
+        <section className="space-y-2">
+          <h2 className="text-sm font-medium text-foreground">{t("desktopPet.builtIn")}</h2>
+          <div className={optionGrid}>{singles.map(renderSingle)}</div>
+          {collections.bundled.map(renderCollection)}
+        </section>
+        {imported.length > 0 && (
+          <section className="space-y-2">
+            <h2 className="text-sm font-medium text-foreground">{t("desktopPet.imported")}</h2>
+            {importedSingles.length > 0 && <div className={optionGrid}>{importedSingles.map(renderSingle)}</div>}
+            {collections.downloaded.map(renderCollection)}
+          </section>
+        )}
       </fieldset>
-
-      {collections.map((collection) => (
-        <fieldset key={collection.id} className="mt-5" disabled={busy || enabled === null}>
-          <legend className="text-sm font-medium text-foreground">{collection.label}</legend>
-          <p className="mt-1 text-xs text-muted">{collection.description}</p>
-          <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3">
-            {collection.variants.map((variant) => {
-              const checked = selected.petId === collection.id && selected.variantId === variant.id;
-              return (
-                <label
-                  key={variant.id}
-                  className={`flex min-w-0 cursor-pointer items-center gap-2 rounded-md border py-1.5 pe-2 text-sm focus-within:ring-2 focus-within:ring-focus-ring ${checked ? "border-accent bg-active font-semibold" : "border-control-border bg-surface hover:bg-surface-strong"}`}
-                >
-                  <input
-                    className="sr-only"
-                    type="radio"
-                    name={`desktop-pet-variant-${collection.id}`}
-                    checked={checked}
-                    onChange={() => void run(() => select(collection.id, variant.id))}
-                  />
-                  <span className="grid h-11 w-11 shrink-0 place-items-center" aria-hidden="true">
-                    {variant.pet ? <PetSprite pet={variant.pet} /> : <img className="h-full [image-rendering:pixelated]" src={variant.thumbnail} alt="" />}
-                  </span>
-                  <span className="min-w-0 truncate text-foreground" title={variant.description || variant.label}>{variant.label}</span>
-                </label>
-              );
-            })}
-          </div>
-        </fieldset>
-      ))}
-
-      <PetActionPreview key={`${selected.petId}:${selected.variantId ?? ""}`} petId={selected.petId} variantId={selected.variantId} />
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <input type="file" ref={fileInput} hidden multiple accept=".zip,.json,.png,.webp" onChange={importFiles} />
@@ -346,11 +389,13 @@ function PetSettings() {
         <Button variant="ghost" size="sm" disabled={busy || enabled !== true} onClick={() => void run(() => setDesktopPetEnabled(true, true))}>
           {t("desktopPet.recoverWindow")}
         </Button>
-        <Button variant="ghost" size="sm" disabled={busy || enabled !== true} onClick={() => void run(() => showDesktopPetReminder({
-          kind: "preview", title: t("desktopPet.previewTitle"), body: t("desktopPet.previewBody"),
-        }))}>
-          {t("desktopPet.preview")}
-        </Button>
+        {(["preview", "preview-break"] as const).map((kind) => (
+          <Button key={kind} variant="ghost" size="sm" disabled={busy || enabled !== true} onClick={() => void run(() => showDesktopPetReminder({
+            kind, title: t("desktopPet.previewTitle"), body: t("desktopPet.previewBody"),
+          }))}>
+            {t(kind === "preview" ? "desktopPet.preview" : "desktopPet.previewBreak")}
+          </Button>
+        ))}
       </div>
       <p id="desktop-pet-import-hint" className="mt-1.5 text-xs text-muted">{t("desktopPet.importHint")}</p>
       {errorKey ? <p role="alert" className="mt-2 text-sm text-danger">{t(errorKey)}</p> : null}
