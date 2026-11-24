@@ -120,8 +120,6 @@ it.each([
   }));
   const bubble = await screen.findByRole("region", { name: "Test reminder" }, { timeout: 2000 });
   expect(bubble.hasAttribute("data-compact")).toBe(true);
-  const [actions] = bubble.querySelectorAll("[data-segmented]");
-  expect(actions).toBeTruthy();
   expect(bubble.querySelector(".desktop-pet-chat")?.textContent ?? null).toBe(label);
   expect(within(bubble).getAllByRole("button").map((button) => button.textContent)).toEqual(["Done", ">>10m", ""]);
   await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Done" })); });

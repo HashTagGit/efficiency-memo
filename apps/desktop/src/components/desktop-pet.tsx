@@ -227,12 +227,12 @@ export function DesktopPet() {
             <p className={iconReminder ? "sr-only" : "text-xs leading-[1.45] text-muted"}>{current.body}</p>
           </div>
           {iconReminder && (
-            <div className="desktop-pet-actions" data-segmented>
-              <Button size="sm" disabled={busy || view.savingAction} onClick={() => void respond(preview ? "dismiss" : "completed")}>
+            <div className="desktop-pet-actions">
+              <Button variant="ghost" size="sm" className="desktop-pet-complete" disabled={busy || view.savingAction} onClick={() => void respond(preview ? "dismiss" : "completed")}>
                 {translate(locale, "pauseHydrate.complete")}
               </Button>
               <Button
-                variant="secondary"
+                variant="ghost"
                 size="sm"
                 className="desktop-pet-snooze"
                 aria-label={t("snooze")}

@@ -135,61 +135,49 @@ html.desktop-pet-window,
 
 .desktop-pet-actions {
   display: flex;
-  justify-content: flex-end;
-  gap: 5px;
-  margin-top: 6px;
+  gap: 4px;
 }
 
 .desktop-pet-actions > button {
   min-height: var(--action-height);
-  padding-inline: 8px;
+  padding-inline: 7px;
   font-size: 12px;
   line-height: 16px;
+  white-space: nowrap;
 }
 
-.desktop-pet-actions .desktop-pet-snooze:not(:disabled) {
-  border-color: color-mix(in srgb, var(--accent) 35%, var(--control-border));
+.desktop-pet-actions .desktop-pet-complete {
+  background: color-mix(in srgb, var(--accent) 16%, var(--bubble-surface));
+  font-weight: 600;
 }
 
-.desktop-pet-actions .desktop-pet-snooze:hover:not(:disabled) {
-  background: color-mix(in srgb, var(--accent) 19%, var(--surface));
-  border-color: var(--accent);
+.desktop-pet-actions .desktop-pet-complete:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 24%, var(--bubble-surface));
 }
 
-.desktop-pet-actions .desktop-pet-snooze:active:not(:disabled) {
-  background: color-mix(in srgb, var(--accent) 26%, var(--surface));
+.desktop-pet-actions .desktop-pet-complete:active:not(:disabled) {
+  background: color-mix(in srgb, var(--accent) 32%, var(--bubble-surface));
 }
 
-.desktop-pet-actions[data-segmented] {
-  --segment-border: color-mix(in srgb, var(--accent) 25%, var(--control-border));
-  --segment-radius: max(0px, calc(var(--control-radius) - 1px));
-  width: max-content;
-  margin-inline-start: auto;
-  gap: 0;
-  border: 1px solid var(--segment-border);
-  border-radius: var(--control-radius);
+.desktop-pet-actions .desktop-pet-snooze {
+  color: color-mix(in srgb, var(--foreground) 78%, var(--bubble-surface));
+  font-variant-numeric: tabular-nums;
 }
 
-.desktop-pet-actions[data-segmented] > button {
-  min-width: 38px;
-  border: 0;
+.desktop-pet-actions .desktop-pet-snooze:hover:not(:disabled),
+.desktop-pet-bubble[data-compact] .desktop-pet-close:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--foreground) 8%, var(--bubble-surface));
 }
 
-.desktop-pet-actions[data-segmented] > button:first-child {
-  border-radius: 0;
-  border-start-start-radius: var(--segment-radius);
-  border-end-start-radius: var(--segment-radius);
+.desktop-pet-actions .desktop-pet-snooze:active:not(:disabled),
+.desktop-pet-bubble[data-compact] .desktop-pet-close:active:not(:disabled) {
+  background: color-mix(in srgb, var(--foreground) 13%, var(--bubble-surface));
 }
 
-.desktop-pet-actions[data-segmented] > .desktop-pet-snooze {
-  border-radius: 0;
-  border-start-end-radius: var(--segment-radius);
-  border-end-end-radius: var(--segment-radius);
-  border-inline-start: 1px solid var(--segment-border);
+.desktop-pet-actions .desktop-pet-complete:disabled,
+.desktop-pet-actions .desktop-pet-snooze:disabled {
+  color: var(--muted);
 }
-
-.desktop-pet-actions[data-segmented] > button:active { scale: none; }
-.desktop-pet-actions[data-segmented] > button:focus-visible { position: relative; z-index: 1; }
 
 .desktop-pet-status:not(:empty) { margin: 4px 2px 0; }
 
@@ -247,21 +235,24 @@ html.desktop-pet-window,
 }
 
 .desktop-pet-bubble[data-compact] .desktop-pet-message svg {
-  width: var(--action-height);
-  height: var(--action-height);
+  width: 26px;
+  height: 26px;
   flex: none;
 }
-.desktop-pet-bubble[data-compact] .desktop-pet-actions { margin: 0; }
-.desktop-pet-bubble[data-compact] .desktop-pet-actions > button {
-  padding-inline: 6px;
-  white-space: nowrap;
+.desktop-pet-bubble[data-compact] .desktop-pet-close {
+  position: static;
+  width: 26px;
+  height: calc(var(--action-height) + 2px);
+  color: color-mix(in srgb, var(--foreground) 62%, var(--bubble-surface));
 }
-.desktop-pet-bubble[data-compact] .desktop-pet-close { position: static; width: 26px; height: calc(var(--action-height) + 2px); }
+.desktop-pet-bubble[data-compact] .desktop-pet-close svg { width: 13px; height: 13px; }
 .desktop-pet-bubble[data-compact] .desktop-pet-status { grid-column: 1 / -1; }
 
-.desktop-pet-bubble[data-compact][data-bubble-style="shimeji"] { --action-height: 34px; column-gap: 3px; }
-.desktop-pet-bubble[data-compact][data-bubble-style="shimeji"] .desktop-pet-actions > button { padding-inline: 4px; }
-.desktop-pet-bubble[data-compact][data-bubble-style="shimeji"] .desktop-pet-close { width: 24px; }
+.desktop-pet-bubble[data-compact][data-bubble-style="shimeji"] {
+  --action-height: 32px;
+  column-gap: 3px;
+}
+.desktop-pet-bubble[data-bubble-style="shimeji"] .desktop-pet-actions > button { padding-inline: 5px; }
 
 .desktop-pet-chat {
   overflow: hidden;
