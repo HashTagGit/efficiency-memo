@@ -5,7 +5,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-li
 import { afterEach, expect, it, vi } from "vitest";
 import App from "../../../App";
 import { AppearanceProvider } from "../../../lib/appearance";
-import { BUNDLED_COLLECTIONS, loadDesktopPetSelection, loadImportedDesktopPets, saveDesktopPetSelection } from "../../../lib/desktop-pet-catalog";
+import { BUNDLED_COLLECTIONS, DEFAULT_PET, loadDesktopPetSelection, loadDesktopPetSprite, loadImportedDesktopPets, saveDesktopPetSelection } from "../../../lib/desktop-pet-catalog";
 import { readPetPack } from "../../../lib/codex-pet";
 import { loadDesktopPetBehavior, saveDesktopPetBehavior, showDesktopPetReminder, supportsDesktopPet } from "../../../lib/desktop-reminders";
 import { I18nProvider, translate, useI18n } from "../../../lib/i18n";
@@ -34,13 +34,17 @@ vi.mock("../../../lib/desktop-reminders", async (importOriginal) => ({
   saveDesktopPetBehavior: vi.fn().mockResolvedValue(undefined),
   showDesktopPetReminder: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock("../../../lib/desktop-pet-catalog", async (importOriginal) => ({
-  ...await importOriginal<typeof import("../../../lib/desktop-pet-catalog")>(),
-  loadDesktopPetSelection: vi.fn().mockResolvedValue({ petId: "amber-cat", variantId: null }),
-  loadImportedDesktopPets: vi.fn().mockResolvedValue([]),
-  saveDesktopPetSelection: vi.fn().mockResolvedValue(undefined),
-  saveImportedDesktopPet: vi.fn().mockResolvedValue(undefined),
-}));
+vi.mock("../../../lib/desktop-pet-catalog", async (importOriginal) => {
+  const catalog = await importOriginal<typeof import("../../../lib/desktop-pet-catalog")>();
+  return {
+    ...catalog,
+    loadDesktopPetSprite: vi.fn(catalog.loadDesktopPetSprite),
+    loadDesktopPetSelection: vi.fn().mockResolvedValue({ petId: "amber-cat", variantId: null }),
+    loadImportedDesktopPets: vi.fn().mockResolvedValue([]),
+    saveDesktopPetSelection: vi.fn().mockResolvedValue(undefined),
+    saveImportedDesktopPet: vi.fn().mockResolvedValue(undefined),
+  };
+});
 vi.mock("../../../lib/codex-pet", async (importOriginal) => ({
   ...await importOriginal<typeof import("../../../lib/codex-pet")>(),
   readPetPack: vi.fn(),
@@ -97,7 +101,8 @@ it("opens the separate pet page from Tools and keeps pet controls out of app set
   expect(new Set(radios.map((radio) => radio.name)).size).toBe(1);
   expect(radios.filter((radio) => radio.checked)).toEqual([clawd]);
   expect(document.activeElement).toBe(clawd);
-  const working = await screen.findByRole("button", { name: "Working" });
+  const working = await screen.findByRole<HTMLButtonElement>("button", { name: "Working" });
+  await waitFor(() => expect(working.disabled).toBe(false));
   fireEvent.click(working);
   expect(working.getAttribute("aria-pressed")).toBe("true");
 
@@ -123,6 +128,25 @@ it("restores the bubble style and saves a new style with the other pet preferenc
   expect(saveDesktopPetBehavior).toHaveBeenCalledWith({
     lookEnabled: true, walkEnabled: false, miniEnabled: true, bubbleStyle: "shimeji",
   });
+});
+
+it("keeps the motion controls in place while a newly selected pet loads", async () => {
+  await discoverTools();
+  renderApp("/tools/pet-assistant");
+  const working = await screen.findByRole<HTMLButtonElement>("button", { name: "Working" });
+  await waitFor(() => expect(working.disabled).toBe(false));
+  let finishLoading!: (pet: typeof DEFAULT_PET) => void;
+  vi.mocked(loadDesktopPetSprite).mockReturnValueOnce(new Promise((resolve) => { finishLoading = resolve; }));
+
+  const robot = screen.getByRole<HTMLInputElement>("radio", { name: "Pocket Robot" });
+  fireEvent.click(robot);
+  await waitFor(() => expect(robot.checked).toBe(true));
+  const pending = screen.getByRole<HTMLButtonElement>("button", { name: "Working" });
+  expect(pending.disabled).toBe(true);
+  expect(document.activeElement).toBe(robot);
+
+  finishLoading({ ...DEFAULT_PET, manifest: { ...DEFAULT_PET.manifest, id: "pocket-robot" } });
+  await waitFor(() => expect(pending.disabled).toBe(false));
 });
 
 it("restores the saved series and translates its copy without switching pets", async () => {

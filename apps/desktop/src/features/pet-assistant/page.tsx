@@ -76,20 +76,23 @@ function PetActionPreview({ petId, variantId, name }: DesktopPetSelection & { na
       <legend className="px-1 text-sm font-medium text-foreground">{t("desktopPet.current")}</legend>
       <div className="flex flex-wrap items-center gap-3">
         <div className="grid h-20 w-20 shrink-0 place-items-center rounded-md bg-background">
-          {pet ? <PetSprite key={pose} pet={pet} animated pose={pose} repeat /> : null}
+          {pet && <PetSprite key={pose} pet={pet} animated pose={pose} repeat />}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="mb-2 break-words text-sm font-semibold text-foreground" aria-live="polite">{name}</p>
-          {pet ? (
-            <div className="flex flex-wrap gap-2" role="group" aria-label={t("desktopPet.motionPreview")}>
-              {previewPoses.map((action) => (
-                <Button key={action} size="sm" variant={pose === action ? "primary" : "ghost"}
-                  aria-pressed={pose === action} onClick={() => setPose(action)}>
-                  {t(`desktopPet.pose.${action}`)}
-                </Button>
-              ))}
-            </div>
-          ) : <p role="status" className="text-sm text-muted">{t(failed ? "desktopPet.motionPreviewError" : "app.loading")}</p>}
+          <p className="mb-2 truncate text-sm font-semibold text-foreground" title={name} aria-live="polite">{name}</p>
+          <div className="flex flex-wrap gap-2" role="group" aria-label={t("desktopPet.motionPreview")}>
+            {previewPoses.map((action) => (
+              <Button key={action} size="sm" variant={pose === action ? "primary" : "ghost"}
+                disabled={!pet} aria-pressed={pose === action} onClick={() => setPose(action)}>
+                {t(`desktopPet.pose.${action}`)}
+              </Button>
+            ))}
+          </div>
+          {!pet && (
+            <p role="status" className={failed ? "text-sm text-muted" : "sr-only"}>
+              {t(failed ? "desktopPet.motionPreviewError" : "app.loading")}
+            </p>
+          )}
         </div>
       </div>
     </fieldset>
@@ -130,7 +133,7 @@ function PetOption({ option, checked, onSelect }: {
 }) {
   return (
     <label
-      className={`flex min-w-0 cursor-pointer items-center gap-2 rounded-md border py-1.5 pe-2 text-sm has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-focus-ring ${checked ? "border-accent bg-active font-semibold" : "border-control-border bg-surface hover:bg-surface-strong"}`}
+      className={`relative flex min-w-0 cursor-pointer items-center gap-2 rounded-md border py-1.5 pe-2 text-sm font-medium has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-focus-ring ${checked ? "border-accent bg-active" : "border-control-border bg-surface hover:bg-surface-strong"}`}
     >
       <input className="sr-only" type="radio" name="desktop-pet-selection" checked={checked} onChange={onSelect} />
       <span className="grid h-11 w-11 shrink-0 place-items-center" aria-hidden="true">
