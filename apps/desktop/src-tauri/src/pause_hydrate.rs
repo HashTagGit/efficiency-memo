@@ -890,8 +890,9 @@ fn apply_action(input: ReminderActionInput, connection: &mut Connection) -> Resu
             params![next_due_at, input.muted_until, input.occurred_at, input.user_id, input.kind],
         )
         .map_err(|error| error.to_string())?;
-    if changed != 1 {
-        return Err("not-pending".to_string());
+    if changed == 0 {
+        // A concurrent natural break or another action can already have resolved the reminder.
+        return Ok(());
     }
     transaction
         .execute(
@@ -1066,7 +1067,11 @@ pub(crate) fn act_on_pause_hydrate_reminder(input: ReminderActionInput, app: App
 
 #[tauri::command]
 pub(crate) fn complete_natural_break(input: NaturalBreakInput, local_date: String, app: AppHandle) -> Result<bool, String> {
-    complete_natural_break_record_at_date(input, &local_date, &mut connection(&app)?)
+    let completed = complete_natural_break_record_at_date(input, &local_date, &mut connection(&app)?)?;
+    if completed {
+        crate::desktop_pet::resolve_natural_break(&app);
+    }
+    Ok(completed)
 }
 
 #[cfg(test)]
@@ -1657,6 +1662,22 @@ mod tests {
         connection.execute("DELETE FROM ch_sessions", []).unwrap();
         assert!(complete_natural_break_record(input("natural-1"), &mut connection).unwrap());
         assert!(!complete_natural_break_record(input("natural-2"), &mut connection).unwrap());
+
+        // The desktop may still show the reminder after natural rest has resolved it.
+        apply_action(
+            ReminderActionInput {
+                user_id: "local-user".into(),
+                kind: "break".into(),
+                action: "snoozed".into(),
+                event_id: "stale-desktop-action".into(),
+                occurred_at: "2026-08-27T10:01:00Z".into(),
+                next_due_at: "2026-08-27T10:11:00Z".into(),
+                muted_until: None,
+                timezone_offset_minutes: 0,
+            },
+            &mut connection,
+        )
+        .expect("an action on the resolved reminder should close its desktop bubble");
 
         let events: Vec<(String, String)> = connection
             .prepare("SELECT kind, source FROM ph_reminder_events ORDER BY occurred_at")

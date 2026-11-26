@@ -160,6 +160,22 @@ impl Queue {
         self.items.pop_front().map(|item| item.reminder)
     }
 
+    fn remove_movement_reminder(&mut self) -> bool {
+        let Some(index) = self.items.iter().position(|item| item.reminder.kind == ReminderKind::Break) else {
+            return false;
+        };
+        if index == 0 {
+            let id = self.items[0].id;
+            if self.saving_action == Some(id) {
+                self.saving_action = None;
+            }
+            self.take_current(id);
+        } else {
+            self.items.remove(index);
+        }
+        true
+    }
+
     fn is_dragging(&self) -> bool {
         self.drag_offset.is_some()
     }
@@ -300,6 +316,23 @@ fn set_visible_without_activation(window: &WebviewWindow, visible: bool) -> taur
 pub(crate) fn destroy_window(app: &AppHandle) {
     if let Some(window) = app.get_webview_window(LABEL) {
         let _ = window.destroy();
+    }
+}
+
+pub(crate) fn resolve_natural_break(app: &AppHandle) {
+    let handle = app.clone();
+    if let Err(error) = app.run_on_main_thread(move || {
+        let state = handle.state::<PetQueue>();
+        let mut queue = state.0.lock().expect("desktop pet queue poisoned");
+        if queue.remove_movement_reminder() {
+            if let Some(window) = handle.get_webview_window(LABEL) {
+                if let Err(error) = queue.publish(&window) {
+                    eprintln!("WARN: Could not update the desktop pet after a natural break: {error}");
+                }
+            }
+        }
+    }) {
+        eprintln!("WARN: Could not update the desktop pet after a natural break: {error}");
     }
 }
 
@@ -1063,6 +1096,30 @@ mod tests {
         let view = queue.snapshot().unwrap();
         assert_eq!(view.count, 2);
         assert_eq!(view.current.unwrap().reminder.title, "Move");
+    }
+
+    #[test]
+    fn resolving_a_natural_break_preserves_the_next_reminder() {
+        for current in [true, false] {
+            let mut queue = Queue::default();
+            let movement = PetReminder { kind: ReminderKind::Break, title: "Move".into(), body: String::new() };
+            let hydration = PetReminder { kind: ReminderKind::Hydration, title: "Water".into(), body: String::new() };
+            if current {
+                queue.push(movement);
+                queue.push(hydration);
+            } else {
+                queue.push(hydration);
+                queue.push(movement);
+            }
+            let saving = queue.items.front().map(|item| item.id);
+            queue.saving_action = saving;
+            assert!(queue.remove_movement_reminder());
+            let view = queue.snapshot().unwrap();
+            assert_eq!(view.count, 1);
+            assert!(matches!(view.current.unwrap().reminder.kind, ReminderKind::Hydration));
+            assert_eq!(queue.saving_action, if current { None } else { saving });
+            assert!(!queue.remove_movement_reminder());
+        }
     }
 
     #[test]
